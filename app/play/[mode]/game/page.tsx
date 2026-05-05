@@ -60,7 +60,6 @@ export default function GamePage() {
         ? [`${apiBook}+${chapter}:${verse}`, `Song+of+Songs+${chapter}:${verse}`]
         : [`${apiBook}+${chapter}:${verse}`];
 
-      let fetched = false;
       for (const name of apiNames) {
         try {
           const res = await fetch(`https://bible-api.com/${name}?translation=kjv`);
@@ -73,9 +72,8 @@ export default function GamePage() {
             }
           }
         } catch {
-          // try next
+          // try next name or attempt
         }
-        if (fetched) break;
       }
       attempts++;
     }
