@@ -11,10 +11,10 @@ interface Props {
 
 export default function ChapterVerseSlider({ label, value, min, max, disabled, onChange }: Props) {
   return (
-    <div className={disabled ? 'opacity-50' : ''}>
+    <div className={`surface-card-soft p-3 ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex justify-between items-center mb-1">
-        <label className="text-slate-300 text-sm font-medium">{label}</label>
-        <span className="text-amber-400 font-bold text-lg min-w-8 text-right">
+        <label className="text-slate-200 text-sm font-semibold">{label}</label>
+        <span className="text-amber-100 font-bold text-lg min-w-8 text-right">
           {disabled ? '-' : value}
         </span>
       </div>
@@ -25,9 +25,9 @@ export default function ChapterVerseSlider({ label, value, min, max, disabled, o
         value={disabled ? min : value}
         disabled={disabled}
         onChange={e => onChange(parseInt(e.target.value))}
-        className="w-full h-2 rounded-full accent-amber-400"
+        className="w-full h-2 rounded-full"
       />
-      <div className="flex justify-between text-xs text-slate-500 mt-1">
+      <div className="flex justify-between text-xs text-slate-400 mt-1">
         <span>{min}</span>
         <span>{max}</span>
       </div>

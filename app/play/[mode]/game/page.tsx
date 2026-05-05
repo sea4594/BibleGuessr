@@ -83,7 +83,11 @@ export default function GamePage() {
 
   useEffect(() => {
     if (session?.gameState === 'playing' && session.modeConfig) {
-      fetchVerse(session.modeConfig.books);
+      const timer = setTimeout(() => {
+        void fetchVerse(session.modeConfig.books);
+      }, 0);
+
+      return () => clearTimeout(timer);
     }
   }, [session?.currentRound, session?.gameState, fetchVerse, session?.modeConfig]);
 
@@ -143,26 +147,28 @@ export default function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex flex-col">
-      <header className="flex items-center justify-between p-4 border-b border-slate-700">
-        <button
-          onClick={handleExitToHome}
-          className="text-slate-400 hover:text-white transition-colors flex items-center gap-2"
-        >
-          <span>✕</span> Exit
-        </button>
-        <span className="text-amber-400 font-semibold">
-          Round {session.currentRound} of {session.totalRounds}
-        </span>
-        <button
-          onClick={() => setIsPaused(true)}
-          className="text-slate-400 hover:text-white transition-colors"
-        >
-          ⏸ Pause
-        </button>
+    <div className="min-h-screen flex flex-col">
+      <header className="mx-auto w-full max-w-5xl px-4 pt-5 sm:px-6 sm:pt-7">
+        <div className="surface-card flex items-center justify-between p-3 sm:p-4">
+          <button
+            onClick={handleExitToHome}
+            className="btn-ghost inline-flex items-center gap-2 px-2 py-1"
+          >
+            <span>✕</span> Exit
+          </button>
+          <span className="text-amber-100 font-semibold text-sm sm:text-base">
+            Round {session.currentRound} of {session.totalRounds}
+          </span>
+          <button
+            onClick={() => setIsPaused(true)}
+            className="btn-outline px-3 py-1.5 text-sm"
+          >
+            Pause
+          </button>
+        </div>
       </header>
 
-      <div className="flex-1 flex flex-col p-4 max-w-4xl mx-auto w-full">
+      <div className="flex-1 flex flex-col p-4 sm:p-6 max-w-5xl mx-auto w-full">
         <VerseDisplay
           verse={currentVerse}
           isLoading={isLoadingVerse}
@@ -176,18 +182,19 @@ export default function GamePage() {
       </div>
 
       {isPaused && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Game Paused</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="surface-card w-full max-w-md p-7 text-center fade-up">
+            <p className="eyebrow mb-2">Pause</p>
+            <h2 className="headline-serif text-3xl text-amber-100 mb-5">Game Paused</h2>
             <button
               onClick={() => setIsPaused(false)}
-              className="block w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-3 rounded-lg mb-3 transition-colors"
+              className="btn-primary block w-full py-3 mb-3"
             >
               Resume
             </button>
             <button
               onClick={handleExitToHome}
-              className="block w-full text-slate-400 hover:text-white py-2 transition-colors"
+              className="btn-outline block w-full py-2.5"
             >
               Exit to Home
             </button>

@@ -41,8 +41,9 @@ export default function GuessInterface({ modeConfig, onSubmit }: Props) {
   const canSubmit = isSingleBook ? true : !!selectedBook;
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mt-4">
-      <h3 className="text-slate-300 text-sm font-medium mb-4 uppercase tracking-wide">Your Guess</h3>
+    <div className="surface-card p-4 sm:p-5 mt-5 sm:mt-6">
+      <p className="eyebrow mb-3">Your Guess</p>
+      <h3 className="headline-serif text-xl text-slate-100 mb-4">Choose The Location</h3>
 
       <div className="space-y-4">
         {!isSingleBook && (
@@ -75,7 +76,7 @@ export default function GuessInterface({ modeConfig, onSubmit }: Props) {
       <button
         onClick={handleSubmit}
         disabled={!canSubmit}
-        className="mt-4 w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold py-3 rounded-lg transition-colors"
+        className="btn-primary mt-5 w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
       >
         Submit Guess
       </button>

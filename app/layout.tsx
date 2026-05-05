@@ -1,6 +1,17 @@
 import type { Metadata } from 'next';
+import { Lora, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { GameProvider } from '@/lib/gameContext';
+
+const bodyFont = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-body',
+});
+
+const headlineFont = Lora({
+  subsets: ['latin'],
+  variable: '--font-headline',
+});
 
 export const metadata: Metadata = {
   title: 'BibleGuessr',
@@ -10,7 +21,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-slate-900 text-white min-h-screen font-sans">
+      <body className={`${bodyFont.variable} ${headlineFont.variable} min-h-screen font-[var(--font-body)] antialiased`}>
         <GameProvider>
           {children}
         </GameProvider>

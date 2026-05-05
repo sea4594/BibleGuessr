@@ -13,47 +13,47 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
   const accuracy = Math.round((totalScore / maxPossible) * 100);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="max-w-lg w-full">
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-amber-400 mb-2">Game Over!</h2>
-          <p className="text-slate-400">{session.modeConfig.name}</p>
+        <div className="text-center mb-8 fade-up">
+          <p className="eyebrow mb-2">Session Complete</p>
+          <h2 className="headline-serif text-5xl text-amber-100 mb-2">Game Over</h2>
+          <p className="text-slate-300">{session.modeConfig.name}</p>
         </div>
 
-        <div className="text-center mb-8">
-          <div className="text-7xl font-bold text-white">{totalScore}</div>
-          <div className="text-slate-400 mt-1">Total Score</div>
-          <div className="text-slate-500 text-sm mt-1">{accuracy}% accuracy</div>
+        <div className="surface-card text-center mb-6 p-6">
+          <div className="text-7xl font-bold text-slate-50">{totalScore}</div>
+          <div className="text-slate-300 mt-1">Total Score</div>
+          <div className="text-amber-100 text-sm mt-1">{accuracy}% accuracy</div>
         </div>
 
-        {/* Per-round breakdown */}
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-6">
-          <h3 className="text-slate-400 text-xs uppercase mb-3">Round Breakdown</h3>
+        <div className="surface-card p-4 sm:p-5 mb-6">
+          <h3 className="text-slate-300 text-xs uppercase tracking-[0.18em] mb-3">Round Breakdown</h3>
           {session.rounds.map((round, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-between py-2 border-t border-slate-700 first:border-0"
+              className="flex items-center justify-between py-2.5 border-t border-[rgba(199,214,242,0.14)] first:border-0"
             >
               <div>
-                <span className="text-slate-300 text-sm">Round {idx + 1}</span>
-                <span className="text-slate-500 text-xs ml-2">
+                <span className="text-slate-200 text-sm">Round {idx + 1}</span>
+                <span className="text-slate-400 text-xs ml-2">
                   {round.verse.book} {round.verse.chapter}:{round.verse.verse}
                 </span>
               </div>
-              <span className="text-amber-400 font-bold">{round.score} pts</span>
+              <span className="text-amber-100 font-bold">{round.score} pts</span>
             </div>
           ))}
         </div>
 
         <button
           onClick={onPlayAgain}
-          className="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-3 rounded-lg text-lg mb-3 transition-colors"
+          className="btn-primary w-full py-3 text-lg mb-3"
         >
           Play Again
         </button>
         <button
           onClick={onHome}
-          className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg mb-3 transition-colors"
+          className="btn-outline w-full py-3 mb-3"
         >
           Home
         </button>
