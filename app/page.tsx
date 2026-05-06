@@ -1,9 +1,22 @@
 'use client';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useUiSettings } from '@/lib/uiSettingsContext';
+import { GameStatsSummary, readGameHistory, summarizeGameHistory } from '@/lib/gameStats';
 
 export default function HomePage() {
   const { settings } = useUiSettings();
+  const [stats] = useState<GameStatsSummary>(() => {
+    if (typeof window === 'undefined') {
+      return {
+        gamesPlayed: 0,
+        bestScore: 0,
+        averageAccuracy: 0,
+        bestAccuracy: 0,
+      };
+    }
+    return summarizeGameHistory(readGameHistory());
+  });
 
   return (
     <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
@@ -17,6 +30,25 @@ export default function HomePage() {
           <div className="mt-5 flex flex-wrap gap-2.5 text-sm">
             <span className="surface-card-soft px-3 py-1.5">Theme: {settings.theme.replace('-', ' ')}</span>
             <span className="surface-card-soft px-3 py-1.5">Default rounds: {settings.preferredRounds}</span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4">
+            <div className="surface-card-soft p-3">
+              <p className="content-muted text-xs">Games Played</p>
+              <p className="text-2xl font-bold">{stats.gamesPlayed}</p>
+            </div>
+            <div className="surface-card-soft p-3">
+              <p className="content-muted text-xs">Best Score</p>
+              <p className="text-2xl font-bold">{stats.bestScore}</p>
+            </div>
+            <div className="surface-card-soft p-3">
+              <p className="content-muted text-xs">Avg Accuracy</p>
+              <p className="text-2xl font-bold">{stats.averageAccuracy}%</p>
+            </div>
+            <div className="surface-card-soft p-3">
+              <p className="content-muted text-xs">Best Accuracy</p>
+              <p className="text-2xl font-bold">{stats.bestAccuracy}%</p>
+            </div>
           </div>
         </section>
 

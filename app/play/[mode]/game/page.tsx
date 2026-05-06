@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useGame } from '@/lib/gameContext';
 import { GameModeId } from '@/lib/gameModes';
 import { calculateScore } from '@/lib/scoring';
-import { BookData } from '@/lib/bibleData';
+import { bibleData, BookData } from '@/lib/bibleData';
 import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import RoundResult from '@/components/RoundResult';
@@ -40,6 +40,9 @@ export default function GamePage() {
   const [isLoadingVerse, setIsLoadingVerse] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [verseError, setVerseError] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [showHint, setShowHint] = useState(false);
+  const [skipsUsed, setSkipsUsed] = useState(0);
 
   useEffect(() => {
     if (!session) {
@@ -67,6 +70,8 @@ export default function GamePage() {
             const data = await res.json();
             if (data.text) {
               setCurrentVerse({ book: book.book, chapter, verse, text: data.text.trim() });
+              setElapsedSeconds(0);
+              setShowHint(false);
               setIsLoadingVerse(false);
               return;
             }
@@ -91,6 +96,26 @@ export default function GamePage() {
     }
   }, [session?.currentRound, session?.gameState, fetchVerse, session?.modeConfig]);
 
+  useEffect(() => {
+    if (!currentVerse || isLoadingVerse || isPaused) return;
+    const interval = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [currentVerse, isLoadingVerse, isPaused]);
+
+  const formatTime = (totalSeconds: number) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const getTestament = (book: string) => {
+    const idx = bibleData.findIndex(b => b.book === book);
+    if (idx === -1) return 'Unknown';
+    return idx <= 38 ? 'Old Testament' : 'New Testament';
+  };
+
   if (!session) return null;
 
   const handleSubmitGuess = (guess: { book: string; chapter: number; verse: number }) => {
@@ -109,7 +134,18 @@ export default function GamePage() {
 
   const handleNextRound = () => {
     setCurrentVerse(null);
+    setElapsedSeconds(0);
+    setShowHint(false);
     nextRound();
+  };
+
+  const handleSkipVerse = () => {
+    if (!session.modeConfig || skipsUsed >= 1) return;
+    setSkipsUsed(prev => prev + 1);
+    setCurrentVerse(null);
+    setElapsedSeconds(0);
+    setShowHint(false);
+    void fetchVerse(session.modeConfig.books);
   };
 
   const handleExitToHome = () => {
@@ -156,9 +192,10 @@ export default function GamePage() {
           >
             <span>✕</span> Exit
           </button>
-          <span className="font-semibold text-sm sm:text-base">
-            Round {session.currentRound} of {session.totalRounds}
-          </span>
+          <div className="text-center">
+            <p className="font-semibold text-sm sm:text-base">Round {session.currentRound} of {session.totalRounds}</p>
+            <p className="content-muted text-xs">Time: {formatTime(elapsedSeconds)}</p>
+          </div>
           <button
             onClick={() => setIsPaused(true)}
             className="btn-outline px-3 py-1.5 text-sm"
@@ -181,7 +218,27 @@ export default function GamePage() {
 
           <div className="play-guess">
             {currentVerse && !isLoadingVerse && (
-              <GuessInterface modeConfig={session.modeConfig} onSubmit={handleSubmitGuess} />
+              <>
+                <div className="surface-card-soft p-3 mb-3 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setShowHint(prev => !prev)}
+                    className="btn-outline px-3 py-1.5 text-sm"
+                  >
+                    {showHint ? 'Hide Hint' : 'Show Testament Hint'}
+                  </button>
+                  <button
+                    onClick={handleSkipVerse}
+                    disabled={skipsUsed >= 1}
+                    className="btn-outline px-3 py-1.5 text-sm disabled:opacity-45"
+                  >
+                    Skip Verse ({Math.max(0, 1 - skipsUsed)} left)
+                  </button>
+                  {showHint && currentVerse && (
+                    <span className="text-sm font-semibold">Hint: {getTestament(currentVerse.book)}</span>
+                  )}
+                </div>
+                <GuessInterface modeConfig={session.modeConfig} onSubmit={handleSubmitGuess} />
+              </>
             )}
           </div>
         </div>
@@ -191,7 +248,7 @@ export default function GamePage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="surface-card w-full max-w-md p-7 text-center fade-up">
             <p className="eyebrow mb-2">Pause</p>
-            <h2 className="headline-serif text-3xl text-amber-100 mb-5">Game Paused</h2>
+            <h2 className="headline-serif text-3xl mb-5">Game Paused</h2>
             <button
               onClick={() => setIsPaused(false)}
               className="btn-primary block w-full py-3 mb-3"

@@ -25,36 +25,36 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
       <div className="max-w-lg w-full">
         <div className="text-center mb-7 fade-up">
           <p className="eyebrow">Round {roundNumber} of {totalRounds}</p>
-          <h2 className="headline-serif text-4xl text-amber-100 mt-1">Round Result</h2>
+          <h2 className="headline-serif text-4xl mt-1">Round Result</h2>
         </div>
 
         <div className="surface-card text-center mb-5 p-5 sm:p-6">
-          <div className="text-6xl font-bold text-amber-100">{score}</div>
-          <div className="text-slate-300 text-sm mt-1">points</div>
+          <div className="text-6xl font-bold">{score}</div>
+          <div className="content-muted text-sm mt-1">points</div>
         </div>
 
         <div className="surface-card p-4 sm:p-5 mb-4">
           <div className="grid grid-cols-3 gap-4 text-center mb-2">
-            <div className="text-slate-300 text-xs uppercase tracking-[0.18em]">Category</div>
-            <div className="text-slate-300 text-xs uppercase tracking-[0.18em]">Correct</div>
-            <div className="text-slate-300 text-xs uppercase tracking-[0.18em]">Your Guess</div>
+            <div className="content-muted text-xs uppercase tracking-[0.18em]">Category</div>
+            <div className="content-muted text-xs uppercase tracking-[0.18em]">Correct</div>
+            <div className="content-muted text-xs uppercase tracking-[0.18em]">Your Guess</div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[rgba(199,214,242,0.14)]">
-            <div className="text-slate-200 text-sm flex items-center justify-center gap-1">
+            <div className="text-sm flex items-center justify-center gap-1">
               <StatusBadge status={feedback.book} /> Book
             </div>
-            <div className="text-slate-50 font-medium text-sm">{verse.book}</div>
+            <div className="font-medium text-sm">{verse.book}</div>
             <div className={`text-sm font-medium ${feedback.book === 'correct' ? 'text-green-400' : feedback.book === 'close' ? 'text-yellow-400' : 'text-red-400'}`}>
               {guess.book}
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[rgba(199,214,242,0.14)]">
-            <div className="text-slate-200 text-sm flex items-center justify-center gap-1">
+            <div className="text-sm flex items-center justify-center gap-1">
               <StatusBadge status={feedback.chapter} /> Chapter
             </div>
-            <div className="text-slate-50 font-medium text-sm">{verse.chapter}</div>
+            <div className="font-medium text-sm">{verse.chapter}</div>
             <div className={`text-sm font-medium ${feedback.chapter === 'correct' ? 'text-green-400' : feedback.chapter === 'close' ? 'text-yellow-400' : 'text-red-400'}`}>
               {guess.chapter}
               {feedback.chaptersOff > 0 && (
@@ -64,10 +64,10 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
           </div>
 
           <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[rgba(199,214,242,0.14)]">
-            <div className="text-slate-200 text-sm flex items-center justify-center gap-1">
+            <div className="text-sm flex items-center justify-center gap-1">
               <StatusBadge status={feedback.verse} /> Verse
             </div>
-            <div className="text-slate-50 font-medium text-sm">{verse.verse}</div>
+            <div className="font-medium text-sm">{verse.verse}</div>
             <div className={`text-sm font-medium ${feedback.verse === 'correct' ? 'text-green-400' : feedback.verse === 'close' ? 'text-yellow-400' : 'text-red-400'}`}>
               {guess.verse}
               {feedback.versesOff > 0 && (
@@ -78,28 +78,28 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
         </div>
 
         <div className="surface-card p-4 sm:p-5 mb-6">
-          <h3 className="text-slate-300 text-xs uppercase tracking-[0.18em] mb-2">Score Breakdown</h3>
+          <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-2">Score Breakdown</h3>
           {scoreBreakdown.testamentPoints !== undefined && (
             <div className="flex justify-between text-sm py-1">
-              <span className="text-slate-200">Testament</span>
-              <span className="text-amber-100">+{scoreBreakdown.testamentPoints}</span>
+              <span>Testament</span>
+              <span className="font-semibold">+{scoreBreakdown.testamentPoints}</span>
             </div>
           )}
           <div className="flex justify-between text-sm py-1">
-            <span className="text-slate-200">Book</span>
-            <span className="text-amber-100">+{Math.round(scoreBreakdown.bookPoints)}</span>
+            <span>Book</span>
+            <span className="font-semibold">+{Math.round(scoreBreakdown.bookPoints)}</span>
           </div>
           <div className="flex justify-between text-sm py-1">
-            <span className="text-slate-200">Chapter</span>
-            <span className="text-amber-100">+{Math.round(scoreBreakdown.chapterPoints)}</span>
+            <span>Chapter</span>
+            <span className="font-semibold">+{Math.round(scoreBreakdown.chapterPoints)}</span>
           </div>
           <div className="flex justify-between text-sm py-1">
-            <span className="text-slate-200">Verse</span>
-            <span className="text-amber-100">+{Math.round(scoreBreakdown.versePoints)}</span>
+            <span>Verse</span>
+            <span className="font-semibold">+{Math.round(scoreBreakdown.versePoints)}</span>
           </div>
           <div className="flex justify-between text-sm py-1 border-t border-[rgba(199,214,242,0.14)] mt-1 font-bold">
-            <span className="text-slate-50">Total</span>
-            <span className="text-amber-100">{score}</span>
+            <span>Total</span>
+            <span>{score}</span>
           </div>
         </div>
 
