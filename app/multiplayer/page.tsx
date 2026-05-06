@@ -38,11 +38,17 @@ export default function MultiplayerPage() {
   };
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
-      <div className="max-w-3xl mx-auto">
-        <section className="surface-card p-6 sm:p-8">
+    <main className="min-h-screen">
+      <header className="topbar">
+        <Link href="/" className="btn-outline px-3 py-2 text-sm">Back</Link>
+        <div className="font-semibold">Multiplayer</div>
+        <Link href="/single-player" className="btn-outline px-3 py-2 text-sm">Modes</Link>
+      </header>
+
+      <div className="page max-w-3xl">
+        <section className="surface-card p-5">
           <p className="eyebrow mb-2">Multiplayer</p>
-          <h1 className="headline-serif text-4xl sm:text-5xl mb-3">Local Pass-and-Play</h1>
+          <h1 className="headline-serif text-3xl sm:text-4xl mb-3">Local Pass-and-Play</h1>
           <p className="content-muted mb-6">
             Multiplayer is configured as local pass-and-play. Each player takes turns on the same device.
           </p>

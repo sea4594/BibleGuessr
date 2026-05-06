@@ -31,12 +31,18 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
   }, [session.mode, session.modeConfig.name, session.totalRounds, totalScore, accuracy]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="max-w-lg w-full">
+    <main className="min-h-screen">
+      <header className="topbar">
+        <button onClick={onHome} className="btn-outline px-3 py-2 text-sm">Home</button>
+        <div className="font-semibold">Session Summary</div>
+        <span className="content-muted text-sm">{session.totalRounds} rounds</span>
+      </header>
+
+      <div className="page max-w-lg">
         <div className="text-center mb-8 fade-up">
           <p className="eyebrow mb-2">Session Complete</p>
-          <h2 className="headline-serif text-5xl text-amber-100 mb-2">Game Over</h2>
-          <p className="text-slate-300">{session.modeConfig.name}</p>
+          <h2 className="headline-serif text-5xl mb-2">Game Over</h2>
+          <p className="content-muted">{session.modeConfig.name}</p>
         </div>
 
         <div className="surface-card text-center mb-6 p-6">
@@ -65,7 +71,7 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
           {session.rounds.map((round, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-between py-2.5 border-t border-[rgba(199,214,242,0.14)] first:border-0"
+              className="flex items-center justify-between py-2.5 border-t border-[var(--line)] first:border-0"
             >
               <div>
                 <span className="text-sm">Round {idx + 1}</span>
@@ -91,6 +97,6 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
           Home
         </button>
       </div>
-    </div>
+    </main>
   );
 }

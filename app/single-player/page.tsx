@@ -46,11 +46,17 @@ export default function SinglePlayerPage() {
   };
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
-      <div className="max-w-6xl mx-auto">
-        <header className="surface-card p-6 sm:p-8 mb-6">
+    <main className="min-h-screen">
+      <header className="topbar">
+        <Link href="/" className="btn-outline px-3 py-2 text-sm">Back</Link>
+        <div className="font-semibold">Single Player</div>
+        <Link href="/settings" className="btn-outline px-3 py-2 text-sm">Settings</Link>
+      </header>
+
+      <div className="page">
+        <header className="surface-card p-5">
           <p className="eyebrow mb-2">Single Player</p>
-          <h1 className="headline-serif text-4xl sm:text-5xl mb-2">Choose a Mode</h1>
+          <h1 className="headline-serif text-3xl sm:text-4xl mb-2">Choose a Mode</h1>
           <p className="content-muted">Pick a scripture pool and start a new run.</p>
         </header>
 
@@ -101,9 +107,6 @@ export default function SinglePlayerPage() {
           <p className="content-muted mt-4">No modes matched your search.</p>
         )}
 
-        <div className="pt-5">
-          <Link href="/" className="btn-outline inline-block px-4 py-2.5">Back to Main Menu</Link>
-        </div>
       </div>
     </main>
   );

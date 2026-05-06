@@ -40,8 +40,15 @@ export default function ModePage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 py-8 sm:py-12">
-      <div className="surface-card fade-up p-7 sm:p-8 max-w-xl w-full">
+    <main className="min-h-screen">
+      <header className="topbar">
+        <button onClick={() => router.push('/single-player')} className="btn-outline px-3 py-2 text-sm">Back</button>
+        <div className="font-semibold">Game Setup</div>
+        <button onClick={() => router.push('/settings')} className="btn-outline px-3 py-2 text-sm">Settings</button>
+      </header>
+
+      <div className="page max-w-xl">
+      <div className="surface-card fade-up p-5 w-full">
         <p className="eyebrow mb-3">Game Setup</p>
         <h1 className="headline-serif text-3xl sm:text-4xl mb-2">{modeConfig.name}</h1>
         <p className="content-muted mb-7 leading-relaxed">{modeConfig.description}</p>
@@ -52,7 +59,7 @@ export default function ModePage() {
             <select
               value={selectedBook}
               onChange={e => setSelectedBook(e.target.value)}
-              className="w-full rounded-xl px-3.5 py-2.5 bg-[var(--surface-soft)] border border-[var(--line)] focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20"
+              className="w-full px-3.5 py-2.5 bg-[var(--panel-soft)] border border-[var(--line-strong)] focus:outline-none"
             >
               {bibleData.map(b => (
                 <option key={b.book} value={b.book}>{b.book}</option>
@@ -68,7 +75,7 @@ export default function ModePage() {
               <button
                 key={n}
                 onClick={() => setRounds(n)}
-                className={rounds === n ? 'btn-primary flex-1 py-2.5 rounded-xl font-semibold' : 'btn-outline flex-1 py-2.5 rounded-xl font-semibold'}
+                className={rounds === n ? 'btn-primary flex-1 py-2.5 font-semibold' : 'btn-outline flex-1 py-2.5 font-semibold'}
               >
                 {n} Rounds
               </button>
@@ -84,19 +91,10 @@ export default function ModePage() {
         </button>
 
         <div className="flex flex-wrap gap-3 mt-3">
-          <button
-            onClick={() => router.push('/single-player')}
-            className="btn-ghost py-2"
-          >
-            ← Back to Modes
-          </button>
-          <button
-            onClick={() => router.push('/settings')}
-            className="btn-outline ml-auto px-3 py-2 text-sm"
-          >
-            Theme & Settings
-          </button>
+          <button onClick={() => router.push('/single-player')} className="btn-ghost py-2">Back to Modes</button>
+          <button onClick={() => router.push('/settings')} className="btn-outline ml-auto px-3 py-2 text-sm">Theme & Settings</button>
         </div>
+      </div>
       </div>
     </main>
   );

@@ -45,7 +45,7 @@ export default function VerseDisplay({ verse, isLoading, error, onRetry }: Props
   return (
     <div className="fade-up">
       <div className="surface-card relative p-6 sm:p-8 min-h-60 flex items-center">
-        <div className="absolute -top-3 left-6 bg-[var(--accent)] text-[var(--accent-ink)] text-xs font-bold px-2 py-0.5 rounded-md">
+        <div className="absolute -top-3 left-6 bg-[var(--accent)] text-[var(--text-main)] text-xs font-bold px-2 py-0.5 border border-[var(--line-strong)]">
           KJV
         </div>
         <p className="headline-serif text-[var(--text-main)] text-xl sm:text-2xl leading-relaxed text-center italic w-full">

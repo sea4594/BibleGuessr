@@ -21,8 +21,14 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
   const { feedback } = scoreBreakdown;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="max-w-lg w-full">
+    <main className="min-h-screen">
+      <header className="topbar">
+        <button onClick={onHome} className="btn-outline px-3 py-2 text-sm">Home</button>
+        <div className="font-semibold">Round Result</div>
+        <span className="content-muted text-sm">{roundNumber} / {totalRounds}</span>
+      </header>
+
+      <div className="page max-w-lg">
         <div className="text-center mb-7 fade-up">
           <p className="eyebrow">Round {roundNumber} of {totalRounds}</p>
           <h2 className="headline-serif text-4xl mt-1">Round Result</h2>
@@ -40,7 +46,7 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
             <div className="content-muted text-xs uppercase tracking-[0.18em]">Your Guess</div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[rgba(199,214,242,0.14)]">
+          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[var(--line)]">
             <div className="text-sm flex items-center justify-center gap-1">
               <StatusBadge status={feedback.book} /> Book
             </div>
@@ -50,7 +56,7 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[rgba(199,214,242,0.14)]">
+          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[var(--line)]">
             <div className="text-sm flex items-center justify-center gap-1">
               <StatusBadge status={feedback.chapter} /> Chapter
             </div>
@@ -63,7 +69,7 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[rgba(199,214,242,0.14)]">
+          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[var(--line)]">
             <div className="text-sm flex items-center justify-center gap-1">
               <StatusBadge status={feedback.verse} /> Verse
             </div>
@@ -97,7 +103,7 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
             <span>Verse</span>
             <span className="font-semibold">+{Math.round(scoreBreakdown.versePoints)}</span>
           </div>
-          <div className="flex justify-between text-sm py-1 border-t border-[rgba(199,214,242,0.14)] mt-1 font-bold">
+          <div className="flex justify-between text-sm py-1 border-t border-[var(--line)] mt-1 font-bold">
             <span>Total</span>
             <span>{score}</span>
           </div>
@@ -116,6 +122,6 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
           Exit to Home
         </button>
       </div>
-    </div>
+    </main>
   );
 }

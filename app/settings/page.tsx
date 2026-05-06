@@ -3,17 +3,36 @@ import Link from 'next/link';
 import { themeOptions, useUiSettings } from '@/lib/uiSettingsContext';
 
 export default function SettingsPage() {
-  const { settings, setTheme, setPreferredRounds } = useUiSettings();
+  const { settings, setTheme, setMode, setPreferredRounds } = useUiSettings();
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 sm:py-12">
-      <div className="max-w-4xl mx-auto">
-        <section className="surface-card p-6 sm:p-8">
-          <p className="eyebrow mb-2">Settings</p>
-          <h1 className="headline-serif text-4xl sm:text-5xl mb-3">Game Preferences</h1>
-          <p className="content-muted mb-6">Choose a curated look and your default rounds.</p>
+    <main className="min-h-screen">
+      <header className="topbar">
+        <Link href="/" className="btn-outline px-3 py-2 text-sm">Back</Link>
+        <div className="font-semibold">Settings</div>
+        <span className="content-muted text-sm">Display & Gameplay</span>
+      </header>
 
-          <h2 className="headline-serif text-2xl mb-3">Theme</h2>
+      <div className="page max-w-4xl">
+        <section className="surface-card p-5">
+          <p className="eyebrow mb-2">Settings</p>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-3">Game Preferences</h1>
+          <p className="content-muted mb-6">Match SphenPad-style themes, mode, and interaction defaults.</p>
+
+          <h2 className="text-2xl font-semibold mb-3">Color Mode</h2>
+          <div className="flex gap-3 mb-6">
+            {(['dark', 'light'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setMode(mode)}
+                className={settings.mode === mode ? 'btn-primary px-4 py-2.5' : 'btn-outline px-4 py-2.5'}
+              >
+                {mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+              </button>
+            ))}
+          </div>
+
+          <h2 className="text-2xl font-semibold mb-3">Theme</h2>
           <div className="theme-grid mb-6">
             {themeOptions.map(theme => (
               <button
@@ -27,12 +46,12 @@ export default function SettingsPage() {
             ))}
           </div>
 
-          <h2 className="headline-serif text-2xl mb-3">Default Rounds</h2>
+          <h2 className="text-2xl font-semibold mb-3">Default Rounds</h2>
           <div className="flex gap-3 mb-6">
-            {[5, 10].map(n => (
+            {([5, 10] as const).map(n => (
               <button
                 key={n}
-                onClick={() => setPreferredRounds(n as 5 | 10)}
+                onClick={() => setPreferredRounds(n)}
                 className={settings.preferredRounds === n ? 'btn-primary px-4 py-2.5' : 'btn-outline px-4 py-2.5'}
               >
                 {n} rounds

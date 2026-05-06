@@ -184,28 +184,26 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen game-shell">
-      <header className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6 sm:pt-6">
-        <div className="surface-card flex items-center justify-between gap-3 p-3 sm:p-4">
-          <button
-            onClick={handleExitToHome}
-            className="btn-ghost inline-flex items-center gap-2 px-2 py-1"
-          >
-            <span>✕</span> Exit
-          </button>
-          <div className="text-center">
-            <p className="font-semibold text-sm sm:text-base">Round {session.currentRound} of {session.totalRounds}</p>
-            <p className="content-muted text-xs">Time: {formatTime(elapsedSeconds)}</p>
-          </div>
-          <button
-            onClick={() => setIsPaused(true)}
-            className="btn-outline px-3 py-1.5 text-sm"
-          >
-            Pause
-          </button>
+      <header className="topbar">
+        <button
+          onClick={handleExitToHome}
+          className="btn-ghost inline-flex items-center gap-2 px-2 py-1"
+        >
+          <span>✕</span> Exit
+        </button>
+        <div className="text-center">
+          <p className="font-semibold text-sm sm:text-base">Round {session.currentRound} of {session.totalRounds}</p>
+          <p className="content-muted text-xs">Time: {formatTime(elapsedSeconds)}</p>
         </div>
+        <button
+          onClick={() => setIsPaused(true)}
+          className="btn-outline px-3 py-1.5 text-sm"
+        >
+          Pause
+        </button>
       </header>
 
-      <div className="flex-1 p-4 sm:p-6 max-w-6xl mx-auto w-full">
+      <div className="page !max-w-6xl w-full">
         <div className="play-layout">
           <div className="play-verse">
             <VerseDisplay

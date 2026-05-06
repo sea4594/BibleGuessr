@@ -2,33 +2,38 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-export type ThemeId = 'sunrise-paper' | 'sea-glass' | 'olive-clay' | 'midnight-study';
+export type ThemeId = 'ocean' | 'forest' | 'clay' | 'berry' | 'bw';
+export type ColorMode = 'dark' | 'light';
 
 export interface UiSettings {
   theme: ThemeId;
+  mode: ColorMode;
   preferredRounds: 5 | 10;
 }
 
 interface UiSettingsContextType {
   settings: UiSettings;
   setTheme: (theme: ThemeId) => void;
+  setMode: (mode: ColorMode) => void;
   setPreferredRounds: (rounds: 5 | 10) => void;
 }
 
 const STORAGE_KEY = 'bg-ui-settings-v1';
 
 const DEFAULT_SETTINGS: UiSettings = {
-  theme: 'sunrise-paper',
+  theme: 'ocean',
+  mode: 'dark',
   preferredRounds: 5,
 };
 
 const UiSettingsContext = createContext<UiSettingsContextType | null>(null);
 
 export const themeOptions: Array<{ id: ThemeId; name: string; description: string }> = [
-  { id: 'sunrise-paper', name: 'Sunrise Paper', description: 'Warm parchment with copper accents' },
-  { id: 'sea-glass', name: 'Sea Glass', description: 'Cool mint and slate, high clarity' },
-  { id: 'olive-clay', name: 'Olive Clay', description: 'Earthy neutrals with olive highlights' },
-  { id: 'midnight-study', name: 'Midnight Study', description: 'Low-light dark mode for night play' },
+  { id: 'ocean', name: 'Ocean', description: 'Cool marine slate and mist tones' },
+  { id: 'forest', name: 'Forest', description: 'Mossy greens with calm contrast' },
+  { id: 'clay', name: 'Clay', description: 'Warm clay neutrals and sand accents' },
+  { id: 'berry', name: 'Berry', description: 'Muted plum with soft pink contrast' },
+  { id: 'bw', name: 'Black & White', description: 'High-contrast monochrome palette' },
 ];
 
 export function UiSettingsProvider({ children }: { children: React.ReactNode }) {
@@ -46,6 +51,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       const parsed = JSON.parse(raw) as Partial<UiSettings>;
       return {
         theme: parsed.theme ?? DEFAULT_SETTINGS.theme,
+        mode: parsed.mode ?? DEFAULT_SETTINGS.mode,
         preferredRounds: parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds,
       };
     } catch {
@@ -55,6 +61,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
+    document.documentElement.setAttribute('data-mode', settings.mode);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 
@@ -63,6 +70,9 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       settings,
       setTheme: (theme: ThemeId) => {
         setSettings(prev => ({ ...prev, theme }));
+      },
+      setMode: (mode: ColorMode) => {
+        setSettings(prev => ({ ...prev, mode }));
       },
       setPreferredRounds: (preferredRounds: 5 | 10) => {
         setSettings(prev => ({ ...prev, preferredRounds }));

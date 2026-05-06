@@ -1,17 +1,13 @@
 import type { Metadata } from 'next';
-import { Lora, Plus_Jakarta_Sans } from 'next/font/google';
+import { Barlow } from 'next/font/google';
 import './globals.css';
 import { GameProvider } from '@/lib/gameContext';
 import { UiSettingsProvider } from '@/lib/uiSettingsContext';
 
-const bodyFont = Plus_Jakarta_Sans({
+const bodyFont = Barlow({
   subsets: ['latin'],
+  weight: ['500', '600', '700', '800'],
   variable: '--font-body',
-});
-
-const headlineFont = Lora({
-  subsets: ['latin'],
-  variable: '--font-headline',
 });
 
 export const metadata: Metadata = {
@@ -22,7 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${bodyFont.variable} ${headlineFont.variable} min-h-screen font-[var(--font-body)] antialiased`}>
+      <body className={`${bodyFont.variable} min-h-screen font-[var(--font-body)] antialiased`}>
         <UiSettingsProvider>
           <GameProvider>
             {children}
