@@ -31,10 +31,6 @@ function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; 
   return { book, chapter, verse };
 }
 
-function getApiBookName(bookName: string): string {
-  return bookName.replace(/ /g, '+');
-}
-
 function resolveNeighborVerse(
   book: string,
   chapter: number,
@@ -108,29 +104,27 @@ export default function GamePage() {
   }, [session, resetGame, router]);
 
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
-    const apiBook = getApiBookName(reference.book);
-    const apiNames = reference.book === 'Song of Solomon'
-      ? [`${apiBook}+${reference.chapter}:${reference.verse}`, `Song+of+Songs+${reference.chapter}:${reference.verse}`]
-      : [`${apiBook}+${reference.chapter}:${reference.verse}`];
+    try {
+      const params = new URLSearchParams({
+        book: reference.book,
+        chapter: String(reference.chapter),
+        verse: String(reference.verse),
+      });
+      const res = await fetch(`/api/verse?${params.toString()}`);
+      if (!res.ok) return null;
 
-    for (const name of apiNames) {
-      try {
-        const res = await fetch(`https://bible-api.com/${name}?translation=kjv`);
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (!data.text) continue;
-        return {
-          book: reference.book,
-          chapter: reference.chapter,
-          verse: reference.verse,
-          text: data.text.trim(),
-        } satisfies VerseInfo;
-      } catch {
-        // try fallback name
-      }
+      const data = await res.json();
+      if (!data?.text) return null;
+
+      return {
+        book: reference.book,
+        chapter: reference.chapter,
+        verse: reference.verse,
+        text: String(data.text).trim(),
+      } satisfies VerseInfo;
+    } catch {
+      return null;
     }
-
-    return null;
   }, []);
 
   const fetchVerse = useCallback(async (books: BookData[]) => {

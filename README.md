@@ -1,6 +1,6 @@
 # BibleGuessr
 
-A GeoGuessr-style Bible verse guessing game. Read a verse from the KJV Bible and guess which book, chapter, and verse it comes from.
+A GeoGuessr-style Bible verse guessing game. Read a verse and guess which book, chapter, and verse it comes from.
 
 ## Getting Started
 
@@ -25,7 +25,26 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 - Next.js 16 (App Router) with TypeScript
 - Tailwind CSS
-- Bible verses fetched from [bible-api.com](https://bible-api.com)
+- Bible verses served from a private Vercel Blob through a server API route
+
+## Private ESV Setup (Vercel Blob)
+
+1. Create a private Blob store in your Vercel project.
+2. Upload your `bible_esv.json` file to that store (do not commit it to this repo).
+3. Add these environment variables in Vercel Project Settings:
+	- `BLOB_READ_WRITE_TOKEN`
+	- `ESV_BLOB_KEY` (the blob pathname, for example `esv/bible_esv.json`)
+4. Redeploy after adding env vars.
+
+For local development, pull env vars with:
+
+```bash
+vercel env pull .env.local
+```
+
+Verse lookups are handled by:
+
+- `GET /api/verse?book=Genesis&chapter=1&verse=1`
 
 ## Build
 
