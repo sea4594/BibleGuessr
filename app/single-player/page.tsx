@@ -56,19 +56,19 @@ export default function SinglePlayerPage() {
       <div className="page">
         <header className="surface-card p-5">
           <p className="eyebrow mb-2">Single Player</p>
-          <h1 className="headline-serif text-3xl sm:text-4xl mb-2">Choose a Mode</h1>
-          <p className="content-muted">Pick a scripture pool and start a new run.</p>
+          <h1 className="headline-serif text-3xl sm:text-4xl mb-1">Modes</h1>
+          <p className="content-muted">Pick one and start.</p>
         </header>
 
         <section className="surface-card-soft p-4 mb-5">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="grid gap-3">
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search modes..."
               className="settings-input !w-full"
             />
-            <div className="flex gap-2">
+            <div className="grid gap-2">
               {[['all', 'All'], ['ot', 'Old Testament'], ['nt', 'New Testament']].map(([key, label]) => (
                 <button
                   key={key}
@@ -96,7 +96,7 @@ export default function SinglePlayerPage() {
               <article key={modeId} className="surface-card mode-card p-5 sm:p-6">
                 <p className="eyebrow mb-2">Mode</p>
                 <h2 className="headline-serif text-2xl mb-2">{mode.name}</h2>
-                <p className="content-muted text-sm mb-5">{mode.description}</p>
+                <p className="content-muted text-sm mb-4 line-clamp-2">{mode.description}</p>
                 <Link href={`/play/${modeId}`} className="btn-primary block text-center py-2.5">Start Mode</Link>
               </article>
             );

@@ -27,10 +27,10 @@ export default function HomePage() {
 
       <div className="page">
         <section className="surface-card p-5 sm:p-6">
-          <p className="eyebrow mb-3">Scripture Challenge</p>
+          <p className="eyebrow mb-3">Scripture Game</p>
           <h1 className="headline-serif text-4xl sm:text-5xl leading-[0.95] mb-3">Guess Verse Locations</h1>
           <p className="content-muted max-w-2xl text-base sm:text-lg">
-            Guess the book, chapter, and verse from a random KJV passage.
+            Find the book, chapter, and verse.
           </p>
           <div className="mt-4 flex flex-wrap gap-2.5 text-sm">
             <span className="surface-card-soft px-3 py-1.5">Theme: {settings.theme}</span>
@@ -62,25 +62,25 @@ export default function HomePage() {
           <Link href="/single-player" className="surface-card menu-card">
             <p className="eyebrow">Play</p>
             <h2 className="headline-serif text-2xl mb-2">Single Player</h2>
-            <p className="content-muted">Choose from all Bible mode pools and start a fast match.</p>
+            <p className="content-muted">Pick a mode and play.</p>
           </Link>
 
           <Link href="/multiplayer" className="surface-card menu-card">
             <p className="eyebrow">Party</p>
             <h2 className="headline-serif text-2xl mb-2">Multiplayer</h2>
-            <p className="content-muted">Pass-and-play support with local score tracking and turn order.</p>
+            <p className="content-muted">Local pass-and-play.</p>
           </Link>
 
           <Link href="/settings" className="surface-card menu-card">
             <p className="eyebrow">Customize</p>
             <h2 className="headline-serif text-2xl mb-2">Settings</h2>
-            <p className="content-muted">Switch themes and set your preferred round count.</p>
+            <p className="content-muted">Theme and defaults.</p>
           </Link>
 
           <Link href="/play/full-bible" className="surface-card menu-card quick-start">
             <p className="eyebrow">Instant Start</p>
             <h2 className="headline-serif text-2xl mb-2">Quick Match</h2>
-            <p className="content-muted">Jump into Full Bible mode immediately.</p>
+            <p className="content-muted">Start Full Bible now.</p>
           </Link>
         </section>
       </div>

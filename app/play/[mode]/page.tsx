@@ -49,13 +49,13 @@ export default function ModePage() {
 
       <div className="page max-w-xl">
       <div className="surface-card fade-up p-5 w-full">
-        <p className="eyebrow mb-3">Game Setup</p>
+        <p className="eyebrow mb-2">Setup</p>
         <h1 className="headline-serif text-3xl sm:text-4xl mb-2">{modeConfig.name}</h1>
-        <p className="content-muted mb-7 leading-relaxed">{modeConfig.description}</p>
+        <p className="content-muted mb-6">{modeConfig.description}</p>
 
         {modeConfig.isSingleBook && (
-          <div className="mb-7">
-            <label className="block text-sm font-semibold mb-2">Select Book</label>
+          <div className="mb-6">
+            <label className="block text-sm font-semibold mb-2">Book</label>
             <select
               value={selectedBook}
               onChange={e => setSelectedBook(e.target.value)}
@@ -68,16 +68,16 @@ export default function ModePage() {
           </div>
         )}
 
-        <div className="mb-7">
-          <label className="block text-sm font-semibold mb-2.5">Number of Rounds</label>
-          <div className="flex gap-3">
+        <div className="mb-6">
+          <label className="block text-sm font-semibold mb-2.5">Rounds</label>
+          <div className="grid gap-2">
             {([5, 10] as const).map(n => (
               <button
                 key={n}
                 onClick={() => setRounds(n)}
-                className={rounds === n ? 'btn-primary flex-1 py-2.5 font-semibold' : 'btn-outline flex-1 py-2.5 font-semibold'}
+                className={rounds === n ? 'btn-primary w-full py-2.5 font-semibold' : 'btn-outline w-full py-2.5 font-semibold'}
               >
-                {n} Rounds
+                {n}
               </button>
             ))}
           </div>
@@ -87,12 +87,12 @@ export default function ModePage() {
           onClick={handleStart}
           className="btn-primary w-full py-3 text-lg"
         >
-          Start Game
+          Start
         </button>
 
         <div className="flex flex-wrap gap-3 mt-3">
-          <button onClick={() => router.push('/single-player')} className="btn-ghost py-2">Back to Modes</button>
-          <button onClick={() => router.push('/settings')} className="btn-outline ml-auto px-3 py-2 text-sm">Theme & Settings</button>
+          <button onClick={() => router.push('/single-player')} className="btn-ghost py-2">Modes</button>
+          <button onClick={() => router.push('/settings')} className="btn-outline ml-auto px-3 py-2 text-sm">Settings</button>
         </div>
       </div>
       </div>

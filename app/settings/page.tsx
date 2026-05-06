@@ -16,16 +16,16 @@ export default function SettingsPage() {
       <div className="page max-w-4xl">
         <section className="surface-card p-5">
           <p className="eyebrow mb-2">Settings</p>
-          <h1 className="text-4xl sm:text-5xl font-bold mb-3">Game Preferences</h1>
-          <p className="content-muted mb-6">Match SphenPad-style themes, mode, and interaction defaults.</p>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-2">Preferences</h1>
+          <p className="content-muted mb-6">Theme and gameplay defaults.</p>
 
           <h2 className="text-2xl font-semibold mb-3">Color Mode</h2>
-          <div className="flex gap-3 mb-6">
+          <div className="grid gap-2 mb-6">
             {(['dark', 'light'] as const).map(mode => (
               <button
                 key={mode}
                 onClick={() => setMode(mode)}
-                className={settings.mode === mode ? 'btn-primary px-4 py-2.5' : 'btn-outline px-4 py-2.5'}
+                className={settings.mode === mode ? 'btn-primary w-full px-4 py-2.5 text-left' : 'btn-outline w-full px-4 py-2.5 text-left'}
               >
                 {mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
               </button>
@@ -47,12 +47,12 @@ export default function SettingsPage() {
           </div>
 
           <h2 className="text-2xl font-semibold mb-3">Default Rounds</h2>
-          <div className="flex gap-3 mb-6">
+          <div className="grid gap-2 mb-6">
             {([5, 10] as const).map(n => (
               <button
                 key={n}
                 onClick={() => setPreferredRounds(n)}
-                className={settings.preferredRounds === n ? 'btn-primary px-4 py-2.5' : 'btn-outline px-4 py-2.5'}
+                className={settings.preferredRounds === n ? 'btn-primary w-full px-4 py-2.5 text-left' : 'btn-outline w-full px-4 py-2.5 text-left'}
               >
                 {n} rounds
               </button>

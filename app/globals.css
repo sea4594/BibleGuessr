@@ -142,11 +142,11 @@ body {
 }
 
 .page {
-  width: min(980px, 100%);
+  width: min(860px, 100%);
   margin: 0 auto;
-  padding: 14px;
+  padding: clamp(12px, 2.2vw, 20px);
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .surface-card {
@@ -231,16 +231,16 @@ button,
 }
 
 .menu-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .mode-grid {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .mode-card,
 .menu-card {
-  padding: 12px;
+  padding: 14px;
 }
 
 .theme-option {
@@ -268,7 +268,7 @@ button,
 
 .settings-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .setting-row {
@@ -276,7 +276,7 @@ button,
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--line-strong);
   background: color-mix(in oklab, var(--panel-soft) 92%, transparent);
 }
@@ -304,15 +304,15 @@ button,
 .guess-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .guess-column {
   border: 1px solid var(--line-strong);
   background: var(--panel-soft);
   border-radius: 0;
-  min-height: 17rem;
-  padding: 8px;
+  min-height: 18rem;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -324,9 +324,59 @@ button,
   color: var(--text-muted);
 }
 
-.guess-value {
-  font-size: 1.3rem;
+.guess-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   font-weight: 700;
+}
+
+.guess-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guess-minmax {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.72rem;
+}
+
+.guess-minmax span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slider-step-controls {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.slider-step-btn {
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in oklab, var(--panel) 86%, transparent);
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.slider-step-btn:disabled {
+  opacity: 0.45;
+}
+
+.slider-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }
 
 .vertical-range {
@@ -334,8 +384,8 @@ button,
   appearance: slider-vertical;
   writing-mode: vertical-lr;
   direction: rtl;
-  width: 1rem;
-  height: clamp(8rem, 27vh, 14rem);
+  width: 1.2rem;
+  height: clamp(9rem, 30vh, 15rem);
 }
 
 input[type='range'] {
@@ -348,15 +398,15 @@ input[type='range']::-webkit-slider-track,
 input[type='range']::-moz-range-track {
   background: color-mix(in oklab, var(--accent) 40%, var(--panel-soft));
   border-radius: 0;
-  height: 7px;
+  height: 10px;
 }
 
 input[type='range']::-webkit-slider-thumb,
 input[type='range']::-moz-range-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 16px;
-  width: 16px;
+  height: 22px;
+  width: 22px;
   border-radius: 0;
   border: 1px solid color-mix(in oklab, var(--text-main) 34%, transparent);
   background: color-mix(in oklab, var(--text-main) 82%, var(--accent));
@@ -367,21 +417,19 @@ input[type='range']::-moz-range-thumb {
   outline-offset: -2px;
 }
 
-@media (min-width: 700px) {
-  .mode-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1080px) {
-  .mode-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 960px) {
   .play-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .guess-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guess-column {
+    min-height: 14rem;
   }
 }
 

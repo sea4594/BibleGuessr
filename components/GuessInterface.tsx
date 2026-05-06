@@ -39,7 +39,7 @@ export default function GuessInterface({ modeConfig, onSubmit }: Props) {
   return (
     <section className="surface-card p-4 sm:p-5 mt-5 sm:mt-6">
       <p className="eyebrow mb-3">Your Guess</p>
-      <h3 className="headline-serif text-2xl mb-4">Choose the Location</h3>
+      <h3 className="headline-serif text-2xl mb-4">Location</h3>
 
       <div className="guess-grid">
         <BookSlider
@@ -72,7 +72,7 @@ export default function GuessInterface({ modeConfig, onSubmit }: Props) {
         disabled={!selectedBook}
         className="btn-primary mt-6 w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
       >
-        Submit Guess
+        Submit
       </button>
     </section>
   );
