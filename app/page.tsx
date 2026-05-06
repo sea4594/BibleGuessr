@@ -37,8 +37,12 @@ export default function HomePage() {
 
   useEffect(() => {
     const ref = getDailyVerseRef();
-    const apiBook = ref.book.replace(/ /g, "+");
-    const url = `https://bible-api.com/${apiBook}+${ref.chapter}:${ref.verse}?translation=kjv`;
+    const params = new URLSearchParams({
+      book: ref.book,
+      chapter: String(ref.chapter),
+      verse: String(ref.verse),
+    });
+    const url = `/api/verse/?${params.toString()}`;
     void fetch(url)
       .then(r => r.json())
       .then((data: { text?: string }) => {

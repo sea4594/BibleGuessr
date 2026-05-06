@@ -44,7 +44,7 @@ vercel env pull .env.local
 
 Verse lookups are handled by:
 
-- `GET /api/verse?book=Genesis&chapter=1&verse=1`
+- `GET /api/verse/?book=Genesis&chapter=1&verse=1`
 
 ## Build
 

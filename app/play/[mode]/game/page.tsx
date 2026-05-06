@@ -110,7 +110,7 @@ export default function GamePage() {
         chapter: String(reference.chapter),
         verse: String(reference.verse),
       });
-      const res = await fetch(`/api/verse?${params.toString()}`);
+      const res = await fetch(`/api/verse/?${params.toString()}`);
       if (!res.ok) return null;
 
       const data = await res.json();
