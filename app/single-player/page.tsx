@@ -12,28 +12,20 @@ export default function SinglePlayerPage() {
       <div className="app-content app-content-scroll">
         <div className="page max-w-3xl">
           <section className="surface-card p-5">
-            <p className="eyebrow mb-2">Mode Select</p>
-            <h1 className="headline-serif text-3xl mb-2">Choose Play Mode</h1>
-            <p className="content-muted">Pick a mode card to open setup.</p>
+            <h1 className="headline-serif text-3xl">Single Player</h1>
           </section>
 
           <section className="mode-grid">
             <Link href="/single-player/whole-bible" className="surface-card mode-card">
-              <p className="eyebrow">Mode</p>
-              <h2 className="headline-serif text-2xl mb-2">Whole Bible</h2>
-              <p className="content-muted">All 66 books.</p>
+              <h2 className="headline-serif text-2xl mb-1">Whole Bible</h2>
             </Link>
 
             <Link href="/single-player/sections" className="surface-card mode-card">
-              <p className="eyebrow">Mode</p>
-              <h2 className="headline-serif text-2xl mb-2">Section Mode</h2>
-              <p className="content-muted">OT, NT, and grouped sections.</p>
+              <h2 className="headline-serif text-2xl mb-1">Section Mode</h2>
             </Link>
 
             <Link href="/single-player/book" className="surface-card mode-card">
-              <p className="eyebrow">Mode</p>
-              <h2 className="headline-serif text-2xl mb-2">Book Mode</h2>
-              <p className="content-muted">Choose a specific book or Surprise me.</p>
+              <h2 className="headline-serif text-2xl mb-1">Book Mode</h2>
             </Link>
           </section>
         </div>

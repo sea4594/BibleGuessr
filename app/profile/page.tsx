@@ -60,11 +60,12 @@ function AvatarEditor({
                     <button
                       key={opt}
                       onClick={() => update(attr.key, opt)}
-                      className="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
+                      className="w-11 h-11 rounded-full border-2 transition-transform hover:scale-110"
                       style={{
                         background: opt,
                         borderColor: local[attr.key] === opt ? 'var(--text-main)' : 'transparent',
                         transform: local[attr.key] === opt ? 'scale(1.18)' : undefined,
+                        boxShadow: local[attr.key] === opt ? '0 0 0 2px var(--bg), 0 0 0 4px var(--text-main)' : undefined,
                       }}
                       title={opt}
                     />
@@ -98,7 +99,7 @@ function AvatarEditor({
 }
 
 export default function ProfilePage() {
-  const { settings, setTheme, setMode, setPreferredRounds, setPreferredGameMode } = useUiSettings();
+  const { settings, setTheme, setPreferredRounds, setPreferredGameMode } = useUiSettings();
   const [profile, setProfile] = useState<UserProfile>(() => readLocalProfile());
   const [accountUser, setAccountUser] = useState<User | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -238,18 +239,6 @@ export default function ProfilePage() {
           {/* Appearance */}
           <section className="surface-card p-5">
             <p className="eyebrow mb-2">Appearance</p>
-            <h2 className="text-xl font-semibold mb-3">Color Mode</h2>
-            <div className="grid gap-2 mb-5">
-              {(['dark', 'light'] as const).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setMode(mode)}
-                  className={settings.mode === mode ? 'btn-primary w-full px-4 py-2.5 text-left' : 'btn-outline w-full px-4 py-2.5 text-left'}
-                >
-                  {mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
-                </button>
-              ))}
-            </div>
             <h2 className="text-xl font-semibold mb-3">Theme</h2>
             <div className="theme-grid">
               {themeOptions.map(theme => (

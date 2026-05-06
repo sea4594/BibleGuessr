@@ -65,7 +65,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
-    document.documentElement.setAttribute('data-mode', settings.mode);
+    document.documentElement.setAttribute('data-mode', 'dark');
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 

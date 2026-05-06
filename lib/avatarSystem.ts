@@ -94,40 +94,87 @@ export function defaultAvatarSpec(seed = 0): AvatarSpec {
 // Head center: (100, 82), r=44. Bottom: y=126. Top: y=38.
 
 function hairBack(style: string, color: string): string {
+  const c = color;
   switch (style) {
     case 'bald': return '';
     case 'short':
-      return `<ellipse cx="100" cy="71" rx="48" ry="36" fill="${color}"/>`;
+      // compact cap that hugs the head
+      return `<ellipse cx="100" cy="70" rx="47" ry="34" fill="${c}"/>
+        <rect x="53" y="78" width="8" height="28" rx="4" fill="${c}"/>
+        <rect x="139" y="78" width="8" height="28" rx="4" fill="${c}"/>`;
     case 'medium':
-      return `<ellipse cx="100" cy="66" rx="50" ry="40" fill="${color}"/>`;
+      return `<ellipse cx="100" cy="66" rx="50" ry="40" fill="${c}"/>
+        <rect x="47" y="78" width="12" height="64" rx="6" fill="${c}"/>
+        <rect x="141" y="78" width="12" height="64" rx="6" fill="${c}"/>`;
     case 'long':
-      return `<ellipse cx="100" cy="66" rx="50" ry="40" fill="${color}"/>`;
+      return `<ellipse cx="100" cy="66" rx="50" ry="40" fill="${c}"/>
+        <rect x="44" y="78" width="14" height="110" rx="7" fill="${c}"/>
+        <rect x="142" y="78" width="14" height="110" rx="7" fill="${c}"/>`;
     case 'curly':
-      return `<circle cx="70" cy="64" r="20" fill="${color}"/>
-        <circle cx="100" cy="54" r="22" fill="${color}"/>
-        <circle cx="130" cy="64" r="20" fill="${color}"/>
-        <circle cx="58" cy="82" r="18" fill="${color}"/>
-        <circle cx="142" cy="82" r="18" fill="${color}"/>`;
+      // large poofy mass behind head
+      return `<circle cx="100" cy="68" r="58" fill="${c}"/>
+        <circle cx="58" cy="88" r="24" fill="${c}"/>
+        <circle cx="142" cy="88" r="24" fill="${c}"/>
+        <circle cx="68" cy="130" r="18" fill="${c}"/>
+        <circle cx="132" cy="130" r="18" fill="${c}"/>`;
     case 'bun':
-      return `<ellipse cx="100" cy="71" rx="48" ry="30" fill="${color}"/>
-        <circle cx="100" cy="42" r="16" fill="${color}"/>`;
+      return `<ellipse cx="100" cy="70" rx="48" ry="32" fill="${c}"/>
+        <circle cx="100" cy="36" r="18" fill="${c}"/>`;
     case 'afro':
-      return `<circle cx="100" cy="76" r="66" fill="${color}"/>`;
+      return `<circle cx="100" cy="72" r="68" fill="${c}"/>
+        <circle cx="58" cy="98" r="28" fill="${c}"/>
+        <circle cx="142" cy="98" r="28" fill="${c}"/>`;
     case 'braids':
-      return `<ellipse cx="100" cy="71" rx="48" ry="36" fill="${color}"/>`;
+      return `<ellipse cx="100" cy="68" rx="50" ry="36" fill="${c}"/>
+        <rect x="44" y="80" width="14" height="100" rx="7" fill="${c}"/>
+        <rect x="142" y="80" width="14" height="100" rx="7" fill="${c}"/>`;
     default:
-      return `<ellipse cx="100" cy="71" rx="48" ry="36" fill="${color}"/>`;
+      return `<ellipse cx="100" cy="70" rx="47" ry="34" fill="${c}"/>`;
   }
 }
 
 function hairFront(style: string, color: string): string {
+  const c = color;
   switch (style) {
+    case 'bald': return '';
+    case 'short':
+      // side burns + short bangs fringe
+      return `<path d="M 56 86 Q 52 110 56 130" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <path d="M 144 86 Q 148 110 144 130" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <path d="M 66 42 Q 100 28 134 42" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
+    case 'medium':
+      // side curtains + fringe
+      return `<path d="M 52 82 Q 46 126 54 170" stroke="${c}" stroke-width="13" fill="none" stroke-linecap="round"/>
+        <path d="M 148 82 Q 154 126 146 170" stroke="${c}" stroke-width="13" fill="none" stroke-linecap="round"/>
+        <path d="M 64 40 Q 100 24 136 40" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
     case 'long':
-      return `<rect x="45" y="116" width="16" height="100" rx="8" fill="${color}"/>
-        <rect x="139" y="116" width="16" height="100" rx="8" fill="${color}"/>`;
+      // long flowing front strands
+      return `<path d="M 50 84 Q 42 130 48 200" stroke="${c}" stroke-width="15" fill="none" stroke-linecap="round"/>
+        <path d="M 150 84 Q 158 130 152 200" stroke="${c}" stroke-width="15" fill="none" stroke-linecap="round"/>
+        <path d="M 64 40 Q 100 22 136 40" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+    case 'curly':
+      // curly wisps in front of face
+      return `<circle cx="68" cy="72" r="14" fill="${c}"/>
+        <circle cx="132" cy="72" r="14" fill="${c}"/>
+        <circle cx="82" cy="56" r="12" fill="${c}"/>
+        <circle cx="118" cy="56" r="12" fill="${c}"/>
+        <circle cx="100" cy="46" r="13" fill="${c}"/>`;
+    case 'bun':
+      // side pieces + fringe with bun show-through above
+      return `<path d="M 56 84 Q 50 110 56 134" stroke="${c}" stroke-width="11" fill="none" stroke-linecap="round"/>
+        <path d="M 144 84 Q 150 110 144 134" stroke="${c}" stroke-width="11" fill="none" stroke-linecap="round"/>
+        <path d="M 66 42 Q 100 28 134 42" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
+    case 'afro':
+      // round textured edge peeking in front
+      return `<circle cx="60" cy="68" r="18" fill="${c}"/>
+        <circle cx="140" cy="68" r="18" fill="${c}"/>
+        <circle cx="78" cy="46" r="16" fill="${c}"/>
+        <circle cx="122" cy="46" r="16" fill="${c}"/>`;
     case 'braids':
-      return `<path d="M 67 126 Q 54 160 62 184 Q 70 208 58 228" stroke="${color}" stroke-width="9" fill="none" stroke-linecap="round"/>
-        <path d="M 133 126 Q 146 160 138 184 Q 130 208 142 228" stroke="${color}" stroke-width="9" fill="none" stroke-linecap="round"/>`;
+      // braids drape in front
+      return `<path d="M 56 126 Q 44 170 50 218" stroke="${c}" stroke-width="11" fill="none" stroke-linecap="round"/>
+        <path d="M 144 126 Q 156 170 150 218" stroke="${c}" stroke-width="11" fill="none" stroke-linecap="round"/>
+        <path d="M 66 40 Q 100 24 134 40" stroke="${c}" stroke-width="13" fill="none" stroke-linecap="round"/>`;
     default: return '';
   }
 }

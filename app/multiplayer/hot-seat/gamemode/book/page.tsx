@@ -42,8 +42,7 @@ export default function HotSeatBookModePage() {
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
           <section className="surface-card p-5">
-            <h1 className="headline-serif text-3xl mb-2">Book Mode</h1>
-            <p className="content-muted mb-4">Pick a book for Hot Seat.</p>
+            <h1 className="headline-serif text-3xl mb-4">Book Mode</h1>
 
             <select
               value={book}

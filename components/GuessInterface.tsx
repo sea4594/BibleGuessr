@@ -6,9 +6,10 @@ import VerticalDragSlider from './VerticalDragSlider';
 interface Props {
   modeConfig: GameModeConfig;
   onSubmit: (guess: { book: string; chapter: number; verse: number }) => void;
+  contextPenalty?: number;
 }
 
-export default function GuessInterface({ modeConfig, onSubmit }: Props) {
+export default function GuessInterface({ modeConfig, onSubmit, contextPenalty = 0 }: Props) {
   const defaultBook = modeConfig.books[0]?.book ?? '';
   const [bookIdx, setBookIdx] = useState(0);
   const [chapter, setChapter] = useState(1);
@@ -61,30 +62,32 @@ export default function GuessInterface({ modeConfig, onSubmit }: Props) {
           items={bookNames}
           selectedIndex={bookIdx}
           onChange={handleBookChange}
-          listMode
         />
         <VerticalDragSlider
           label="Chapter"
           items={chapterItems}
           selectedIndex={chapter - 1}
           onChange={handleChapterChange}
-          disabled={!defaultBook}
         />
         <VerticalDragSlider
           label="Verse"
           items={verseItems}
           selectedIndex={verse - 1}
           onChange={handleVerseChange}
-          disabled={!defaultBook}
         />
       </div>
 
-      <button
-        onClick={handleSubmit}
-        className="btn-primary w-full py-2.5 mt-2"
-      >
-        Submit Guess
-      </button>
+      <div className="flex items-center gap-2 mt-2">
+        {contextPenalty > 0 && (
+          <span className="text-sm font-bold text-[var(--danger)]" aria-label="Context penalty">-{contextPenalty}</span>
+        )}
+        <button
+          onClick={handleSubmit}
+          className="btn-primary flex-1 py-2.5"
+        >
+          Submit
+        </button>
+      </div>
     </div>
   );
 }

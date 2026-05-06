@@ -19,13 +19,6 @@ html[data-mode='dark'] {
   color-scheme: dark;
 }
 
-html[data-mode='light'] {
-  color-scheme: light;
-  --line: color-mix(in oklab, #000 14%, transparent);
-  --line-strong: color-mix(in oklab, #000 24%, transparent);
-  --shadow: 0 10px 24px rgba(27, 34, 44, 0.12);
-}
-
 html[data-theme='bw'][data-mode='dark'] {
   --bg: #1b1b1b;
   --panel: #2a2a2a;
@@ -35,31 +28,13 @@ html[data-theme='bw'][data-mode='dark'] {
   --accent: #d7d7d7;
 }
 
-html[data-theme='bw'][data-mode='light'] {
-  --bg: #f2f2f2;
-  --panel: #ffffff;
-  --panel-soft: #f8f8f8;
-  --text-main: #1f1f1f;
-  --text-muted: #656565;
-  --accent: #404040;
-}
-
-html[data-theme='ocean'][data-mode='light'] {
-  --bg: #edf2f7;
-  --panel: #ffffff;
-  --panel-soft: #d9e2ec;
-  --text-main: #1f2f3d;
-  --text-muted: #455a6f;
-  --accent: #475f73;
-}
-
 html[data-theme='ocean'][data-mode='dark'] {
-  --bg: #151d25;
-  --panel: #2c3a47;
-  --panel-soft: #475f73;
-  --text-main: #f1f6fb;
-  --text-muted: #c5d3e0;
-  --accent: #93a7bf;
+  --bg: #191c22;
+  --panel: #2a2f39;
+  --panel-soft: #303643;
+  --text-main: #f6f8ff;
+  --text-muted: #aeb8ce;
+  --accent: #5f95ff;
 }
 
 html[data-theme='forest'][data-mode='dark'] {
@@ -71,15 +46,6 @@ html[data-theme='forest'][data-mode='dark'] {
   --accent: #93a390;
 }
 
-html[data-theme='forest'][data-mode='light'] {
-  --bg: #eef2ed;
-  --panel: #ffffff;
-  --panel-soft: #dfe6dd;
-  --text-main: #1f2c1e;
-  --text-muted: #465845;
-  --accent: #5e6e5b;
-}
-
 html[data-theme='clay'][data-mode='dark'] {
   --bg: #1d1918;
   --panel: #4f453f;
@@ -89,15 +55,6 @@ html[data-theme='clay'][data-mode='dark'] {
   --accent: #e8dfda;
 }
 
-html[data-theme='clay'][data-mode='light'] {
-  --bg: #f5f1ee;
-  --panel: #ffffff;
-  --panel-soft: #e8dfda;
-  --text-main: #433630;
-  --text-muted: #675851;
-  --accent: #cbb5a9;
-}
-
 html[data-theme='berry'][data-mode='dark'] {
   --bg: #1a1419;
   --panel: #3f2e3a;
@@ -105,15 +62,6 @@ html[data-theme='berry'][data-mode='dark'] {
   --text-main: #fff6fb;
   --text-muted: #f4e3ec;
   --accent: #debfce;
-}
-
-html[data-theme='berry'][data-mode='light'] {
-  --bg: #f8f2f5;
-  --panel: #ffffff;
-  --panel-soft: #e9d6df;
-  --text-main: #4a2f3f;
-  --text-muted: #704f61;
-  --accent: #9e6a84;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -806,4 +754,206 @@ input[type='range']::-moz-range-thumb {
   background: var(--panel-soft);
   border: 1px solid var(--line);
   border-radius: 10px;
+}
+
+/* ====== Game: condensed top bar ====== */
+.game-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: max(6px, env(safe-area-inset-top)) 10px 6px;
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  min-height: 0;
+}
+.game-topbar-round {
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.game-topbar-player {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.game-topbar-time {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.game-topbar-pause {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--text-main);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ====== Game content layout ====== */
+.game-content {
+  padding-bottom: env(safe-area-inset-bottom) !important;
+}
+.game-content .page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  gap: 6px;
+  max-width: 100%;
+}
+.game-content .play-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 6px;
+  overflow: hidden;
+}
+.game-content .play-verse {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.game-content .play-guess {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.game-content .guess-interface {
+  flex: 1;
+}
+.game-content .sliders-row {
+  flex: 1;
+  min-height: 0;
+}
+@media (max-width: 640px) {
+  .game-content .play-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1.3fr;
+  }
+}
+
+/* ====== Verse display wrapper ====== */
+.verse-display-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.verse-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 1px;
+}
+
+/* ====== Pause overlay ====== */
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+.pause-card {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+/* ====== Slider popup – renders above finger within track-wrap ====== */
+.vslider-popup-above {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  /* top is set via inline style */
+  background: var(--panel);
+  border: 1.5px solid color-mix(in oklab, var(--accent) 70%, var(--line));
+  border-radius: 10px;
+  padding: 4px 5px;
+  z-index: 100;
+  min-width: 72px;
+  max-width: 130px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+/* Override old right-side popup positioning when using above variant */
+.vslider-track-wrap {
+  overflow: visible !important;
+}
+
+/* ====== ScrollWheel Picker ====== */
+.scroll-picker-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.scroll-picker-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.scroll-picker {
+  height: calc(3 * 44px);
+  width: 80px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  scrollbar-width: none;
+  position: relative;
+}
+.scroll-picker::-webkit-scrollbar { display: none; }
+.scroll-picker-item {
+  height: 44px;
+  scroll-snap-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.scroll-picker-item.selected {
+  color: var(--text-main);
+  font-size: 1.3rem;
+}
+.scroll-picker::before,
+.scroll-picker::after {
+  content: '';
+  display: block;
+  height: 44px;
 }

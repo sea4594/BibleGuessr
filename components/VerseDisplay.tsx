@@ -30,10 +30,10 @@ export default function VerseDisplay({
 }: Props) {
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-52">
+      <div className="flex-1 flex items-center justify-center min-h-40">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="content-muted">Loading verse...</p>
+          <div className="w-8 h-8 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="content-muted text-sm">Loading verse…</p>
         </div>
       </div>
     );
@@ -41,15 +41,10 @@ export default function VerseDisplay({
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-52">
+      <div className="flex-1 flex items-center justify-center min-h-40">
         <div className="text-center">
-          <p className="text-[var(--danger)] mb-3">{error}</p>
-          <button
-            onClick={onRetry}
-            className="btn-primary py-2 px-4"
-          >
-            Try Again
-          </button>
+          <p className="text-[var(--danger)] mb-3 text-sm">{error}</p>
+          <button onClick={onRetry} className="btn-primary py-2 px-4 text-sm">Try Again</button>
         </div>
       </div>
     );
@@ -60,25 +55,28 @@ export default function VerseDisplay({
   const versesToDisplay = [...previousVerses, verse, ...nextVerses];
 
   return (
-    <div className="fade-up">
+    <div className="verse-display-wrap">
+      {/* Previous button – sticky, does not scroll with text */}
       <button
         onClick={onAddPrevious}
         disabled={Boolean(isLoadingNeighbor)}
-        className="btn-outline w-full py-2 text-sm mb-2 disabled:opacity-50"
+        className="btn-outline w-full py-1.5 text-xs mb-1 disabled:opacity-50 flex-shrink-0"
       >
-        Previous verse (-10 points)
+        ↑ Previous verse&nbsp;
+        <span className="text-[var(--danger)] font-semibold">-10</span>
       </button>
 
-      <div className="surface-card relative p-4 sm:p-5">
-        <div className="absolute -top-3 left-4 bg-[var(--accent)] text-[var(--text-main)] text-xs font-bold px-2 py-0.5 border border-[var(--line-strong)]">
-          KJV
-        </div>
-        <div className="h-64 overflow-y-auto px-2 py-1">
+      {/* Scrollable verse area */}
+      <div className="verse-scroll-area">
+        <div className="surface-card relative p-3 sm:p-4">
+          <div className="absolute -top-3 left-4 bg-[var(--accent)] text-[var(--text-main)] text-xs font-bold px-2 py-0.5 border border-[var(--line-strong)]">
+            KJV
+          </div>
           <div className="space-y-3">
             {versesToDisplay.map(item => (
               <p
                 key={`${item.book}-${item.chapter}-${item.verse}`}
-                className="headline-serif text-[var(--text-main)] text-lg sm:text-xl leading-relaxed text-center italic"
+                className="headline-serif text-[var(--text-main)] text-base sm:text-lg leading-relaxed text-center italic"
               >
                 &ldquo;{item.text}&rdquo;
               </p>
@@ -87,15 +85,15 @@ export default function VerseDisplay({
         </div>
       </div>
 
+      {/* Next button – sticky, does not scroll with text */}
       <button
         onClick={onAddNext}
         disabled={Boolean(isLoadingNeighbor)}
-        className="btn-outline w-full py-2 text-sm mt-2 disabled:opacity-50"
+        className="btn-outline w-full py-1.5 text-xs mt-1 disabled:opacity-50 flex-shrink-0"
       >
-        Next verse (-10 points)
+        ↓ Next verse&nbsp;
+        <span className="text-[var(--danger)] font-semibold">-10</span>
       </button>
-
-      <p className="content-muted text-sm text-center mt-3">Where is this verse found?</p>
     </div>
   );
 }
