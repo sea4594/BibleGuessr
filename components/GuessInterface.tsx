@@ -1,8 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { GameModeConfig } from '@/lib/gameModes';
-import BookSlider from './BookSlider';
-import ChapterVerseSlider from './ChapterVerseSlider';
+import VerticalDragSlider from './VerticalDragSlider';
 
 interface Props {
   modeConfig: GameModeConfig;
@@ -11,69 +10,81 @@ interface Props {
 
 export default function GuessInterface({ modeConfig, onSubmit }: Props) {
   const defaultBook = modeConfig.books[0]?.book ?? '';
-
-  const [selectedBook, setSelectedBook] = useState<string>(defaultBook);
+  const [bookIdx, setBookIdx] = useState(0);
   const [chapter, setChapter] = useState(1);
   const [verse, setVerse] = useState(1);
 
-  const bookData = modeConfig.books.find(b => b.book === selectedBook) ?? null;
-  const chaptersCount = bookData ? bookData.chapters.length : 1;
-  const chapterData = bookData?.chapters.find(c => parseInt(c.chapter) === chapter);
-  const versesCount = chapterData ? parseInt(chapterData.verses) : 1;
+  const bookNames = useMemo(() => modeConfig.books.map(b => b.book), [modeConfig]);
+  const selectedBook = modeConfig.books[bookIdx];
 
-  const handleBookSelect = (book: string) => {
-    setSelectedBook(book);
+  const chaptersCount = selectedBook ? selectedBook.chapters.length : 1;
+  const chapterItems = useMemo(
+    () => Array.from({ length: chaptersCount }, (_, i) => String(i + 1)),
+    [chaptersCount]
+  );
+
+  const chapterData = selectedBook?.chapters[chapter - 1];
+  const versesCount = chapterData ? parseInt(chapterData.verses, 10) : 1;
+  const verseItems = useMemo(
+    () => Array.from({ length: versesCount }, (_, i) => String(i + 1)),
+    [versesCount]
+  );
+
+  const handleBookChange = (idx: number) => {
+    setBookIdx(idx);
     setChapter(1);
     setVerse(1);
   };
 
-  const handleChapterChange = (val: number) => {
-    setChapter(val);
+  const handleChapterChange = (idx: number) => {
+    setChapter(idx + 1);
     setVerse(1);
   };
 
+  const handleVerseChange = (idx: number) => {
+    setVerse(idx + 1);
+  };
+
   const handleSubmit = () => {
-    onSubmit({ book: selectedBook || defaultBook, chapter, verse });
+    onSubmit({
+      book: selectedBook?.book ?? defaultBook,
+      chapter,
+      verse,
+    });
   };
 
   return (
-    <section className="surface-card p-4 sm:p-5 mt-5 sm:mt-6">
-      <p className="eyebrow mb-3">Your Guess</p>
-      <h3 className="headline-serif text-2xl mb-4">Location</h3>
-
-      <div className="guess-grid">
-        <BookSlider
-          books={modeConfig.books}
-          selectedBook={selectedBook || null}
-          onSelect={handleBookSelect}
+    <div className="guess-interface">
+      <div className="sliders-row">
+        <VerticalDragSlider
+          label="Book"
+          items={bookNames}
+          selectedIndex={bookIdx}
+          onChange={handleBookChange}
+          listMode
         />
-
-        <ChapterVerseSlider
+        <VerticalDragSlider
           label="Chapter"
-          value={chapter}
-          min={1}
-          max={chaptersCount}
-          disabled={!selectedBook}
+          items={chapterItems}
+          selectedIndex={chapter - 1}
           onChange={handleChapterChange}
+          disabled={!defaultBook}
         />
-
-        <ChapterVerseSlider
+        <VerticalDragSlider
           label="Verse"
-          value={verse}
-          min={1}
-          max={Math.max(versesCount, 1)}
-          disabled={!selectedBook}
-          onChange={setVerse}
+          items={verseItems}
+          selectedIndex={verse - 1}
+          onChange={handleVerseChange}
+          disabled={!defaultBook}
         />
       </div>
 
       <button
         onClick={handleSubmit}
-        disabled={!selectedBook}
-        className="btn-primary mt-6 w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
+        className="btn-primary w-full py-2.5 mt-2"
       >
-        Submit
+        Submit Guess
       </button>
-    </section>
+    </div>
   );
 }

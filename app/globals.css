@@ -557,3 +557,253 @@ input[type='range']::-moz-range-thumb {
     transform: translateY(0);
   }
 }
+
+/* ====== Game layout: full-screen, no scroll ====== */
+.game-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.game-shell .app-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.game-shell .page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  gap: 8px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.game-shell .play-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.game-shell .play-verse {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.game-shell .play-guess {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 960px) {
+  .game-shell .play-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1.4fr;
+  }
+}
+
+/* ====== Guess Interface ====== */
+.guess-interface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+}
+
+.sliders-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ====== Vertical Drag Slider ====== */
+.vslider-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  position: relative;
+}
+
+.vslider-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.vslider-selected-val {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 3px;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.vslider-track-wrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  position: relative;
+}
+
+.vslider-track {
+  flex: 1;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-soft);
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Number mode fill */
+.vslider-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: color-mix(in oklab, var(--accent) 36%, var(--panel-soft));
+  transition: height 0.06s ease;
+  pointer-events: none;
+}
+
+/* End labels */
+.vslider-end-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 2;
+  padding: 2px 0;
+}
+
+.vslider-end-label.top { top: 2px; }
+.vslider-end-label.bottom { bottom: 2px; }
+
+/* Thumb indicator line */
+.vslider-thumb-line {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  height: 2px;
+  background: var(--text-main);
+  pointer-events: none;
+  z-index: 3;
+  border-radius: 1px;
+  opacity: 0.85;
+  transition: top 0.06s ease;
+}
+
+/* Book list mode */
+.vslider-book-list {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.vslider-book-item {
+  flex-shrink: 0;
+  font-size: 5.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  padding: 0 3px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vslider-book-item.active {
+  color: var(--text-main);
+  background: color-mix(in oklab, var(--accent) 32%, transparent);
+  font-weight: 800;
+}
+
+/* Drag popup */
+.vslider-popup {
+  position: absolute;
+  left: calc(100% + 5px);
+  background: var(--panel);
+  border: 1.5px solid color-mix(in oklab, var(--accent) 70%, var(--line));
+  border-radius: 10px;
+  padding: 4px 5px;
+  z-index: 100;
+  min-width: 72px;
+  max-width: 130px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.vslider-popup-item {
+  font-size: 0.68rem;
+  padding: 2px 4px;
+  text-align: center;
+  color: var(--text-muted);
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vslider-popup-item.center {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+  padding: 4px 6px;
+  border-radius: 6px;
+  margin: 2px 0;
+}
+
+.vslider-popup-item.empty {
+  height: 24px;
+}
+
+/* Verse display area controls row */
+.controls-row {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
