@@ -1,11 +1,14 @@
 'use client';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { gameModes, GameModeId } from '@/lib/gameModes';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
 import { useUiSettings } from '@/lib/uiSettingsContext';
 import AppTopBar from '@/components/AppTopBar';
+import HorizontalWheel from '@/components/HorizontalWheel';
+
+const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 export default function ModePage() {
   const params = useParams();
@@ -14,17 +17,8 @@ export default function ModePage() {
   const { settings } = useUiSettings();
   const modeId = params.mode as GameModeId;
   const modeConfig = gameModes[modeId];
-  const [rounds, setRounds] = useState<5 | 10>(settings.preferredRounds);
+  const [rounds, setRounds] = useState<number>(settings.preferredRounds);
   const [selectedBook, setSelectedBook] = useState(bibleData[0].book);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-    const isDirectLoad = !document.referrer || !document.referrer.includes(window.location.host);
-    if (isDirectLoad && (navEntry?.type === 'navigate' || navEntry?.type === 'reload')) {
-      router.replace('/');
-    }
-  }, [router]);
 
 
   if (!modeConfig) {
@@ -54,11 +48,11 @@ export default function ModePage() {
       <AppTopBar title="Game Setup" backHref="/single-player" />
 
       <div className="app-content app-content-scroll">
-      <div className="page max-w-xl">
+      <div className="page max-w-xl setup-page">
+        <h1 className="headline-serif text-3xl sm:text-4xl setup-title">{modeConfig.name}</h1>
+        <p className="content-muted mb-3">{modeConfig.description}</p>
+
       <div className="surface-card fade-up p-5 w-full">
-        <p className="eyebrow mb-2">Setup</p>
-        <h1 className="headline-serif text-3xl sm:text-4xl mb-2">{modeConfig.name}</h1>
-        <p className="content-muted mb-6">{modeConfig.description}</p>
 
         {modeConfig.isSingleBook && (
           <div className="mb-6">
@@ -76,31 +70,16 @@ export default function ModePage() {
         )}
 
         <div className="mb-6">
-          <label className="block text-sm font-semibold mb-2.5">Rounds</label>
-          <div className="grid gap-2">
-            {([5, 10] as const).map(n => (
-              <button
-                key={n}
-                onClick={() => setRounds(n)}
-                className={rounds === n ? 'btn-primary w-full py-2.5 font-semibold' : 'btn-outline w-full py-2.5 font-semibold'}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button
-          onClick={handleStart}
-          className="btn-primary w-full py-3 text-lg"
-        >
-          Start
-        </button>
-
-        <div className="flex flex-wrap gap-3 mt-3">
-          <button onClick={() => router.push('/single-player')} className="btn-ghost py-2">Modes</button>
+          <HorizontalWheel label="Rounds" values={[...ROUND_VALUES]} selected={rounds} onChange={setRounds} />
         </div>
       </div>
+
+      <button
+        onClick={handleStart}
+        className="btn-primary setup-start-btn"
+      >
+        Start
+      </button>
       </div>
       </div>
     </main>

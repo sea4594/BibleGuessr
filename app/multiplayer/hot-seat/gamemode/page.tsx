@@ -10,9 +10,7 @@ export default function HotSeatGamemodePage() {
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-3xl">
-          <section className="surface-card p-5">
-            <h1 className="headline-serif text-3xl">Select Gamemode</h1>
-          </section>
+          <h1 className="headline-serif text-3xl mb-1">Select Gamemode</h1>
 
           <section className="mode-grid">
             <Link href="/multiplayer/hot-seat/gamemode/whole-bible" className="surface-card mode-card">

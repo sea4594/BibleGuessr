@@ -3,9 +3,12 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import AppTopBar from '@/components/AppTopBar';
+import HorizontalWheel from '@/components/HorizontalWheel';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
 import { gameModes } from '@/lib/gameModes';
+
+const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export default function BookModeSetupPage() {
   const router = useRouter();
@@ -15,10 +18,7 @@ export default function BookModeSetupPage() {
   const [surprise, setSurprise] = useState(false);
 
   const handleStart = () => {
-    const resolvedBook = surprise
-      ? bibleData[Math.floor(Math.random() * bibleData.length)].book
-      : book;
-
+    const resolvedBook = surprise ? bibleData[Math.floor(Math.random() * bibleData.length)].book : book;
     const selected = bibleData.find(item => item.book === resolvedBook) ?? bibleData[0];
     startGame({
       mode: 'book-selection',
@@ -35,23 +35,13 @@ export default function BookModeSetupPage() {
       <AppTopBar title="Book Mode Setup" backHref="/single-player" />
 
       <div className="app-content app-content-scroll">
-        <div className="page max-w-xl">
-          <section className="surface-card p-5">
-            <p className="eyebrow mb-2">Setup</p>
-            <h1 className="headline-serif text-3xl mb-2">Book Mode</h1>
-            <p className="content-muted mb-5">Choose rounds and your book, or surprise yourself.</p>
+        <div className="page max-w-xl setup-page">
+          <h1 className="headline-serif text-3xl sm:text-4xl setup-title">Book Mode</h1>
 
-            <label className="block mb-2 text-sm font-semibold">Rounds: {rounds}</label>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              value={rounds}
-              onChange={e => setRounds(parseInt(e.target.value, 10))}
-              className="w-full mb-6"
-            />
+          <section className="surface-card p-4 sm:p-5">
+            <HorizontalWheel label="Rounds" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
 
-            <label className="block text-sm font-semibold mb-2">Book Selection</label>
+            <label className="block text-sm font-semibold mb-2 mt-4">Book Selection</label>
             <select
               value={book}
               onChange={e => setBook(e.target.value)}
@@ -63,7 +53,7 @@ export default function BookModeSetupPage() {
               ))}
             </select>
 
-            <label className="setting-row mb-6">
+            <label className="setting-row">
               <span>Surprise me!</span>
               <input
                 type="checkbox"
@@ -72,9 +62,9 @@ export default function BookModeSetupPage() {
                 aria-label="Surprise me"
               />
             </label>
-
-            <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
           </section>
+
+          <button onClick={handleStart} className="btn-primary setup-start-btn">Start</button>
         </div>
       </div>
     </main>

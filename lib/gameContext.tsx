@@ -40,7 +40,6 @@ export interface GameSession {
   rounds: RoundData[];
   selectedBook?: string;
   returnPath?: string;
-  seed?: number;
   multiplayer?: MultiplayerConfig;
   gameState: 'setup' | 'playing' | 'result' | 'summary';
 }

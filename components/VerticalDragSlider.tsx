@@ -12,7 +12,7 @@ interface Props {
 // Upward calibration: fingertip registers at center of touch, but the visible
 // tip is this many px higher. Adjust so the selected item matches where the
 // user actually points.
-const CALIBRATION_OFFSET = 22;
+const CALIBRATION_OFFSET = 0;
 const POPUP_H = 130; // approximate popup height, px
 
 export default function VerticalDragSlider({
@@ -60,6 +60,8 @@ export default function VerticalDragSlider({
 
   const activeIdx = dragging ? hoverIdx : selectedIndex;
   const thumbPct = items.length <= 1 ? 0 : (activeIdx / (items.length - 1)) * 100;
+  const itemHeightPercent = items.length > 0 ? 100 / items.length : 100;
+  const dynamicFontPx = Math.max(4, Math.min(14, Math.floor(220 / Math.max(items.length, 1))));
 
   // 5-item context window
   const contextItems = [-2, -1, 0, 1, 2].map(off => {
@@ -87,7 +89,16 @@ export default function VerticalDragSlider({
         >
           <div className="vslider-book-list" aria-hidden="true">
             {items.map((name, i) => (
-              <div key={i} className={`vslider-book-item${i === activeIdx ? ' active' : ''}`}>
+              <div
+                key={i}
+                className={`vslider-book-item${i === activeIdx ? ' active' : ''}`}
+                style={{
+                  height: `${itemHeightPercent}%`,
+                  minHeight: `${itemHeightPercent}%`,
+                  lineHeight: `${itemHeightPercent}%`,
+                  fontSize: `${dynamicFontPx}px`,
+                }}
+              >
                 {name}
               </div>
             ))}

@@ -4,59 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
+import HorizontalWheel from '@/components/HorizontalWheel';
 import { defaultHotSeatSettings, readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
 import { hostParty, joinParty, PartyRoom, subscribeToParty } from '@/lib/partyEngine';
 import { isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
-
-// ── Horizontal Scroll-wheel picker ──────────────────────────────────────────
-function HScrollPicker({
-  label,
-  values,
-  selected,
-  onChange,
-}: {
-  label: string;
-  values: number[];
-  selected: number;
-  onChange: (v: number) => void;
-}) {
-  const listRef = useRef<HTMLDivElement>(null);
-  const ITEM_W = 60;
-  const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const idx = values.indexOf(selected);
-    if (idx < 0 || !listRef.current) return;
-    listRef.current.scrollLeft = idx * ITEM_W;
-  }, [selected, values]);
-
-  const handleScroll = () => {
-    if (!listRef.current) return;
-    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-    scrollTimeout.current = setTimeout(() => {
-      if (!listRef.current) return;
-      const idx = Math.round(listRef.current.scrollLeft / ITEM_W);
-      const clamped = Math.max(0, Math.min(values.length - 1, idx));
-      listRef.current.scrollLeft = clamped * ITEM_W;
-      onChange(values[clamped]);
-    }, 120);
-  };
-
-  return (
-    <div className="h-scroll-picker-wrap">
-      <span className="h-scroll-picker-label">{label}</span>
-      <div ref={listRef} className="h-scroll-picker" onScroll={handleScroll}>
-        {values.map(v => (
-          <div key={v} className={`h-scroll-picker-item${v === selected ? ' selected' : ''}`} onClick={() => onChange(v)}>
-            {v}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 const PLAYER_VALUES = [2, 3, 4, 5, 6, 7, 8];
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -162,8 +115,8 @@ export default function MultiplayerPage() {
 
                 {/* Horizontal pickers row */}
                 <div className="flex gap-6 justify-center mb-6 px-2">
-                  <HScrollPicker label="Players" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
-                  <HScrollPicker label="Rounds/Player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+                  <HorizontalWheel label="Players" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
+                  <HorizontalWheel label="Rounds/Player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
                 </div>
 
                 {/* Player names */}

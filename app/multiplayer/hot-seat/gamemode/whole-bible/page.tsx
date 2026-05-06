@@ -48,7 +48,6 @@ export default function HotSeatWholeBiblePage() {
       mode: 'full-bible',
       modeConfig: MODE,
       totalRounds: settings.players * rounds,
-      seed: Date.now(),
       returnPath: '/multiplayer/hot-seat/gamemode',
       multiplayer: {
         enabled: true,

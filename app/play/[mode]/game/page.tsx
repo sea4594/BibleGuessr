@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -6,7 +7,6 @@ import { useGame } from '@/lib/gameContext';
 import { GameModeId } from '@/lib/gameModes';
 import { calculateScore } from '@/lib/scoring';
 import { bibleData, BookData } from '@/lib/bibleData';
-import { SeededRandom } from '@/lib/seededRandom';
 import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import RoundResult from '@/components/RoundResult';
@@ -22,19 +22,28 @@ interface VerseInfo {
 
 type NeighborDirection = 'previous' | 'next';
 
-function pickRandomVerse(books: BookData[], rng?: SeededRandom): { book: BookData; chapter: number; verse: number } {
-  const rnd = (max: number) => rng ? Math.floor(rng.next() * max) : Math.floor(Math.random() * max);
-  const book = books[rnd(books.length)];
-  const chapterData = book.chapters[rnd(book.chapters.length)];
-  const chapter = parseInt(chapterData.chapter);
-  const verseCount = parseInt(chapterData.verses);
-  const verse = rnd(verseCount) + 1;
+function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
+  const book = books[Math.floor(Math.random() * books.length)];
+  const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
+  const chapter = parseInt(chapterData.chapter, 10);
+  const verseCount = parseInt(chapterData.verses, 10);
+  const verse = Math.floor(Math.random() * verseCount) + 1;
   return { book, chapter, verse };
 }
 
-function resolveNeighborVerse(book: string, chapter: number, verse: number, direction: NeighborDirection): { book: string; chapter: number; verse: number } | null {
+function getApiBookName(bookName: string): string {
+  return bookName.replace(/ /g, '+');
+}
+
+function resolveNeighborVerse(
+  book: string,
+  chapter: number,
+  verse: number,
+  direction: NeighborDirection
+): { book: string; chapter: number; verse: number } | null {
   const bookIndex = bibleData.findIndex(b => b.book === book);
   if (bookIndex < 0) return null;
+
   const bookData = bibleData[bookIndex];
   const chapterData = bookData.chapters[chapter - 1];
   const maxVerse = chapterData ? parseInt(chapterData.verses, 10) : 1;
@@ -42,13 +51,23 @@ function resolveNeighborVerse(book: string, chapter: number, verse: number, dire
   if (direction === 'previous') {
     if (verse > 1) return { book, chapter, verse: verse - 1 };
     if (chapter > 1) {
-      const prevChData = bookData.chapters[chapter - 2];
-      return { book, chapter: chapter - 1, verse: parseInt(prevChData?.verses ?? '1', 10) };
+      const previousChapter = chapter - 1;
+      const previousChapterData = bookData.chapters[previousChapter - 1];
+      return {
+        book,
+        chapter: previousChapter,
+        verse: previousChapterData ? parseInt(previousChapterData.verses, 10) : 1,
+      };
     }
     if (bookIndex === 0) return null;
-    const prevBook = bibleData[bookIndex - 1];
-    const lastCh = prevBook.chapters[prevBook.chapters.length - 1];
-    return { book: prevBook.book, chapter: prevBook.chapters.length, verse: parseInt(lastCh.verses, 10) };
+    const previousBook = bibleData[bookIndex - 1];
+    const previousBookChapterCount = previousBook.chapters.length;
+    const previousBookFinalChapter = previousBook.chapters[previousBookChapterCount - 1];
+    return {
+      book: previousBook.book,
+      chapter: previousBookChapterCount,
+      verse: parseInt(previousBookFinalChapter.verses, 10),
+    };
   }
 
   if (verse < maxVerse) return { book, chapter, verse: verse + 1 };
@@ -64,120 +83,169 @@ export default function GamePage() {
   const modeId = params.mode as GameModeId;
 
   const [currentVerse, setCurrentVerse] = useState<VerseInfo | null>(null);
+  const [sharedVerseByRound, setSharedVerseByRound] = useState<Record<number, VerseInfo>>({});
   const [isLoadingVerse, setIsLoadingVerse] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [verseError, setVerseError] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [previousVerses, setPreviousVerses] = useState<VerseInfo[]>([]);
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
-  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
-  const [rng, setRng] = useState<SeededRandom | undefined>(undefined);
 
   useEffect(() => {
     if (!session) router.replace('/');
-    else if (session.seed) {
-      const t = setTimeout(() => setRng(new SeededRandom(session.seed!)), 0);
-      return () => clearTimeout(t);
-    }
   }, [session, router]);
 
   useEffect(() => {
     if (!session) return;
     if (session.gameState !== 'summary') return;
     if (session.multiplayer?.lobbyType !== 'hot-seat') return;
+
     const target = session.returnPath ?? '/multiplayer/hot-seat/gamemode';
     resetGame();
     router.replace(target);
   }, [session, resetGame, router]);
 
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
-    const apiBook = reference.book.replace(/ /g, '+');
-    const names = reference.book === 'Song of Solomon'
+    const apiBook = getApiBookName(reference.book);
+    const apiNames = reference.book === 'Song of Solomon'
       ? [`${apiBook}+${reference.chapter}:${reference.verse}`, `Song+of+Songs+${reference.chapter}:${reference.verse}`]
       : [`${apiBook}+${reference.chapter}:${reference.verse}`];
-    for (const name of names) {
+
+    for (const name of apiNames) {
       try {
         const res = await fetch(`https://bible-api.com/${name}?translation=kjv`);
         if (!res.ok) continue;
         const data = await res.json();
         if (!data.text) continue;
-        return { book: reference.book, chapter: reference.chapter, verse: reference.verse, text: data.text.trim() } satisfies VerseInfo;
-      } catch { /* try next */ }
+        return {
+          book: reference.book,
+          chapter: reference.chapter,
+          verse: reference.verse,
+          text: data.text.trim(),
+        } satisfies VerseInfo;
+      } catch {
+        // try fallback name
+      }
     }
+
     return null;
   }, []);
 
   const fetchVerse = useCallback(async (books: BookData[]) => {
+    if (!session) return;
+
     setIsLoadingVerse(true);
     setVerseError(null);
     setPreviousVerses([]);
     setNextVerses([]);
+
+    const playerCount = session.multiplayer?.players.length ?? 1;
+    const isAlternate = session.multiplayer?.enabled && session.multiplayer.turnStyle === 'alternate';
+    const isAllAtOnce = session.multiplayer?.enabled && session.multiplayer.turnStyle === 'all-at-once';
+    const roundsPerPlayer = session.multiplayer?.roundsPerPlayer ?? 1;
+
+    let logicalRound = session.currentRound;
+    if (isAlternate) {
+      logicalRound = Math.ceil(session.currentRound / playerCount);
+    } else if (isAllAtOnce) {
+      logicalRound = ((session.currentRound - 1) % roundsPerPlayer) + 1;
+    }
+
+    if (session.multiplayer?.enabled && sharedVerseByRound[logicalRound]) {
+      setCurrentVerse(sharedVerseByRound[logicalRound]);
+      setElapsedSeconds(0);
+      setIsLoadingVerse(false);
+      return;
+    }
+
     let attempts = 0;
-    while (attempts < 5) {
-      const { book, chapter, verse } = pickRandomVerse(books, rng);
+    while (attempts < 8) {
+      const { book, chapter, verse } = pickRandomVerse(books);
       const data = await fetchVerseByReference({ book: book.book, chapter, verse });
       if (data) {
         setCurrentVerse(data);
         setElapsedSeconds(0);
         setIsLoadingVerse(false);
+        if (session.multiplayer?.enabled) {
+          setSharedVerseByRound(prev => ({ ...prev, [logicalRound]: data }));
+        }
         return;
       }
       attempts++;
     }
+
     setVerseError('Failed to load verse. Please try again.');
     setIsLoadingVerse(false);
-  }, [fetchVerseByReference, rng]);
+  }, [fetchVerseByReference, session, sharedVerseByRound]);
 
   useEffect(() => {
     if (session?.gameState === 'playing' && session.modeConfig) {
-      const t = setTimeout(() => void fetchVerse(session.modeConfig.books), 0);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => {
+        void fetchVerse(session.modeConfig.books);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [session?.currentRound, session?.gameState, fetchVerse, session?.modeConfig]);
+  }, [session?.currentRound, session?.gameState, session?.modeConfig, fetchVerse]);
 
   useEffect(() => {
     if (!currentVerse || isLoadingVerse || isPaused) return;
-    const interval = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
+    const interval = setInterval(() => setElapsedSeconds(prev => prev + 1), 1000);
     return () => clearInterval(interval);
   }, [currentVerse, isLoadingVerse, isPaused]);
 
-  const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const formatTime = (totalSeconds: number) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   if (!session) return null;
 
-  const isAlternate = session.multiplayer?.enabled && session.multiplayer.turnStyle === 'alternate';
-  const playerCount = session.multiplayer?.players.length ?? 1;
-  const displayRound = isAlternate ? Math.ceil(session.currentRound / playerCount) : session.currentRound;
-  const displayTotal = isAlternate ? (session.multiplayer?.roundsPerPlayer ?? session.totalRounds) : session.totalRounds;
-
   const getCurrentPlayerName = () => {
     if (!session.multiplayer?.enabled || session.multiplayer.players.length === 0) return null;
+
     const completedTurns = session.rounds.length;
     if (session.multiplayer.turnStyle === 'alternate') {
-      return session.multiplayer.players[completedTurns % session.multiplayer.players.length];
+      const index = completedTurns % session.multiplayer.players.length;
+      return session.multiplayer.players[index];
     }
-    const idx = Math.min(Math.floor(completedTurns / session.multiplayer.roundsPerPlayer), session.multiplayer.players.length - 1);
-    return session.multiplayer.players[idx];
+
+    const groupedIndex = Math.floor(completedTurns / session.multiplayer.roundsPerPlayer);
+    const boundedIndex = Math.min(groupedIndex, session.multiplayer.players.length - 1);
+    return session.multiplayer.players[boundedIndex];
   };
+
   const currentPlayerName = getCurrentPlayerName();
+
+  const playerCount = session.multiplayer?.players.length ?? 1;
+  const isAlternate = session.multiplayer?.enabled && session.multiplayer.turnStyle === 'alternate';
+  const displayRound = isAlternate ? Math.ceil(session.currentRound / playerCount) : session.currentRound;
+  const displayTotalRounds = isAlternate ? (session.multiplayer?.roundsPerPlayer ?? session.totalRounds) : session.totalRounds;
 
   const handleAddNeighborVerse = async (direction: NeighborDirection) => {
     if (!currentVerse || loadingNeighbor) return;
-    const seed = direction === 'previous' ? (previousVerses[0] ?? currentVerse) : (nextVerses[nextVerses.length - 1] ?? currentVerse);
-    const targetRef = resolveNeighborVerse(seed.book, seed.chapter, seed.verse, direction);
+
+    const seedVerse = direction === 'previous'
+      ? previousVerses[0] ?? currentVerse
+      : nextVerses[nextVerses.length - 1] ?? currentVerse;
+
+    const targetRef = resolveNeighborVerse(seedVerse.book, seedVerse.chapter, seedVerse.verse, direction);
     if (!targetRef) return;
+
     setLoadingNeighbor(direction);
     const data = await fetchVerseByReference(targetRef);
     if (data) {
-      if (direction === 'previous') setPreviousVerses(p => [data, ...p]);
-      else setNextVerses(p => [...p, data]);
+      if (direction === 'previous') setPreviousVerses(prev => [data, ...prev]);
+      else setNextVerses(prev => [...prev, data]);
     }
     setLoadingNeighbor(null);
   };
 
   const handleSubmitGuess = (guess: { book: string; chapter: number; verse: number }) => {
     if (!currentVerse) return;
+
     const bookData = session.modeConfig.books.find(b => b.book === currentVerse.book) ?? session.modeConfig.books[0];
     const breakdown = calculateScore(
       { book: currentVerse.book, chapter: currentVerse.chapter, verse: currentVerse.verse },
@@ -185,14 +253,28 @@ export default function GamePage() {
       bookData,
       session.modeConfig.scoringType
     );
-    const contextPenalty = (previousVerses.length + nextVerses.length) * 10;
+
+    const contextVersesAdded = previousVerses.length + nextVerses.length;
+    const contextPenalty = contextVersesAdded * 10;
     const adjustedTotal = Math.max(0, breakdown.total - contextPenalty);
+
     submitGuess(
       guess,
       currentVerse,
-      { playerName: currentPlayerName ?? undefined, baseScore: breakdown.total, contextPenalty, contextVersesAdded: previousVerses.length + nextVerses.length },
+      {
+        playerName: currentPlayerName ?? undefined,
+        baseScore: breakdown.total,
+        contextPenalty,
+        contextVersesAdded,
+      },
       adjustedTotal,
-      { ...breakdown, baseTotal: breakdown.total, contextPenalty, contextVersesAdded: previousVerses.length + nextVerses.length, total: adjustedTotal }
+      {
+        ...breakdown,
+        baseTotal: breakdown.total,
+        contextPenalty,
+        contextVersesAdded,
+        total: adjustedTotal,
+      }
     );
   };
 
@@ -204,18 +286,23 @@ export default function GamePage() {
     nextRound();
   };
 
-  const handleQuit = () => {
+  const handleExitToHome = () => {
     const destination = session?.returnPath ?? '/';
     resetGame();
     router.push(destination);
   };
 
   const handlePlayAgain = () => {
-    startGame({ mode: modeId, modeConfig: session.modeConfig, totalRounds: session.totalRounds, selectedBook: session.selectedBook });
+    startGame({
+      mode: modeId,
+      modeConfig: session.modeConfig,
+      totalRounds: session.totalRounds,
+      selectedBook: session.selectedBook,
+    });
   };
 
   if (session.gameState === 'summary') {
-    return <GameSummary session={session} onPlayAgain={handlePlayAgain} onHome={handleQuit} />;
+    return <GameSummary session={session} onPlayAgain={handlePlayAgain} onHome={handleExitToHome} />;
   }
 
   if (session.gameState === 'result') {
@@ -223,11 +310,12 @@ export default function GamePage() {
     return (
       <RoundResult
         round={lastRound}
-        roundNumber={session.currentRound}
-        totalRounds={session.totalRounds}
+        roundNumber={displayRound}
+        totalRounds={displayTotalRounds}
         onNext={handleNextRound}
-        onHome={handleQuit}
+        onHome={handleExitToHome}
         isLastRound={session.currentRound >= session.totalRounds}
+        rounds={session.rounds}
       />
     );
   }
@@ -235,67 +323,71 @@ export default function GamePage() {
   const contextPenalty = (previousVerses.length + nextVerses.length) * 10;
 
   return (
-    <div className="app-screen game-shell" onClick={() => isPaused && setIsPaused(false)}>
+    <div className="app-screen game-shell">
       <header className="game-topbar">
-        <span className="game-topbar-round">
-          Round {displayRound}/{displayTotal}
+        <p className="game-topbar-round">
+          Round {displayRound} / {displayTotalRounds}
           {currentPlayerName && <span className="game-topbar-player"> · {currentPlayerName}</span>}
-        </span>
-        <span className="game-topbar-time">{formatTime(elapsedSeconds)}</span>
-        <button onClick={() => setIsPaused(true)} className="game-topbar-pause" aria-label="Pause">
+        </p>
+        <p className="game-topbar-time">{formatTime(elapsedSeconds)}</p>
+        <button onClick={() => setIsPaused(true)} className="game-topbar-pause" aria-label="Pause game">
           <Pause size={15} />
         </button>
       </header>
 
       <div className="app-content app-content-fixed game-content">
-        <div className="play-layout">
-          <div className="play-verse">
-            <VerseDisplay
-              verse={currentVerse}
-              previousVerses={previousVerses}
-              nextVerses={nextVerses}
-              isLoading={isLoadingVerse}
-              error={verseError}
-              isLoadingNeighbor={loadingNeighbor}
-              onAddPrevious={() => void handleAddNeighborVerse('previous')}
-              onAddNext={() => void handleAddNeighborVerse('next')}
-              onRetry={() => session.modeConfig && fetchVerse(session.modeConfig.books)}
-            />
-          </div>
-
-          <div className="play-guess">
-            {currentVerse && !isLoadingVerse && (
-              <GuessInterface
-                modeConfig={session.modeConfig}
-                onSubmit={handleSubmitGuess}
-                contextPenalty={contextPenalty}
+        <div className="page !max-w-6xl w-full">
+          <div className="play-layout">
+            <div className="play-verse">
+              <VerseDisplay
+                verse={currentVerse}
+                previousVerses={previousVerses}
+                nextVerses={nextVerses}
+                isLoading={isLoadingVerse}
+                error={verseError}
+                isLoadingNeighbor={loadingNeighbor}
+                onAddPrevious={() => void handleAddNeighborVerse('previous')}
+                onAddNext={() => void handleAddNeighborVerse('next')}
+                onRetry={() => session.modeConfig && fetchVerse(session.modeConfig.books)}
               />
-            )}
+            </div>
+
+            <div className="play-guess">
+              {currentVerse && !isLoadingVerse && (
+                <GuessInterface modeConfig={session.modeConfig} onSubmit={handleSubmitGuess} contextPenalty={contextPenalty} />
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {isPaused && (
-        <div className="pause-overlay" onClick={e => e.currentTarget === e.target && setIsPaused(false)}>
-          <div className="pause-card fade-up">
-            <button onClick={() => setIsPaused(false)} className="absolute top-3 right-3 p-1 hover:opacity-75">
-              <X size={24} />
+        <div className="pause-overlay" onClick={() => setIsPaused(false)}>
+          <div className="pause-card fade-up" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setIsPaused(false)} className="pause-close-btn" aria-label="Close pause menu">
+              <X size={18} />
             </button>
-            <h2 className="headline-serif text-2xl mb-1">Paused</h2>
-            <p className="content-muted text-sm mb-5">Round {displayRound} of {displayTotal}</p>
-            <Link href="/profile" className="btn-outline block w-full py-2.5 text-center mb-2">Settings</Link>
-            <button onClick={() => setShowQuitConfirm(true)} className="btn-outline block w-full py-2.5 text-[var(--danger)]">Quit</button>
+
+            <h2 className="headline-serif text-3xl mb-5">Paused</h2>
+
+            <Link href="/profile" className="btn-outline block w-full py-3 mb-2 text-center" onClick={() => setIsPaused(false)}>
+              Settings
+            </Link>
+
+            <button onClick={() => setShowQuitConfirm(true)} className="btn-outline block w-full py-3 text-[var(--danger)]">
+              Quit
+            </button>
           </div>
         </div>
       )}
 
       {showQuitConfirm && (
-        <div className="pause-overlay" style={{ zIndex: 60 }} onClick={e => e.currentTarget === e.target && setShowQuitConfirm(false)}>
-          <div className="pause-card fade-up">
-            <h2 className="headline-serif text-xl mb-2">Quit game?</h2>
-            <p className="content-muted text-sm mb-5">Your progress will be lost.</p>
-            <button onClick={handleQuit} className="btn-primary block w-full py-3 mb-2 bg-[var(--danger)] border-[var(--danger)]">Yes, Quit</button>
-            <button onClick={() => setShowQuitConfirm(false)} className="btn-outline block w-full py-2.5">Cancel</button>
+        <div className="pause-overlay" onClick={() => setShowQuitConfirm(false)}>
+          <div className="pause-card fade-up" onClick={e => e.stopPropagation()}>
+            <h2 className="headline-serif text-2xl mb-2">Quit game?</h2>
+            <p className="content-muted mb-5">Your current progress will be lost.</p>
+            <button onClick={handleExitToHome} className="btn-primary block w-full py-3 mb-2">Yes, Quit</button>
+            <button onClick={() => setShowQuitConfirm(false)} className="btn-outline block w-full py-3">Cancel</button>
           </div>
         </div>
       )}

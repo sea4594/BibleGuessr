@@ -68,7 +68,7 @@ export default function VerseDisplay({
 
       {/* Scrollable verse area */}
       <div className="verse-scroll-area">
-        <div className="surface-card p-3 sm:p-4">
+        <div className="surface-card relative p-3 sm:p-4">
           <div className="space-y-3">
             {versesToDisplay.map(item => (
               <p
