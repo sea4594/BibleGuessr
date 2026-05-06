@@ -4,15 +4,18 @@ import { useState } from 'react';
 import { gameModes, GameModeId } from '@/lib/gameModes';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
+import { useUiSettings } from '@/lib/uiSettingsContext';
 
 export default function ModePage() {
   const params = useParams();
   const router = useRouter();
   const { startGame } = useGame();
+  const { settings } = useUiSettings();
   const modeId = params.mode as GameModeId;
   const modeConfig = gameModes[modeId];
-  const [rounds, setRounds] = useState(5);
+  const [rounds, setRounds] = useState<5 | 10>(settings.preferredRounds);
   const [selectedBook, setSelectedBook] = useState(bibleData[0].book);
+
 
   if (!modeConfig) {
     return (
@@ -84,12 +87,20 @@ export default function ModePage() {
           Start Game
         </button>
 
-        <button
-          onClick={() => router.push('/')}
-          className="btn-ghost w-full mt-3 py-2"
-        >
-          ← Back to Home
-        </button>
+        <div className="flex flex-wrap gap-3 mt-3">
+          <button
+            onClick={() => router.push('/single-player')}
+            className="btn-ghost py-2"
+          >
+            ← Back to Modes
+          </button>
+          <button
+            onClick={() => router.push('/settings')}
+            className="btn-outline ml-auto px-3 py-2 text-sm"
+          >
+            Theme & Settings
+          </button>
+        </div>
       </div>
     </main>
   );

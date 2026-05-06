@@ -147,16 +147,16 @@ export default function GamePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="mx-auto w-full max-w-5xl px-4 pt-5 sm:px-6 sm:pt-7">
-        <div className="surface-card flex items-center justify-between p-3 sm:p-4">
+    <div className="min-h-screen game-shell">
+      <header className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6 sm:pt-6">
+        <div className="surface-card flex items-center justify-between gap-3 p-3 sm:p-4">
           <button
             onClick={handleExitToHome}
             className="btn-ghost inline-flex items-center gap-2 px-2 py-1"
           >
             <span>✕</span> Exit
           </button>
-          <span className="text-amber-100 font-semibold text-sm sm:text-base">
+          <span className="font-semibold text-sm sm:text-base">
             Round {session.currentRound} of {session.totalRounds}
           </span>
           <button
@@ -168,17 +168,23 @@ export default function GamePage() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col p-4 sm:p-6 max-w-5xl mx-auto w-full">
-        <VerseDisplay
-          verse={currentVerse}
-          isLoading={isLoadingVerse}
-          error={verseError}
-          onRetry={() => session.modeConfig && fetchVerse(session.modeConfig.books)}
-        />
+      <div className="flex-1 p-4 sm:p-6 max-w-6xl mx-auto w-full">
+        <div className="play-layout">
+          <div className="play-verse">
+            <VerseDisplay
+              verse={currentVerse}
+              isLoading={isLoadingVerse}
+              error={verseError}
+              onRetry={() => session.modeConfig && fetchVerse(session.modeConfig.books)}
+            />
+          </div>
 
-        {currentVerse && !isLoadingVerse && (
-          <GuessInterface modeConfig={session.modeConfig} onSubmit={handleSubmitGuess} />
-        )}
+          <div className="play-guess">
+            {currentVerse && !isLoadingVerse && (
+              <GuessInterface modeConfig={session.modeConfig} onSubmit={handleSubmitGuess} />
+            )}
+          </div>
+        </div>
       </div>
 
       {isPaused && (

@@ -10,10 +10,9 @@ interface Props {
 }
 
 export default function GuessInterface({ modeConfig, onSubmit }: Props) {
-  const isSingleBook = modeConfig.isSingleBook;
   const defaultBook = modeConfig.books[0]?.book ?? '';
 
-  const [selectedBook, setSelectedBook] = useState<string>(isSingleBook ? defaultBook : '');
+  const [selectedBook, setSelectedBook] = useState<string>(defaultBook);
   const [chapter, setChapter] = useState(1);
   const [verse, setVerse] = useState(1);
 
@@ -34,32 +33,27 @@ export default function GuessInterface({ modeConfig, onSubmit }: Props) {
   };
 
   const handleSubmit = () => {
-    if (!isSingleBook && !selectedBook) return;
     onSubmit({ book: selectedBook || defaultBook, chapter, verse });
   };
 
-  const canSubmit = isSingleBook ? true : !!selectedBook;
-
   return (
-    <div className="surface-card p-4 sm:p-5 mt-5 sm:mt-6">
+    <section className="surface-card p-4 sm:p-5 mt-5 sm:mt-6">
       <p className="eyebrow mb-3">Your Guess</p>
-      <h3 className="headline-serif text-xl text-slate-100 mb-4">Choose The Location</h3>
+      <h3 className="headline-serif text-2xl mb-4">Choose the Location</h3>
 
-      <div className="space-y-4">
-        {!isSingleBook && (
-          <BookSlider
-            books={modeConfig.books}
-            selectedBook={selectedBook || null}
-            onSelect={handleBookSelect}
-          />
-        )}
+      <div className="guess-grid">
+        <BookSlider
+          books={modeConfig.books}
+          selectedBook={selectedBook || null}
+          onSelect={handleBookSelect}
+        />
 
         <ChapterVerseSlider
           label="Chapter"
           value={chapter}
           min={1}
           max={chaptersCount}
-          disabled={!isSingleBook && !selectedBook}
+          disabled={!selectedBook}
           onChange={handleChapterChange}
         />
 
@@ -68,18 +62,18 @@ export default function GuessInterface({ modeConfig, onSubmit }: Props) {
           value={verse}
           min={1}
           max={Math.max(versesCount, 1)}
-          disabled={!isSingleBook && !selectedBook}
+          disabled={!selectedBook}
           onChange={setVerse}
         />
       </div>
 
       <button
         onClick={handleSubmit}
-        disabled={!canSubmit}
-        className="btn-primary mt-5 w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
+        disabled={!selectedBook}
+        className="btn-primary mt-6 w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
       >
         Submit Guess
       </button>
-    </div>
+    </section>
   );
 }
