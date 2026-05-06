@@ -19,6 +19,23 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
     return Math.max(...session.rounds.map(r => r.score));
   }, [session.rounds]);
 
+  const playerTotals = useMemo(() => {
+    if (!session.multiplayer?.enabled) return [] as Array<{ player: string; score: number }>;
+
+    const totals = new Map<string, number>();
+    for (const player of session.multiplayer.players) {
+      totals.set(player, 0);
+    }
+    for (const round of session.rounds) {
+      if (!round.playerName) continue;
+      totals.set(round.playerName, (totals.get(round.playerName) ?? 0) + round.score);
+    }
+
+    return Array.from(totals.entries())
+      .map(([player, score]) => ({ player, score }))
+      .sort((a, b) => b.score - a.score);
+  }, [session.multiplayer, session.rounds]);
+
   useEffect(() => {
     addGameRecord({
       timestamp: Date.now(),
@@ -31,13 +48,14 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
   }, [session.mode, session.modeConfig.name, session.totalRounds, totalScore, accuracy]);
 
   return (
-    <main className="min-h-screen">
+    <main className="app-screen">
       <header className="topbar">
         <button onClick={onHome} className="btn-outline px-3 py-2 text-sm">Home</button>
         <div className="font-semibold">Session Summary</div>
         <span className="content-muted text-sm">{session.totalRounds} rounds</span>
       </header>
 
+      <div className="app-content app-content-scroll">
       <div className="page max-w-lg">
         <div className="text-center mb-8 fade-up">
           <p className="eyebrow mb-2">Session Complete</p>
@@ -75,6 +93,9 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
             >
               <div>
                 <span className="text-sm">Round {idx + 1}</span>
+                {round.playerName && (
+                  <span className="content-muted text-xs ml-2">{round.playerName}</span>
+                )}
                 <span className="content-muted text-xs ml-2">
                   {round.verse.book} {round.verse.chapter}:{round.verse.verse}
                 </span>
@@ -83,6 +104,21 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
             </div>
           ))}
         </div>
+
+        {playerTotals.length > 0 && (
+          <div className="surface-card p-4 sm:p-5 mb-6">
+            <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Leaderboard</h3>
+            {playerTotals.map((entry, idx) => (
+              <div
+                key={entry.player}
+                className="flex items-center justify-between py-2.5 border-t border-[var(--line)] first:border-0"
+              >
+                <span className="text-sm">{idx + 1}. {entry.player}</span>
+                <span className="font-bold">{entry.score} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <button
           onClick={onPlayAgain}
@@ -96,6 +132,7 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
         >
           Home
         </button>
+      </div>
       </div>
     </main>
   );

@@ -5,6 +5,9 @@ export interface ScoreBreakdown {
   bookPoints: number;
   chapterPoints: number;
   versePoints: number;
+  baseTotal?: number;
+  contextPenalty?: number;
+  contextVersesAdded?: number;
   total: number;
   feedback: {
     book: 'correct' | 'close' | 'wrong';

@@ -16,8 +16,19 @@ export interface RoundData {
     chapter: number;
     verse: number;
   };
+  playerName?: string;
+  baseScore: number;
+  contextPenalty: number;
+  contextVersesAdded: number;
   score: number;
   scoreBreakdown: ScoreBreakdown;
+}
+
+export interface MultiplayerConfig {
+  enabled: boolean;
+  players: string[];
+  roundsPerPlayer: number;
+  turnStyle: 'alternate' | 'all-at-once';
 }
 
 export interface GameSession {
@@ -27,6 +38,7 @@ export interface GameSession {
   currentRound: number;
   rounds: RoundData[];
   selectedBook?: string;
+  multiplayer?: MultiplayerConfig;
   gameState: 'setup' | 'playing' | 'result' | 'summary';
 }
 
@@ -36,6 +48,12 @@ interface GameContextType {
   submitGuess: (
     guess: RoundData['guess'],
     verse: RoundData['verse'],
+    options: {
+      playerName?: string;
+      baseScore: number;
+      contextPenalty: number;
+      contextVersesAdded: number;
+    },
     score: number,
     breakdown: ScoreBreakdown
   ) => void;
@@ -60,12 +78,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const submitGuess = (
     guess: RoundData['guess'],
     verse: RoundData['verse'],
+    options: {
+      playerName?: string;
+      baseScore: number;
+      contextPenalty: number;
+      contextVersesAdded: number;
+    },
     score: number,
     breakdown: ScoreBreakdown
   ) => {
     setSession(prev => {
       if (!prev) return null;
-      const newRound: RoundData = { verse, guess, score, scoreBreakdown: breakdown };
+      const newRound: RoundData = {
+        verse,
+        guess,
+        playerName: options.playerName,
+        baseScore: options.baseScore,
+        contextPenalty: options.contextPenalty,
+        contextVersesAdded: options.contextVersesAdded,
+        score,
+        scoreBreakdown: breakdown,
+      };
       return { ...prev, rounds: [...prev.rounds, newRound], gameState: 'result' };
     });
   };

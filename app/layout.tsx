@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Barlow } from 'next/font/google';
 import './globals.css';
 import { GameProvider } from '@/lib/gameContext';
@@ -13,6 +13,19 @@ const bodyFont = Barlow({
 export const metadata: Metadata = {
   title: 'BibleGuessr',
   description: 'A GeoGuessr-style Bible verse guessing game',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'BibleGuessr',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

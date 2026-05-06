@@ -21,17 +21,19 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
   const { feedback } = scoreBreakdown;
 
   return (
-    <main className="min-h-screen">
+    <main className="app-screen">
       <header className="topbar">
         <button onClick={onHome} className="btn-outline px-3 py-2 text-sm">Home</button>
         <div className="font-semibold">Round Result</div>
         <span className="content-muted text-sm">{roundNumber} / {totalRounds}</span>
       </header>
 
+      <div className="app-content app-content-scroll">
       <div className="page max-w-lg">
         <div className="text-center mb-7 fade-up">
           <p className="eyebrow">Round {roundNumber} of {totalRounds}</p>
           <h2 className="headline-serif text-4xl mt-1">Round Result</h2>
+          {round.playerName && <p className="content-muted mt-2">Player: {round.playerName}</p>}
         </div>
 
         <div className="surface-card text-center mb-5 p-5 sm:p-6">
@@ -103,6 +105,12 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
             <span>Verse</span>
             <span className="font-semibold">+{Math.round(scoreBreakdown.versePoints)}</span>
           </div>
+          {round.contextVersesAdded > 0 && (
+            <div className="flex justify-between text-sm py-1 text-[var(--danger)]">
+              <span>Context verses ({round.contextVersesAdded} x -10)</span>
+              <span className="font-semibold">-{round.contextPenalty}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm py-1 border-t border-[var(--line)] mt-1 font-bold">
             <span>Total</span>
             <span>{score}</span>
@@ -121,6 +129,7 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
         >
           Exit to Home
         </button>
+      </div>
       </div>
     </main>
   );

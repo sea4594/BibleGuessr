@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useUiSettings } from '@/lib/uiSettingsContext';
 import { GameStatsSummary, readGameHistory, summarizeGameHistory } from '@/lib/gameStats';
+import MainBottomNav from '@/components/MainBottomNav';
 
 export default function HomePage() {
   const { settings } = useUiSettings();
@@ -19,12 +20,13 @@ export default function HomePage() {
   });
 
   return (
-    <main className="min-h-screen fade-up">
+    <main className="app-screen fade-up">
       <header className="topbar">
         <div className="font-extrabold tracking-wide">BibleGuessr</div>
         <div className="content-muted text-sm">Main Menu</div>
       </header>
 
+      <div className="app-content app-content-scroll">
       <div className="page">
         <section className="surface-card p-5 sm:p-6">
           <p className="eyebrow mb-3">Scripture Game</p>
@@ -71,9 +73,9 @@ export default function HomePage() {
             <p className="content-muted">Local pass-and-play.</p>
           </Link>
 
-          <Link href="/settings" className="surface-card menu-card">
+          <Link href="/profile" className="surface-card menu-card">
             <p className="eyebrow">Customize</p>
-            <h2 className="headline-serif text-2xl mb-2">Settings</h2>
+            <h2 className="headline-serif text-2xl mb-2">Profile</h2>
             <p className="content-muted">Theme and defaults.</p>
           </Link>
 
@@ -84,6 +86,8 @@ export default function HomePage() {
           </Link>
         </section>
       </div>
+      </div>
+      <MainBottomNav />
     </main>
   );
 }

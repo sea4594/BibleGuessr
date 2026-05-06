@@ -1,11 +1,24 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import MainBottomNav from '@/components/MainBottomNav';
+import { useUiSettings } from '@/lib/uiSettingsContext';
+import { useGame } from '@/lib/gameContext';
+import { gameModes, GameModeId } from '@/lib/gameModes';
+import { bibleData } from '@/lib/bibleData';
 
 export default function MultiplayerPage() {
+  const router = useRouter();
+  const { settings } = useUiSettings();
+  const { startGame } = useGame();
+
   const [players, setPlayers] = useState(2);
-  const [rounds, setRounds] = useState(5);
+  const [rounds, setRounds] = useState<5 | 10>(settings.preferredRounds);
   const [names, setNames] = useState<string[]>(['Player 1', 'Player 2']);
+  const [modeId, setModeId] = useState<GameModeId>('full-bible');
+  const [turnStyle, setTurnStyle] = useState<'alternate' | 'all-at-once'>('alternate');
+  const [selectedBook, setSelectedBook] = useState(bibleData[0].book);
 
   const handlePlayersChange = (next: number) => {
     const normalized = Math.min(8, Math.max(2, next));
@@ -21,30 +34,63 @@ export default function MultiplayerPage() {
 
   const [turnOrder, setTurnOrder] = useState<string[]>([]);
 
+  const modeConfig = gameModes[modeId];
+
+  const startMultiplayer = () => {
+    const activePlayers = names
+      .slice(0, players)
+      .map((name, idx) => (name || `Player ${idx + 1}`).trim() || `Player ${idx + 1}`);
+
+    const multiplayerModeConfig = modeConfig.isSingleBook
+      ? { ...modeConfig, books: [bibleData.find(b => b.book === selectedBook)!] }
+      : modeConfig;
+
+    startGame({
+      mode: modeId,
+      modeConfig: multiplayerModeConfig,
+      totalRounds: players * rounds,
+      selectedBook: modeConfig.isSingleBook ? selectedBook : undefined,
+      multiplayer: {
+        enabled: true,
+        players: activePlayers,
+        roundsPerPlayer: rounds,
+        turnStyle,
+      },
+    });
+
+    router.push(`/play/${modeId}/game`);
+  };
+
   const generateTurnOrder = () => {
     const source = names.slice(0, players);
-    for (let i = source.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [source[i], source[j]] = [source[j], source[i]];
-    }
 
     const order: string[] = [];
-    for (let round = 0; round < rounds; round++) {
+    if (turnStyle === 'alternate') {
+      for (let round = 0; round < rounds; round++) {
+        for (const name of source) {
+          order.push(`R${round + 1}: ${name}`);
+        }
+      }
+    } else {
       for (const name of source) {
-        order.push(`R${round + 1}: ${name}`);
+        for (let round = 0; round < rounds; round++) {
+          order.push(`${name} - Turn ${round + 1}`);
+        }
       }
     }
+
     setTurnOrder(order);
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="app-screen">
       <header className="topbar">
-        <Link href="/" className="btn-outline px-3 py-2 text-sm">Back</Link>
+        <Link href="/" className="btn-outline px-3 py-2 text-sm">Home</Link>
         <div className="font-semibold">Multiplayer</div>
-        <Link href="/single-player" className="btn-outline px-3 py-2 text-sm">Modes</Link>
+        <Link href="/profile" className="btn-outline px-3 py-2 text-sm">Profile</Link>
       </header>
 
+      <div className="app-content app-content-scroll">
       <div className="page max-w-3xl">
         <section className="surface-card p-5">
           <p className="eyebrow mb-2">Multiplayer</p>
@@ -69,7 +115,7 @@ export default function MultiplayerPage() {
             <label className="setting-row">
               <span>Rounds per player</span>
               <div className="flex gap-2">
-                {[5, 10].map(n => (
+                {([5, 10] as const).map(n => (
                   <button
                     key={n}
                     onClick={() => setRounds(n)}
@@ -78,6 +124,52 @@ export default function MultiplayerPage() {
                     {n}
                   </button>
                 ))}
+              </div>
+            </label>
+
+            <label className="setting-row">
+              <span>Mode</span>
+              <select
+                value={modeId}
+                onChange={e => setModeId(e.target.value as GameModeId)}
+                className="settings-input !w-48"
+              >
+                {Object.values(gameModes).map(mode => (
+                  <option key={mode.id} value={mode.id}>{mode.name}</option>
+                ))}
+              </select>
+            </label>
+
+            {modeConfig.isSingleBook && (
+              <label className="setting-row">
+                <span>Book</span>
+                <select
+                  value={selectedBook}
+                  onChange={e => setSelectedBook(e.target.value)}
+                  className="settings-input !w-48"
+                >
+                  {bibleData.map(b => (
+                    <option key={b.book} value={b.book}>{b.book}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            <label className="setting-row">
+              <span>Hot Seat</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setTurnStyle('alternate')}
+                  className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}
+                >
+                  Alternate turns
+                </button>
+                <button
+                  onClick={() => setTurnStyle('all-at-once')}
+                  className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}
+                >
+                  All turns at once
+                </button>
               </div>
             </label>
           </div>
@@ -102,12 +194,13 @@ export default function MultiplayerPage() {
           </div>
 
           <div className="surface-card-soft p-4 mt-5">
-            <p className="text-sm"><strong>Configured:</strong> {players} players, {rounds} rounds each.</p>
-            <p className="text-sm mt-1 content-muted">Generate an order and use any single-player mode as your verse source.</p>
+            <p className="text-sm"><strong>Configured:</strong> {players} players, {rounds} rounds each, {modeConfig.name}.</p>
+            <p className="text-sm mt-1 content-muted">Turn style: {turnStyle === 'alternate' ? 'Alternate turns' : 'All turns at once'}.</p>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
             <button onClick={generateTurnOrder} className="btn-primary px-4 py-2">Generate Turn Order</button>
+            <button onClick={startMultiplayer} className="btn-primary px-4 py-2">Start Multiplayer Round</button>
             {turnOrder.length > 0 && (
               <button onClick={() => setTurnOrder([])} className="btn-outline px-4 py-2">Clear</button>
             )}
@@ -125,11 +218,12 @@ export default function MultiplayerPage() {
           )}
 
           <div className="flex flex-wrap gap-3 mt-6">
-            <Link href="/single-player" className="btn-primary px-4 py-2.5">Go to Modes</Link>
-            <Link href="/" className="btn-outline px-4 py-2.5">Back to Main Menu</Link>
+            <Link href="/single-player" className="btn-outline px-4 py-2.5">Browse Single Modes</Link>
           </div>
         </section>
       </div>
+      </div>
+      <MainBottomNav />
     </main>
   );
 }

@@ -40,13 +40,14 @@ export default function ModePage() {
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="app-screen">
       <header className="topbar">
         <button onClick={() => router.push('/single-player')} className="btn-outline px-3 py-2 text-sm">Back</button>
         <div className="font-semibold">Game Setup</div>
-        <button onClick={() => router.push('/settings')} className="btn-outline px-3 py-2 text-sm">Settings</button>
+        <button onClick={() => router.push('/profile')} className="btn-outline px-3 py-2 text-sm">Profile</button>
       </header>
 
+      <div className="app-content app-content-scroll">
       <div className="page max-w-xl">
       <div className="surface-card fade-up p-5 w-full">
         <p className="eyebrow mb-2">Setup</p>
@@ -92,8 +93,9 @@ export default function ModePage() {
 
         <div className="flex flex-wrap gap-3 mt-3">
           <button onClick={() => router.push('/single-player')} className="btn-ghost py-2">Modes</button>
-          <button onClick={() => router.push('/settings')} className="btn-outline ml-auto px-3 py-2 text-sm">Settings</button>
+          <button onClick={() => router.push('/profile')} className="btn-outline ml-auto px-3 py-2 text-sm">Profile</button>
         </div>
+      </div>
       </div>
       </div>
     </main>

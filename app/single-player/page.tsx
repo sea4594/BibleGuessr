@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { gameModes, GameModeId } from '@/lib/gameModes';
 import { bibleData } from '@/lib/bibleData';
+import MainBottomNav from '@/components/MainBottomNav';
 
 const modeOrder: GameModeId[] = [
   'full-bible', 'old-testament', 'new-testament', 'pentateuch',
@@ -46,13 +47,14 @@ export default function SinglePlayerPage() {
   };
 
   return (
-    <main className="min-h-screen">
+    <main className="app-screen">
       <header className="topbar">
         <Link href="/" className="btn-outline px-3 py-2 text-sm">Back</Link>
         <div className="font-semibold">Single Player</div>
-        <Link href="/settings" className="btn-outline px-3 py-2 text-sm">Settings</Link>
+        <Link href="/profile" className="btn-outline px-3 py-2 text-sm">Profile</Link>
       </header>
 
+      <div className="app-content app-content-scroll">
       <div className="page">
         <header className="surface-card p-5">
           <p className="eyebrow mb-2">Single Player</p>
@@ -108,6 +110,8 @@ export default function SinglePlayerPage() {
         )}
 
       </div>
+      </div>
+      <MainBottomNav />
     </main>
   );
 }

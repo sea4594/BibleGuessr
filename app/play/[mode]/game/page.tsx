@@ -17,6 +17,8 @@ interface VerseInfo {
   text: string;
 }
 
+type NeighborDirection = 'previous' | 'next';
+
 function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
   const book = books[Math.floor(Math.random() * books.length)];
   const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
@@ -28,6 +30,54 @@ function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; 
 
 function getApiBookName(bookName: string): string {
   return bookName.replace(/ /g, '+');
+}
+
+function resolveNeighborVerse(
+  book: string,
+  chapter: number,
+  verse: number,
+  direction: NeighborDirection
+): { book: string; chapter: number; verse: number } | null {
+  const bookIndex = bibleData.findIndex(b => b.book === book);
+  if (bookIndex < 0) return null;
+
+  const bookData = bibleData[bookIndex];
+  const chapterData = bookData.chapters[chapter - 1];
+  const maxVerse = chapterData ? parseInt(chapterData.verses, 10) : 1;
+
+  if (direction === 'previous') {
+    if (verse > 1) {
+      return { book, chapter, verse: verse - 1 };
+    }
+
+    if (chapter > 1) {
+      const previousChapter = chapter - 1;
+      const previousChapterData = bookData.chapters[previousChapter - 1];
+      const previousChapterVerses = previousChapterData ? parseInt(previousChapterData.verses, 10) : 1;
+      return { book, chapter: previousChapter, verse: previousChapterVerses };
+    }
+
+    if (bookIndex === 0) return null;
+    const previousBook = bibleData[bookIndex - 1];
+    const previousBookChapterCount = previousBook.chapters.length;
+    const previousBookFinalChapter = previousBook.chapters[previousBookChapterCount - 1];
+    return {
+      book: previousBook.book,
+      chapter: previousBookChapterCount,
+      verse: parseInt(previousBookFinalChapter.verses, 10),
+    };
+  }
+
+  if (verse < maxVerse) {
+    return { book, chapter, verse: verse + 1 };
+  }
+
+  if (chapter < bookData.chapters.length) {
+    return { book, chapter: chapter + 1, verse: 1 };
+  }
+
+  if (bookIndex >= bibleData.length - 1) return null;
+  return { book: bibleData[bookIndex + 1].book, chapter: 1, verse: 1 };
 }
 
 export default function GamePage() {
@@ -43,6 +93,9 @@ export default function GamePage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showHint, setShowHint] = useState(false);
   const [skipsUsed, setSkipsUsed] = useState(0);
+  const [previousVerses, setPreviousVerses] = useState<VerseInfo[]>([]);
+  const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
+  const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -50,41 +103,54 @@ export default function GamePage() {
     }
   }, [session, modeId, router]);
 
+  const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
+    const apiBook = getApiBookName(reference.book);
+    const apiNames = reference.book === 'Song of Solomon'
+      ? [`${apiBook}+${reference.chapter}:${reference.verse}`, `Song+of+Songs+${reference.chapter}:${reference.verse}`]
+      : [`${apiBook}+${reference.chapter}:${reference.verse}`];
+
+    for (const name of apiNames) {
+      try {
+        const res = await fetch(`https://bible-api.com/${name}?translation=kjv`);
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data.text) continue;
+        return {
+          book: reference.book,
+          chapter: reference.chapter,
+          verse: reference.verse,
+          text: data.text.trim(),
+        } satisfies VerseInfo;
+      } catch {
+        // keep trying alternate names
+      }
+    }
+
+    return null;
+  }, []);
+
   const fetchVerse = useCallback(async (books: BookData[]) => {
     setIsLoadingVerse(true);
     setVerseError(null);
+    setPreviousVerses([]);
+    setNextVerses([]);
 
     let attempts = 0;
     while (attempts < 5) {
       const { book, chapter, verse } = pickRandomVerse(books);
-      const apiBook = getApiBookName(book.book);
-      // Try alternate name for Song of Solomon
-      const apiNames = book.book === 'Song of Solomon'
-        ? [`${apiBook}+${chapter}:${verse}`, `Song+of+Songs+${chapter}:${verse}`]
-        : [`${apiBook}+${chapter}:${verse}`];
-
-      for (const name of apiNames) {
-        try {
-          const res = await fetch(`https://bible-api.com/${name}?translation=kjv`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.text) {
-              setCurrentVerse({ book: book.book, chapter, verse, text: data.text.trim() });
-              setElapsedSeconds(0);
-              setShowHint(false);
-              setIsLoadingVerse(false);
-              return;
-            }
-          }
-        } catch {
-          // try next name or attempt
-        }
+      const data = await fetchVerseByReference({ book: book.book, chapter, verse });
+      if (data) {
+        setCurrentVerse(data);
+        setElapsedSeconds(0);
+        setShowHint(false);
+        setIsLoadingVerse(false);
+        return;
       }
       attempts++;
     }
     setVerseError('Failed to load verse. Please try again.');
     setIsLoadingVerse(false);
-  }, []);
+  }, [fetchVerseByReference]);
 
   useEffect(() => {
     if (session?.gameState === 'playing' && session.modeConfig) {
@@ -118,6 +184,46 @@ export default function GamePage() {
 
   if (!session) return null;
 
+  const getCurrentPlayerName = () => {
+    if (!session.multiplayer?.enabled || session.multiplayer.players.length === 0) {
+      return null;
+    }
+
+    const completedTurns = session.rounds.length;
+    if (session.multiplayer.turnStyle === 'alternate') {
+      const index = completedTurns % session.multiplayer.players.length;
+      return session.multiplayer.players[index];
+    }
+
+    const groupedIndex = Math.floor(completedTurns / session.multiplayer.roundsPerPlayer);
+    const boundedIndex = Math.min(groupedIndex, session.multiplayer.players.length - 1);
+    return session.multiplayer.players[boundedIndex];
+  };
+
+  const currentPlayerName = getCurrentPlayerName();
+
+  const handleAddNeighborVerse = async (direction: NeighborDirection) => {
+    if (!currentVerse || loadingNeighbor) return;
+
+    const seedVerse = direction === 'previous'
+      ? previousVerses[0] ?? currentVerse
+      : nextVerses[nextVerses.length - 1] ?? currentVerse;
+
+    const targetRef = resolveNeighborVerse(seedVerse.book, seedVerse.chapter, seedVerse.verse, direction);
+    if (!targetRef) return;
+
+    setLoadingNeighbor(direction);
+    const data = await fetchVerseByReference(targetRef);
+    if (data) {
+      if (direction === 'previous') {
+        setPreviousVerses(prev => [data, ...prev]);
+      } else {
+        setNextVerses(prev => [...prev, data]);
+      }
+    }
+    setLoadingNeighbor(null);
+  };
+
   const handleSubmitGuess = (guess: { book: string; chapter: number; verse: number }) => {
     if (!currentVerse) return;
     const bookData =
@@ -129,13 +235,37 @@ export default function GamePage() {
       bookData,
       session.modeConfig.scoringType
     );
-    submitGuess(guess, currentVerse, breakdown.total, breakdown);
+
+    const contextVersesAdded = previousVerses.length + nextVerses.length;
+    const contextPenalty = contextVersesAdded * 10;
+    const adjustedTotal = Math.max(0, breakdown.total - contextPenalty);
+
+    submitGuess(
+      guess,
+      currentVerse,
+      {
+        playerName: currentPlayerName ?? undefined,
+        baseScore: breakdown.total,
+        contextPenalty,
+        contextVersesAdded,
+      },
+      adjustedTotal,
+      {
+        ...breakdown,
+        baseTotal: breakdown.total,
+        contextPenalty,
+        contextVersesAdded,
+        total: adjustedTotal,
+      }
+    );
   };
 
   const handleNextRound = () => {
     setCurrentVerse(null);
     setElapsedSeconds(0);
     setShowHint(false);
+    setPreviousVerses([]);
+    setNextVerses([]);
     nextRound();
   };
 
@@ -145,6 +275,8 @@ export default function GamePage() {
     setCurrentVerse(null);
     setElapsedSeconds(0);
     setShowHint(false);
+    setPreviousVerses([]);
+    setNextVerses([]);
     void fetchVerse(session.modeConfig.books);
   };
 
@@ -183,7 +315,7 @@ export default function GamePage() {
   }
 
   return (
-    <div className="min-h-screen game-shell">
+    <div className="app-screen game-shell">
       <header className="topbar">
         <button
           onClick={handleExitToHome}
@@ -194,6 +326,7 @@ export default function GamePage() {
         <div className="text-center">
           <p className="font-semibold text-sm sm:text-base">Round {session.currentRound} of {session.totalRounds}</p>
           <p className="content-muted text-xs">Time: {formatTime(elapsedSeconds)}</p>
+          {currentPlayerName && <p className="content-muted text-xs">Current: {currentPlayerName}</p>}
         </div>
         <button
           onClick={() => setIsPaused(true)}
@@ -203,13 +336,19 @@ export default function GamePage() {
         </button>
       </header>
 
+      <div className="app-content app-content-fixed">
       <div className="page !max-w-6xl w-full">
         <div className="play-layout">
           <div className="play-verse">
             <VerseDisplay
               verse={currentVerse}
+              previousVerses={previousVerses}
+              nextVerses={nextVerses}
               isLoading={isLoadingVerse}
               error={verseError}
+              isLoadingNeighbor={loadingNeighbor}
+              onAddPrevious={() => void handleAddNeighborVerse('previous')}
+              onAddNext={() => void handleAddNeighborVerse('next')}
               onRetry={() => session.modeConfig && fetchVerse(session.modeConfig.books)}
             />
           </div>
@@ -234,12 +373,16 @@ export default function GamePage() {
                   {showHint && currentVerse && (
                     <span className="text-sm font-semibold">Hint: {getTestament(currentVerse.book)}</span>
                   )}
+                  <span className="text-sm content-muted ml-auto">
+                    Context penalty: -{(previousVerses.length + nextVerses.length) * 10}
+                  </span>
                 </div>
                 <GuessInterface modeConfig={session.modeConfig} onSubmit={handleSubmitGuess} />
               </>
             )}
           </div>
         </div>
+      </div>
       </div>
 
       {isPaused && (
