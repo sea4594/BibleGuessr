@@ -7,7 +7,7 @@ import MainBottomNav from '@/components/MainBottomNav';
 export default function SinglePlayerPage() {
   return (
     <main className="app-screen">
-      <AppTopBar title="Single Player" backHref="/" />
+      <AppTopBar title="Single Player" />
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-3xl">

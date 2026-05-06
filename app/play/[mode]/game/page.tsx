@@ -10,6 +10,7 @@ import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import RoundResult from '@/components/RoundResult';
 import GameSummary from '@/components/GameSummary';
+import { X, Settings } from 'lucide-react';
 
 interface VerseInfo {
   book: string;
@@ -100,7 +101,7 @@ export default function GamePage() {
 
   useEffect(() => {
     if (!session) {
-      router.replace(`/play/${modeId}`);
+      router.replace('/');
     }
   }, [session, modeId, router]);
 
@@ -333,14 +334,14 @@ export default function GamePage() {
           onClick={handleExitToHome}
           className="btn-ghost inline-flex items-center gap-2 px-2 py-1"
         >
-          <span>✕</span> Exit
+          <X size={16} /> Exit
         </button>
         <div className="text-center">
           <p className="font-semibold text-sm sm:text-base">Round {session.currentRound} of {session.totalRounds}</p>
           <p className="content-muted text-xs">Time: {formatTime(elapsedSeconds)}</p>
           {currentPlayerName && <p className="content-muted text-xs">Current: {currentPlayerName}</p>}
         </div>
-        <Link href="/profile" className="btn-outline px-3 py-1.5 text-sm settings-icon-btn" aria-label="Profile settings">⚙</Link>
+        <Link href="/profile" className="btn-outline px-3 py-1.5 text-sm settings-icon-btn" aria-label="Profile settings"><Settings size={16}/></Link>
       </header>
 
       <div className="app-content app-content-fixed">

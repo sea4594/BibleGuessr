@@ -8,7 +8,7 @@ import { defaultHotSeatSettings, readHotSeatSettings, writeHotSeatSettings } fro
 import { hostParty, joinParty, PartyRoom, subscribeToParty } from '@/lib/partyEngine';
 import { isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
-import { avatarToDataUri, getAvatarOptions } from '@/lib/avatarOptions';
+import { avatarToDataUri } from '@/lib/avatarSystem';
 
 export default function MultiplayerPage() {
   const router = useRouter();
@@ -27,12 +27,6 @@ export default function MultiplayerPage() {
 
   const profile = useMemo(() => readLocalProfile(), []);
   const clientId = useMemo(() => readClientId(), []);
-  const avatarOptions = useMemo(() => getAvatarOptions(96), []);
-
-  const getAvatarUri = (avatarId: string) => {
-    const selected = avatarOptions.find(item => item.id === avatarId) ?? avatarOptions[0];
-    return avatarToDataUri(selected);
-  };
 
   useEffect(() => {
     writeHotSeatSettings({ players, rounds, turnStyle, names });
@@ -55,7 +49,7 @@ export default function MultiplayerPage() {
       const created = await hostParty({
         id: clientId,
         name: profile.name,
-        avatarId: profile.avatarId,
+        avatar: profile.avatar,
         isHost: true,
         joinedAt: Date.now(),
       });
@@ -74,7 +68,7 @@ export default function MultiplayerPage() {
       cancelled = true;
       unsubscribe();
     };
-  }, [tab, clientId, profile.avatarId, profile.name, room?.code]);
+  }, [tab, clientId, profile.avatar, profile.name, room?.code]);
 
   useEffect(() => {
     if (joinOpen) {
@@ -114,7 +108,7 @@ export default function MultiplayerPage() {
     const ok = await joinParty(code, {
       id: clientId,
       name: profile.name,
-      avatarId: profile.avatarId,
+      avatar: profile.avatar,
       isHost: false,
       joinedAt: Date.now(),
     });
@@ -128,7 +122,7 @@ export default function MultiplayerPage() {
 
   return (
     <main className="app-screen">
-      <AppTopBar title="Multiplayer" backHref="/" />
+      <AppTopBar title="Multiplayer" />
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-4xl">
@@ -246,7 +240,7 @@ export default function MultiplayerPage() {
                     <div className="grid gap-2">
                       {room.members.map(member => (
                         <div key={member.id} className="surface-card p-3 flex items-center gap-3">
-                          <img src={getAvatarUri(member.avatarId)} alt={`${member.name} avatar`} className="w-12 h-12 border border-[var(--line)]" />
+                          <img src={avatarToDataUri(member.avatar)} alt={`${member.name} avatar`} className="w-12 h-12 border border-[var(--line)]" />
                           <div className="flex-1">
                             <p className="text-sm font-semibold">{member.name}</p>
                             <p className="text-xs content-muted">{member.isHost ? 'Host' : 'Joined'}</p>

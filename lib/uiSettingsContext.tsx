@@ -9,6 +9,7 @@ export interface UiSettings {
   theme: ThemeId;
   mode: ColorMode;
   preferredRounds: 5 | 10;
+  preferredGameMode: string;
 }
 
 interface UiSettingsContextType {
@@ -16,6 +17,7 @@ interface UiSettingsContextType {
   setTheme: (theme: ThemeId) => void;
   setMode: (mode: ColorMode) => void;
   setPreferredRounds: (rounds: 5 | 10) => void;
+  setPreferredGameMode: (mode: string) => void;
 }
 
 const STORAGE_KEY = 'bg-ui-settings-v1';
@@ -24,6 +26,7 @@ const DEFAULT_SETTINGS: UiSettings = {
   theme: 'ocean',
   mode: 'dark',
   preferredRounds: 5,
+  preferredGameMode: 'full-bible',
 };
 
 const UiSettingsContext = createContext<UiSettingsContextType | null>(null);
@@ -53,6 +56,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
         theme: parsed.theme ?? DEFAULT_SETTINGS.theme,
         mode: parsed.mode ?? DEFAULT_SETTINGS.mode,
         preferredRounds: parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds,
+        preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
       };
     } catch {
       return DEFAULT_SETTINGS;
@@ -76,6 +80,9 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       },
       setPreferredRounds: (preferredRounds: 5 | 10) => {
         setSettings(prev => ({ ...prev, preferredRounds }));
+      },
+      setPreferredGameMode: (preferredGameMode: string) => {
+        setSettings(prev => ({ ...prev, preferredGameMode }));
       },
     }),
     [settings]

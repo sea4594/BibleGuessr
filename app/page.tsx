@@ -1,89 +1,99 @@
-'use client';
-import Link from 'next/link';
-import { useState } from 'react';
-import { useUiSettings } from '@/lib/uiSettingsContext';
-import { GameStatsSummary, readGameHistory, summarizeGameHistory } from '@/lib/gameStats';
-import MainBottomNav from '@/components/MainBottomNav';
-import AppTopBar from '@/components/AppTopBar';
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useUiSettings } from "@/lib/uiSettingsContext";
+import { useGame } from "@/lib/gameContext";
+import { gameModes, GameModeId } from "@/lib/gameModes";
+import { bibleData } from "@/lib/bibleData";
+import MainBottomNav from "@/components/MainBottomNav";
+import AppTopBar from "@/components/AppTopBar";
+import { Zap } from "lucide-react";
+
+interface VerseOfDay {
+  book: string;
+  chapter: number;
+  verse: number;
+  text: string;
+}
+
+function getDailyVerseRef(): { book: string; chapter: number; verse: number } {
+  const now = new Date();
+  const seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+  const bookIdx = seed % bibleData.length;
+  const book = bibleData[bookIdx];
+  const chapIdx = Math.floor(seed / 100) % book.chapters.length;
+  const chap = book.chapters[chapIdx];
+  const verseCount = parseInt(chap.verses, 10);
+  const verseIdx = Math.floor(seed / 10000) % verseCount;
+  return { book: book.book, chapter: parseInt(chap.chapter, 10), verse: Math.max(1, verseIdx) };
+}
 
 export default function HomePage() {
   const { settings } = useUiSettings();
-  const [stats] = useState<GameStatsSummary>(() => {
-    if (typeof window === 'undefined') {
-      return {
-        gamesPlayed: 0,
-        bestScore: 0,
-        averageAccuracy: 0,
-        bestAccuracy: 0,
-      };
-    }
-    return summarizeGameHistory(readGameHistory());
-  });
+  const { startGame } = useGame();
+  const router = useRouter();
+  const [verseOfDay, setVerseOfDay] = useState<VerseOfDay | null>(null);
+  const [loadingVerse, setLoadingVerse] = useState(true);
+
+  useEffect(() => {
+    const ref = getDailyVerseRef();
+    const apiBook = ref.book.replace(/ /g, "+");
+    const url = `https://bible-api.com/${apiBook}+${ref.chapter}:${ref.verse}?translation=kjv`;
+    void fetch(url)
+      .then(r => r.json())
+      .then((data: { text?: string }) => {
+        if (data.text) {
+          setVerseOfDay({ ...ref, text: data.text.trim() });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingVerse(false));
+  }, []);
+
+  const handleQuickPlay = () => {
+    const modeId: GameModeId = (settings.preferredGameMode in gameModes)
+      ? (settings.preferredGameMode as GameModeId)
+      : "full-bible";
+    const modeConfig = gameModes[modeId];
+    startGame({ mode: modeId, modeConfig, totalRounds: settings.preferredRounds });
+    router.push(`/play/${modeId}/game`);
+  };
 
   return (
     <main className="app-screen fade-up">
       <AppTopBar title="BibleGuessr" />
-
       <div className="app-content app-content-scroll">
-      <div className="page">
-        <section className="surface-card p-5 sm:p-6">
-          <p className="eyebrow mb-3">Scripture Game</p>
-          <h1 className="headline-serif text-4xl sm:text-5xl leading-[0.95] mb-3">Guess Verse Locations</h1>
-          <p className="content-muted max-w-2xl text-base sm:text-lg">
-            Find the book, chapter, and verse.
+        <div className="page max-w-xl">
+          <section className="surface-card p-5">
+            <p className="eyebrow mb-2">Verse of the Day</p>
+            {loadingVerse ? (
+              <p className="content-muted text-sm animate-pulse">Loading verse...</p>
+            ) : verseOfDay ? (
+              <>
+                <p className="text-base leading-relaxed mb-3 italic">&ldquo;{verseOfDay.text}&rdquo;</p>
+                <p className="eyebrow text-xs">
+                  {verseOfDay.book} {verseOfDay.chapter}:{verseOfDay.verse}
+                </p>
+              </>
+            ) : (
+              <p className="content-muted text-sm">Could not load verse.</p>
+            )}
+          </section>
+
+          <button
+            onClick={handleQuickPlay}
+            className="btn-primary w-full py-5 text-xl font-bold inline-flex items-center justify-center gap-3"
+          >
+            <Zap size={24} /> Quick Play
+          </button>
+          <p className="content-muted text-xs text-center -mt-1">
+            {settings.preferredRounds} rounds &middot; {settings.preferredGameMode.replace(/-/g, " ")}
+            {" - "}
+            <span className="underline cursor-pointer" onClick={() => router.push("/profile")}>
+              change in settings
+            </span>
           </p>
-          <div className="mt-4 flex flex-wrap gap-2.5 text-sm">
-            <span className="surface-card-soft px-3 py-1.5">Theme: {settings.theme}</span>
-            <span className="surface-card-soft px-3 py-1.5">Mode: {settings.mode}</span>
-            <span className="surface-card-soft px-3 py-1.5">Default rounds: {settings.preferredRounds}</span>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4">
-            <div className="surface-card-soft p-3">
-              <p className="content-muted text-xs">Games Played</p>
-              <p className="text-2xl font-bold">{stats.gamesPlayed}</p>
-            </div>
-            <div className="surface-card-soft p-3">
-              <p className="content-muted text-xs">Best Score</p>
-              <p className="text-2xl font-bold">{stats.bestScore}</p>
-            </div>
-            <div className="surface-card-soft p-3">
-              <p className="content-muted text-xs">Avg Accuracy</p>
-              <p className="text-2xl font-bold">{stats.averageAccuracy}%</p>
-            </div>
-            <div className="surface-card-soft p-3">
-              <p className="content-muted text-xs">Best Accuracy</p>
-              <p className="text-2xl font-bold">{stats.bestAccuracy}%</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="menu-grid">
-          <Link href="/single-player" className="surface-card menu-card">
-            <p className="eyebrow">Play</p>
-            <h2 className="headline-serif text-2xl mb-2">Single Player</h2>
-            <p className="content-muted">Pick a mode and play.</p>
-          </Link>
-
-          <Link href="/multiplayer" className="surface-card menu-card">
-            <p className="eyebrow">Party</p>
-            <h2 className="headline-serif text-2xl mb-2">Multiplayer</h2>
-            <p className="content-muted">Local pass-and-play.</p>
-          </Link>
-
-          <Link href="/profile" className="surface-card menu-card">
-            <p className="eyebrow">Customize</p>
-            <h2 className="headline-serif text-2xl mb-2">Profile</h2>
-            <p className="content-muted">Theme and defaults.</p>
-          </Link>
-
-          <Link href="/play/full-bible" className="surface-card menu-card quick-start">
-            <p className="eyebrow">Instant Start</p>
-            <h2 className="headline-serif text-2xl mb-2">Quick Match</h2>
-            <p className="content-muted">Start Full Bible now.</p>
-          </Link>
-        </section>
-      </div>
+        </div>
       </div>
       <MainBottomNav />
     </main>

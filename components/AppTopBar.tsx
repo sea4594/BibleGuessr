@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ChevronLeft, Settings } from 'lucide-react';
 
 interface AppTopBarProps {
   title: string;
@@ -16,8 +17,8 @@ export default function AppTopBar({ title, backHref, backLabel = 'Back' }: AppTo
     <header className="topbar app-topbar">
       <div className="topbar-left-slot">
         {backHref ? (
-          <button onClick={() => router.push(backHref)} className="btn-outline px-3 py-2 text-sm">
-            {backLabel}
+          <button onClick={() => router.push(backHref)} className="btn-outline px-2 py-2 text-sm inline-flex items-center gap-1">
+            <ChevronLeft size={15} />{backLabel}
           </button>
         ) : (
           <span className="topbar-placeholder" aria-hidden="true" />
@@ -29,8 +30,8 @@ export default function AppTopBar({ title, backHref, backLabel = 'Back' }: AppTo
       </div>
 
       <div className="topbar-right-slot">
-        <Link href="/profile" className="btn-outline px-3 py-2 text-sm settings-icon-btn" aria-label="Profile settings">
-          ⚙
+        <Link href="/profile" className="btn-outline p-2 settings-icon-btn inline-flex items-center justify-center" aria-label="Profile settings">
+          <Settings size={18} />
         </Link>
       </div>
     </header>

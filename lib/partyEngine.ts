@@ -8,11 +8,12 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebaseClient';
+import type { AvatarSpec } from './avatarSystem';
 
 export interface PartyMember {
   id: string;
   name: string;
-  avatarId: string;
+  avatar: AvatarSpec;
   isHost: boolean;
   joinedAt: number;
 }

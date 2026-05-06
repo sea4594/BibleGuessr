@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Home, User, Users, Gamepad2 } from 'lucide-react';
 
 const navItems = [
-  { href: '/', label: 'Home' },
-  { href: '/single-player', label: 'Single' },
-  { href: '/multiplayer', label: 'Multi' },
-  { href: '/profile', label: 'Profile' },
+  { href: '/', label: 'Home', Icon: Home },
+  { href: '/single-player', label: 'Single', Icon: Gamepad2 },
+  { href: '/multiplayer', label: 'Multiplayer', Icon: Users },
+  { href: '/profile', label: 'Profile', Icon: User },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -25,15 +26,16 @@ export default function MainBottomNav() {
 
   return (
     <nav className="main-bottom-nav" aria-label="Primary">
-      {navItems.map(item => {
-        const active = isActive(pathname, item.href);
+      {navItems.map(({ href, label, Icon }) => {
+        const active = isActive(pathname, href);
         return (
           <Link
-            key={item.href}
-            href={item.href}
+            key={href}
+            href={href}
             className={active ? 'main-nav-item active' : 'main-nav-item'}
           >
-            {item.label}
+            <Icon size={18} className="mx-auto mb-0.5" />
+            {label}
           </Link>
         );
       })}
