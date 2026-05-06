@@ -64,7 +64,7 @@ export default function ModePage() {
         <div className="mb-7">
           <label className="block text-sm font-semibold mb-2.5">Number of Rounds</label>
           <div className="flex gap-3">
-            {[5, 10].map(n => (
+            {([5, 10] as const).map(n => (
               <button
                 key={n}
                 onClick={() => setRounds(n)}
