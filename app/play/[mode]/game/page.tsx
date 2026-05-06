@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useGame } from '@/lib/gameContext';
 import { GameModeId } from '@/lib/gameModes';
 import { calculateScore } from '@/lib/scoring';
@@ -102,6 +103,16 @@ export default function GamePage() {
       router.replace(`/play/${modeId}`);
     }
   }, [session, modeId, router]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (session.gameState !== 'summary') return;
+    if (session.multiplayer?.lobbyType !== 'hot-seat') return;
+
+    const target = session.returnPath ?? '/multiplayer/hot-seat/gamemode';
+    resetGame();
+    router.replace(target);
+  }, [session, resetGame, router]);
 
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
     const apiBook = getApiBookName(reference.book);
@@ -281,8 +292,9 @@ export default function GamePage() {
   };
 
   const handleExitToHome = () => {
+    const destination = session?.returnPath ?? '/';
     resetGame();
-    router.push('/');
+    router.push(destination);
   };
 
   const handlePlayAgain = () => {
@@ -328,12 +340,7 @@ export default function GamePage() {
           <p className="content-muted text-xs">Time: {formatTime(elapsedSeconds)}</p>
           {currentPlayerName && <p className="content-muted text-xs">Current: {currentPlayerName}</p>}
         </div>
-        <button
-          onClick={() => setIsPaused(true)}
-          className="btn-outline px-3 py-1.5 text-sm"
-        >
-          Pause
-        </button>
+        <Link href="/profile" className="btn-outline px-3 py-1.5 text-sm settings-icon-btn" aria-label="Profile settings">⚙</Link>
       </header>
 
       <div className="app-content app-content-fixed">
@@ -357,6 +364,12 @@ export default function GamePage() {
             {currentVerse && !isLoadingVerse && (
               <>
                 <div className="surface-card-soft p-3 mb-3 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setIsPaused(true)}
+                    className="btn-outline px-3 py-1.5 text-sm"
+                  >
+                    Pause
+                  </button>
                   <button
                     onClick={() => setShowHint(prev => !prev)}
                     className="btn-outline px-3 py-1.5 text-sm"

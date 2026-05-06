@@ -1,228 +1,306 @@
 'use client';
-import Link from 'next/link';
-import { useState } from 'react';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
-import { useUiSettings } from '@/lib/uiSettingsContext';
-import { useGame } from '@/lib/gameContext';
-import { gameModes, GameModeId } from '@/lib/gameModes';
-import { bibleData } from '@/lib/bibleData';
+import { defaultHotSeatSettings, readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
+import { hostParty, joinParty, PartyRoom, subscribeToParty } from '@/lib/partyEngine';
+import { isFirebaseConfigured } from '@/lib/firebaseClient';
+import { readClientId, readLocalProfile } from '@/lib/userProfile';
+import { avatarToDataUri, getAvatarOptions } from '@/lib/avatarOptions';
 
 export default function MultiplayerPage() {
   const router = useRouter();
-  const { settings } = useUiSettings();
-  const { startGame } = useGame();
+  const [tab, setTab] = useState<'hot-seat' | 'party'>('hot-seat');
+  const initialHotSeat = useMemo(() => readHotSeatSettings(), []);
 
-  const [players, setPlayers] = useState(2);
-  const [rounds, setRounds] = useState<5 | 10>(settings.preferredRounds);
-  const [names, setNames] = useState<string[]>(['Player 1', 'Player 2']);
-  const [modeId, setModeId] = useState<GameModeId>('full-bible');
-  const [turnStyle, setTurnStyle] = useState<'alternate' | 'all-at-once'>('alternate');
-  const [selectedBook, setSelectedBook] = useState(bibleData[0].book);
+  const [players, setPlayers] = useState(initialHotSeat.players);
+  const [rounds, setRounds] = useState(initialHotSeat.rounds);
+  const [turnStyle, setTurnStyle] = useState(initialHotSeat.turnStyle);
+  const [names, setNames] = useState<string[]>(initialHotSeat.names);
 
-  const handlePlayersChange = (next: number) => {
-    const normalized = Math.min(8, Math.max(2, next));
-    setPlayers(normalized);
+  const [room, setRoom] = useState<PartyRoom | null>(null);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState(['', '', '', '']);
+  const joinRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  const profile = useMemo(() => readLocalProfile(), []);
+  const clientId = useMemo(() => readClientId(), []);
+  const avatarOptions = useMemo(() => getAvatarOptions(96), []);
+
+  const getAvatarUri = (avatarId: string) => {
+    const selected = avatarOptions.find(item => item.id === avatarId) ?? avatarOptions[0];
+    return avatarToDataUri(selected);
+  };
+
+  useEffect(() => {
+    writeHotSeatSettings({ players, rounds, turnStyle, names });
+  }, [players, rounds, turnStyle, names]);
+
+  useEffect(() => {
+    if (tab !== 'party' || !isFirebaseConfigured()) return;
+
+    let unsubscribe: () => void = () => {};
+    let cancelled = false;
+
+    const run = async () => {
+      if (room?.code) {
+        unsubscribe = subscribeToParty(room.code, next => {
+          if (!cancelled) setRoom(next);
+        });
+        return;
+      }
+
+      const created = await hostParty({
+        id: clientId,
+        name: profile.name,
+        avatarId: profile.avatarId,
+        isHost: true,
+        joinedAt: Date.now(),
+      });
+
+      if (!cancelled && created) {
+        setRoom(created);
+        unsubscribe = subscribeToParty(created.code, next => {
+          if (!cancelled) setRoom(next);
+        });
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [tab, clientId, profile.avatarId, profile.name, room?.code]);
+
+  useEffect(() => {
+    if (joinOpen) {
+      queueMicrotask(() => {
+        joinRefs.current[0]?.focus();
+      });
+    }
+  }, [joinOpen]);
+
+  const applyPlayers = (value: number) => {
+    const nextPlayers = Math.min(8, Math.max(2, value));
+    setPlayers(nextPlayers);
     setNames(prev => {
-      const adjusted = prev.slice(0, normalized);
-      while (adjusted.length < normalized) {
+      const adjusted = prev.slice(0, nextPlayers);
+      while (adjusted.length < nextPlayers) {
         adjusted.push(`Player ${adjusted.length + 1}`);
       }
       return adjusted;
     });
   };
 
-  const [turnOrder, setTurnOrder] = useState<string[]>([]);
-
-  const modeConfig = gameModes[modeId];
-
-  const startMultiplayer = () => {
-    const activePlayers = names
-      .slice(0, players)
-      .map((name, idx) => (name || `Player ${idx + 1}`).trim() || `Player ${idx + 1}`);
-
-    const multiplayerModeConfig = modeConfig.isSingleBook
-      ? { ...modeConfig, books: [bibleData.find(b => b.book === selectedBook)!] }
-      : modeConfig;
-
-    startGame({
-      mode: modeId,
-      modeConfig: multiplayerModeConfig,
-      totalRounds: players * rounds,
-      selectedBook: modeConfig.isSingleBook ? selectedBook : undefined,
-      multiplayer: {
-        enabled: true,
-        players: activePlayers,
-        roundsPerPlayer: rounds,
-        turnStyle,
-      },
-    });
-
-    router.push(`/play/${modeId}/game`);
+  const resetDefaults = () => {
+    setPlayers(defaultHotSeatSettings.players);
+    setRounds(defaultHotSeatSettings.rounds);
+    setTurnStyle(defaultHotSeatSettings.turnStyle);
+    setNames(defaultHotSeatSettings.names);
   };
 
-  const generateTurnOrder = () => {
-    const source = names.slice(0, players);
+  const selectGamemode = () => {
+    router.push('/multiplayer/hot-seat/gamemode');
+  };
 
-    const order: string[] = [];
-    if (turnStyle === 'alternate') {
-      for (let round = 0; round < rounds; round++) {
-        for (const name of source) {
-          order.push(`R${round + 1}: ${name}`);
-        }
-      }
-    } else {
-      for (const name of source) {
-        for (let round = 0; round < rounds; round++) {
-          order.push(`${name} - Turn ${round + 1}`);
-        }
-      }
+  const submitJoin = async () => {
+    const code = joinCode.join('').toUpperCase();
+    if (code.length !== 4 || !isFirebaseConfigured()) return;
+
+    const ok = await joinParty(code, {
+      id: clientId,
+      name: profile.name,
+      avatarId: profile.avatarId,
+      isHost: false,
+      joinedAt: Date.now(),
+    });
+
+    if (ok) {
+      setJoinOpen(false);
+      setJoinCode(['', '', '', '']);
+      subscribeToParty(code, next => setRoom(next));
     }
-
-    setTurnOrder(order);
   };
 
   return (
     <main className="app-screen">
-      <header className="topbar">
-        <Link href="/" className="btn-outline px-3 py-2 text-sm">Home</Link>
-        <div className="font-semibold">Multiplayer</div>
-        <Link href="/profile" className="btn-outline px-3 py-2 text-sm">Profile</Link>
-      </header>
+      <AppTopBar title="Multiplayer" backHref="/" />
 
       <div className="app-content app-content-scroll">
-      <div className="page max-w-3xl">
-        <section className="surface-card p-5">
-          <p className="eyebrow mb-2">Multiplayer</p>
-          <h1 className="headline-serif text-3xl sm:text-4xl mb-3">Local Pass-and-Play</h1>
-          <p className="content-muted mb-6">
-            Multiplayer is configured as local pass-and-play. Each player takes turns on the same device.
-          </p>
-
-          <div className="settings-list">
-            <label className="setting-row">
-              <span>Players</span>
-              <input
-                type="number"
-                min={2}
-                max={8}
-                value={players}
-                onChange={e => handlePlayersChange(parseInt(e.target.value || '2', 10))}
-                className="settings-input"
-              />
-            </label>
-
-            <label className="setting-row">
-              <span>Rounds per player</span>
-              <div className="flex gap-2">
-                {([5, 10] as const).map(n => (
-                  <button
-                    key={n}
-                    onClick={() => setRounds(n)}
-                    className={rounds === n ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </label>
-
-            <label className="setting-row">
-              <span>Mode</span>
-              <select
-                value={modeId}
-                onChange={e => setModeId(e.target.value as GameModeId)}
-                className="settings-input !w-48"
+        <div className="page max-w-4xl">
+          <section className="surface-card p-3 sm:p-4">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setTab('hot-seat')}
+                className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}
               >
-                {Object.values(gameModes).map(mode => (
-                  <option key={mode.id} value={mode.id}>{mode.name}</option>
-                ))}
-              </select>
-            </label>
+                Hot Seat
+              </button>
+              <button
+                onClick={() => setTab('party')}
+                className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}
+              >
+                Party
+              </button>
+            </div>
+          </section>
 
-            {modeConfig.isSingleBook && (
-              <label className="setting-row">
-                <span>Book</span>
-                <select
-                  value={selectedBook}
-                  onChange={e => setSelectedBook(e.target.value)}
-                  className="settings-input !w-48"
-                >
-                  {bibleData.map(b => (
-                    <option key={b.book} value={b.book}>{b.book}</option>
-                  ))}
-                </select>
-              </label>
-            )}
+          {tab === 'hot-seat' && (
+            <section className="surface-card p-5">
+              <p className="eyebrow mb-2">Hot Seat Setup</p>
+              <h2 className="headline-serif text-3xl mb-4">Local Multiplayer</h2>
 
-            <label className="setting-row">
-              <span>Hot Seat</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setTurnStyle('alternate')}
-                  className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}
-                >
-                  Alternate turns
-                </button>
-                <button
-                  onClick={() => setTurnStyle('all-at-once')}
-                  className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}
-                >
-                  All turns at once
-                </button>
+              <div className="settings-list">
+                <label className="setting-row">
+                  <span>Players</span>
+                  <input
+                    type="number"
+                    min={2}
+                    max={8}
+                    value={players}
+                    onChange={e => applyPlayers(parseInt(e.target.value || '2', 10))}
+                    className="settings-input"
+                  />
+                </label>
+
+                <label className="setting-row">
+                  <span>Rounds per player</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={rounds}
+                    onChange={e => setRounds(parseInt(e.target.value, 10))}
+                    className="w-44"
+                  />
+                  <span className="font-semibold">{rounds}</span>
+                </label>
+
+                <label className="setting-row">
+                  <span>Turn style</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setTurnStyle('alternate')}
+                      className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}
+                    >
+                      Alternate
+                    </button>
+                    <button
+                      onClick={() => setTurnStyle('all-at-once')}
+                      className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}
+                    >
+                      All at once
+                    </button>
+                  </div>
+                </label>
               </div>
-            </label>
-          </div>
 
-          <div className="mt-4">
-            <p className="text-sm font-semibold mb-2">Player Names</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {names.slice(0, players).map((name, idx) => (
+              <div className="mt-4">
+                <p className="text-sm font-semibold mb-2">Player Names</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {names.slice(0, players).map((name, idx) => (
+                    <input
+                      key={idx}
+                      value={name}
+                      onChange={e => {
+                        const next = names.slice();
+                        next[idx] = e.target.value;
+                        setNames(next);
+                      }}
+                      className="settings-input !w-full"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                <button onClick={resetDefaults} className="btn-outline py-2.5">Reset to defaults</button>
+                <button onClick={selectGamemode} className="btn-primary py-2.5">Select Gamemode</button>
+              </div>
+            </section>
+          )}
+
+          {tab === 'party' && (
+            <section className="surface-card p-5 relative">
+              <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm absolute right-5 top-5">
+                Join by code
+              </button>
+
+              <p className="eyebrow mb-2">Party</p>
+              <h2 className="headline-serif text-3xl mb-5">Hosted Party</h2>
+
+              {!isFirebaseConfigured() && (
+                <div className="surface-card-soft p-4 text-sm">
+                  Add Firebase env vars to enable online party hosting and joining.
+                </div>
+              )}
+
+              {isFirebaseConfigured() && room && (
+                <>
+                  <div className="surface-card-soft p-4 mb-4">
+                    <p className="font-semibold mb-2">Party Members</p>
+                    <div className="grid gap-2">
+                      {room.members.map(member => (
+                        <div key={member.id} className="surface-card p-3 flex items-center gap-3">
+                          <img src={getAvatarUri(member.avatarId)} alt={`${member.name} avatar`} className="w-12 h-12 border border-[var(--line)]" />
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{member.name}</p>
+                            <p className="text-xs content-muted">{member.isHost ? 'Host' : 'Joined'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="text-center">
+                    <p className="content-muted text-sm">Party Code</p>
+                    <p className="headline-serif text-5xl tracking-[0.2em] mt-1">{room.code}</p>
+                  </div>
+                </>
+              )}
+            </section>
+          )}
+        </div>
+      </div>
+
+      {joinOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="surface-card w-full max-w-sm p-5">
+            <p className="eyebrow mb-2">Join Party</p>
+            <h3 className="headline-serif text-2xl mb-4">Enter 4-letter code</h3>
+            <div className="grid grid-cols-4 gap-2 mb-5">
+              {joinCode.map((value, idx) => (
                 <input
                   key={idx}
-                  value={name}
-                  onChange={e => {
-                    const next = names.slice();
-                    next[idx] = e.target.value || `Player ${idx + 1}`;
-                    setNames(next);
+                  ref={el => {
+                    joinRefs.current[idx] = el;
                   }}
-                  className="settings-input !w-full"
-                  aria-label={`Player ${idx + 1} name`}
+                  value={value}
+                  maxLength={1}
+                  onChange={e => {
+                    const char = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '');
+                    const next = joinCode.slice();
+                    next[idx] = char;
+                    setJoinCode(next);
+                    if (char && idx < 3) joinRefs.current[idx + 1]?.focus();
+                  }}
+                  className="settings-input !w-full text-center text-2xl font-bold"
+                  inputMode="text"
                 />
               ))}
             </div>
-          </div>
-
-          <div className="surface-card-soft p-4 mt-5">
-            <p className="text-sm"><strong>Configured:</strong> {players} players, {rounds} rounds each, {modeConfig.name}.</p>
-            <p className="text-sm mt-1 content-muted">Turn style: {turnStyle === 'alternate' ? 'Alternate turns' : 'All turns at once'}.</p>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button onClick={generateTurnOrder} className="btn-primary px-4 py-2">Generate Turn Order</button>
-            <button onClick={startMultiplayer} className="btn-primary px-4 py-2">Start Multiplayer Round</button>
-            {turnOrder.length > 0 && (
-              <button onClick={() => setTurnOrder([])} className="btn-outline px-4 py-2">Clear</button>
-            )}
-          </div>
-
-          {turnOrder.length > 0 && (
-            <div className="surface-card-soft p-4 mt-4 max-h-64 overflow-y-auto">
-              <p className="text-sm font-semibold mb-2">Turn Queue</p>
-              <ol className="text-sm content-muted space-y-1">
-                {turnOrder.map((entry, idx) => (
-                  <li key={idx}>{idx + 1}. {entry}</li>
-                ))}
-              </ol>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setJoinOpen(false)} className="btn-outline py-2.5">Cancel</button>
+              <button onClick={() => void submitJoin()} className="btn-primary py-2.5">Join</button>
             </div>
-          )}
-
-          <div className="flex flex-wrap gap-3 mt-6">
-            <Link href="/single-player" className="btn-outline px-4 py-2.5">Browse Single Modes</Link>
           </div>
-        </section>
-      </div>
-      </div>
+        </div>
+      )}
+
       <MainBottomNav />
     </main>
   );

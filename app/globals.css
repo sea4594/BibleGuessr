@@ -199,6 +199,41 @@ body {
   z-index: 20;
 }
 
+.app-topbar {
+  display: grid;
+  grid-template-columns: 7rem 1fr 7rem;
+  align-items: center;
+}
+
+.topbar-left-slot,
+.topbar-right-slot {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-left-slot {
+  justify-content: flex-start;
+}
+
+.topbar-right-slot {
+  justify-content: flex-end;
+}
+
+.topbar-title-slot {
+  text-align: center;
+}
+
+.topbar-placeholder {
+  display: inline-block;
+  width: 4rem;
+  height: 2.3rem;
+}
+
+.settings-icon-btn {
+  width: 42px;
+  text-align: center;
+}
+
 .page {
   width: min(860px, 100%);
   margin: 0 auto;

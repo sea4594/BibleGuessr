@@ -6,6 +6,20 @@ export type GameModeId =
   | 'pauline-epistles' | 'general-epistles' | 'all-epistles'
   | 'book-selection' | 'full-bible';
 
+export const sectionModeIds: GameModeId[] = [
+  'old-testament',
+  'new-testament',
+  'pentateuch',
+  'historical',
+  'wisdom',
+  'major-prophets',
+  'minor-prophets',
+  'gospels',
+  'pauline-epistles',
+  'general-epistles',
+  'all-epistles',
+];
+
 export interface GameModeConfig {
   id: GameModeId;
   name: string;

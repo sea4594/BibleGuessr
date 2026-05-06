@@ -5,6 +5,7 @@ import { gameModes, GameModeId } from '@/lib/gameModes';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
 import { useUiSettings } from '@/lib/uiSettingsContext';
+import AppTopBar from '@/components/AppTopBar';
 
 export default function ModePage() {
   const params = useParams();
@@ -41,11 +42,7 @@ export default function ModePage() {
 
   return (
     <main className="app-screen">
-      <header className="topbar">
-        <button onClick={() => router.push('/single-player')} className="btn-outline px-3 py-2 text-sm">Back</button>
-        <div className="font-semibold">Game Setup</div>
-        <button onClick={() => router.push('/profile')} className="btn-outline px-3 py-2 text-sm">Profile</button>
-      </header>
+      <AppTopBar title="Game Setup" backHref="/single-player" />
 
       <div className="app-content app-content-scroll">
       <div className="page max-w-xl">
@@ -93,7 +90,6 @@ export default function ModePage() {
 
         <div className="flex flex-wrap gap-3 mt-3">
           <button onClick={() => router.push('/single-player')} className="btn-ghost py-2">Modes</button>
-          <button onClick={() => router.push('/profile')} className="btn-outline ml-auto px-3 py-2 text-sm">Profile</button>
         </div>
       </div>
       </div>

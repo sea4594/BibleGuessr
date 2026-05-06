@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { RoundData } from '@/lib/gameContext';
 
 interface Props {
@@ -25,7 +26,7 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
       <header className="topbar">
         <button onClick={onHome} className="btn-outline px-3 py-2 text-sm">Home</button>
         <div className="font-semibold">Round Result</div>
-        <span className="content-muted text-sm">{roundNumber} / {totalRounds}</span>
+        <Link href="/profile" className="btn-outline px-3 py-2 text-sm settings-icon-btn" aria-label="Profile settings">⚙</Link>
       </header>
 
       <div className="app-content app-content-scroll">

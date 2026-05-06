@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useMemo } from 'react';
 import { GameSession } from '@/lib/gameContext';
 import { addGameRecord } from '@/lib/gameStats';
@@ -52,7 +53,7 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
       <header className="topbar">
         <button onClick={onHome} className="btn-outline px-3 py-2 text-sm">Home</button>
         <div className="font-semibold">Session Summary</div>
-        <span className="content-muted text-sm">{session.totalRounds} rounds</span>
+        <Link href="/profile" className="btn-outline px-3 py-2 text-sm settings-icon-btn" aria-label="Profile settings">⚙</Link>
       </header>
 
       <div className="app-content app-content-scroll">

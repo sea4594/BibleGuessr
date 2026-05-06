@@ -26,6 +26,7 @@ export interface RoundData {
 
 export interface MultiplayerConfig {
   enabled: boolean;
+  lobbyType?: 'hot-seat' | 'party';
   players: string[];
   roundsPerPlayer: number;
   turnStyle: 'alternate' | 'all-at-once';
@@ -38,6 +39,7 @@ export interface GameSession {
   currentRound: number;
   rounds: RoundData[];
   selectedBook?: string;
+  returnPath?: string;
   multiplayer?: MultiplayerConfig;
   gameState: 'setup' | 'playing' | 'result' | 'summary';
 }

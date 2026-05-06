@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useUiSettings } from '@/lib/uiSettingsContext';
 import { GameStatsSummary, readGameHistory, summarizeGameHistory } from '@/lib/gameStats';
 import MainBottomNav from '@/components/MainBottomNav';
+import AppTopBar from '@/components/AppTopBar';
 
 export default function HomePage() {
   const { settings } = useUiSettings();
@@ -21,10 +22,7 @@ export default function HomePage() {
 
   return (
     <main className="app-screen fade-up">
-      <header className="topbar">
-        <div className="font-extrabold tracking-wide">BibleGuessr</div>
-        <div className="content-muted text-sm">Main Menu</div>
-      </header>
+      <AppTopBar title="BibleGuessr" />
 
       <div className="app-content app-content-scroll">
       <div className="page">
