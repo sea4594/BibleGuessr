@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 interface Props {
   label: string;
@@ -20,17 +20,29 @@ export default function HorizontalWheel({
   const listRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const getScrollLeftForIndex = useCallback((idx: number) => {
+    if (!listRef.current) return 0;
+    const centeredOffset = (listRef.current.clientWidth - itemWidth) / 2;
+    return Math.max(0, idx * itemWidth - centeredOffset);
+  }, [itemWidth]);
+
+  const getIndexForScrollLeft = useCallback((scrollLeft: number) => {
+    if (!listRef.current) return 0;
+    const centeredOffset = (listRef.current.clientWidth - itemWidth) / 2;
+    return Math.round((scrollLeft + centeredOffset) / itemWidth);
+  }, [itemWidth]);
+
   useEffect(() => {
     const idx = values.indexOf(selected);
     if (idx < 0 || !listRef.current) return;
-    listRef.current.scrollLeft = idx * itemWidth;
-  }, [selected, values, itemWidth]);
+    listRef.current.scrollLeft = getScrollLeftForIndex(idx);
+  }, [selected, values, getScrollLeftForIndex]);
 
   const snapToNearest = () => {
     if (!listRef.current) return;
-    const idx = Math.round(listRef.current.scrollLeft / itemWidth);
+    const idx = getIndexForScrollLeft(listRef.current.scrollLeft);
     const clamped = Math.max(0, Math.min(values.length - 1, idx));
-    listRef.current.scrollLeft = clamped * itemWidth;
+    listRef.current.scrollLeft = getScrollLeftForIndex(clamped);
     onChange(values[clamped]);
   };
 

@@ -11,6 +11,7 @@ import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import RoundResult from '@/components/RoundResult';
 import GameSummary from '@/components/GameSummary';
+import { fetchVerseTextByReference } from '@/lib/verseClient';
 import { Pause, X } from 'lucide-react';
 
 interface VerseInfo {
@@ -104,27 +105,15 @@ export default function GamePage() {
   }, [session, resetGame, router]);
 
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
-    try {
-      const params = new URLSearchParams({
-        book: reference.book,
-        chapter: String(reference.chapter),
-        verse: String(reference.verse),
-      });
-      const res = await fetch(`/api/verse/?${params.toString()}`);
-      if (!res.ok) return null;
+    const text = await fetchVerseTextByReference(reference.book, reference.chapter, reference.verse);
+    if (!text) return null;
 
-      const data = await res.json();
-      if (!data?.text) return null;
-
-      return {
-        book: reference.book,
-        chapter: reference.chapter,
-        verse: reference.verse,
-        text: String(data.text).trim(),
-      } satisfies VerseInfo;
-    } catch {
-      return null;
-    }
+    return {
+      book: reference.book,
+      chapter: reference.chapter,
+      verse: reference.verse,
+      text,
+    } satisfies VerseInfo;
   }, []);
 
   const fetchVerse = useCallback(async (books: BookData[]) => {

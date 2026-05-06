@@ -5,6 +5,9 @@ const isGitHubPagesBuild =
 
 const nextConfig: NextConfig = {
   trailingSlash: true,
+  env: {
+    NEXT_PUBLIC_IS_GITHUB_PAGES: isGitHubPagesBuild ? "true" : "false",
+  },
   images: {
     unoptimized: true,
   },

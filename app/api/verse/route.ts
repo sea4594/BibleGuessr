@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { getVerseTextByReference } from '@/lib/server/esvBlob';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-static';
+export const revalidate = 3600;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

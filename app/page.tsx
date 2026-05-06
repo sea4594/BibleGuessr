@@ -5,6 +5,7 @@ import { useUiSettings } from "@/lib/uiSettingsContext";
 import { useGame } from "@/lib/gameContext";
 import { gameModes, GameModeId } from "@/lib/gameModes";
 import { bibleData } from "@/lib/bibleData";
+import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
 import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
@@ -37,20 +38,12 @@ export default function HomePage() {
 
   useEffect(() => {
     const ref = getDailyVerseRef();
-    const params = new URLSearchParams({
-      book: ref.book,
-      chapter: String(ref.chapter),
-      verse: String(ref.verse),
-    });
-    const url = `/api/verse/?${params.toString()}`;
-    void fetch(url)
-      .then(r => r.json())
-      .then((data: { text?: string }) => {
-        if (data.text) {
-          setVerseOfDay({ ...ref, text: data.text.trim() });
+    void fetchVerseTextByReference(ref.book, ref.chapter, ref.verse)
+      .then(text => {
+        if (text) {
+          setVerseOfDay({ ...ref, text });
         }
       })
-      .catch(() => {})
       .finally(() => setLoadingVerse(false));
   }, []);
 
@@ -69,7 +62,7 @@ export default function HomePage() {
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
           <section className="surface-card p-5">
-            <p className="eyebrow mb-2">Verse of the Day</p>
+            <p className="eyebrow mb-2">(random) VERSE OF THE DAY</p>
             {loadingVerse ? (
               <p className="content-muted text-sm animate-pulse">Loading verse...</p>
             ) : verseOfDay ? (
