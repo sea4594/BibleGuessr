@@ -11,10 +11,43 @@ interface Props {
   isLastRound: boolean;
 }
 
+// Utility function to get feedback styling
+function getFeedbackStyles(status: 'correct' | 'close' | 'wrong') {
+  const styles = {
+    correct: { color: 'text-green-400', icon: '✓', label: 'Correct' },
+    close: { color: 'text-yellow-400', icon: '~', label: 'Close' },
+    wrong: { color: 'text-red-400', icon: '✗', label: 'Wrong' },
+  };
+  return styles[status];
+}
+
 function StatusBadge({ status }: { status: 'correct' | 'close' | 'wrong' }) {
-  const styles = { correct: 'text-green-400', close: 'text-yellow-400', wrong: 'text-red-400' };
-  const icons = { correct: '✓', close: '~', wrong: '✗' };
-  return <span className={`font-bold ${styles[status]}`}>{icons[status]}</span>;
+  const style = getFeedbackStyles(status);
+  return <span className={`font-bold ${style.color}`}>{style.icon}</span>;
+}
+
+interface FeedbackRowProps {
+  category: string;
+  correct: string | number;
+  guess: string | number;
+  status: 'correct' | 'close' | 'wrong';
+  detail?: string;
+}
+
+function FeedbackRow({ category, correct, guess, status, detail }: FeedbackRowProps) {
+  const style = getFeedbackStyles(status);
+  return (
+    <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[var(--line)]">
+      <div className="text-sm flex items-center justify-center gap-1">
+        <StatusBadge status={status} /> {category}
+      </div>
+      <div className="font-medium text-sm">{correct}</div>
+      <div className={`text-sm font-medium ${style.color}`}>
+        {guess}
+        {detail && <span className="text-xs ml-1">{detail}</span>}
+      </div>
+    </div>
+  );
 }
 
 export default function RoundResult({ round, roundNumber, totalRounds, onNext, onHome, isLastRound }: Props) {
@@ -49,41 +82,28 @@ export default function RoundResult({ round, roundNumber, totalRounds, onNext, o
             <div className="content-muted text-xs uppercase tracking-[0.18em]">Your Guess</div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[var(--line)]">
-            <div className="text-sm flex items-center justify-center gap-1">
-              <StatusBadge status={feedback.book} /> Book
-            </div>
-            <div className="font-medium text-sm">{verse.book}</div>
-            <div className={`text-sm font-medium ${feedback.book === 'correct' ? 'text-green-400' : feedback.book === 'close' ? 'text-yellow-400' : 'text-red-400'}`}>
-              {guess.book}
-            </div>
-          </div>
+          <FeedbackRow
+            category="Book"
+            correct={verse.book}
+            guess={guess.book}
+            status={feedback.book}
+          />
 
-          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[var(--line)]">
-            <div className="text-sm flex items-center justify-center gap-1">
-              <StatusBadge status={feedback.chapter} /> Chapter
-            </div>
-            <div className="font-medium text-sm">{verse.chapter}</div>
-            <div className={`text-sm font-medium ${feedback.chapter === 'correct' ? 'text-green-400' : feedback.chapter === 'close' ? 'text-yellow-400' : 'text-red-400'}`}>
-              {guess.chapter}
-              {feedback.chaptersOff > 0 && (
-                <span className="text-xs ml-1">({feedback.chaptersOff} off)</span>
-              )}
-            </div>
-          </div>
+          <FeedbackRow
+            category="Chapter"
+            correct={verse.chapter}
+            guess={guess.chapter}
+            status={feedback.chapter}
+            detail={feedback.chaptersOff > 0 ? `(${feedback.chaptersOff} off)` : undefined}
+          />
 
-          <div className="grid grid-cols-3 gap-4 text-center py-2.5 border-t border-[var(--line)]">
-            <div className="text-sm flex items-center justify-center gap-1">
-              <StatusBadge status={feedback.verse} /> Verse
-            </div>
-            <div className="font-medium text-sm">{verse.verse}</div>
-            <div className={`text-sm font-medium ${feedback.verse === 'correct' ? 'text-green-400' : feedback.verse === 'close' ? 'text-yellow-400' : 'text-red-400'}`}>
-              {guess.verse}
-              {feedback.versesOff > 0 && (
-                <span className="text-xs ml-1">({feedback.versesOff} off)</span>
-              )}
-            </div>
-          </div>
+          <FeedbackRow
+            category="Verse"
+            correct={verse.verse}
+            guess={guess.verse}
+            status={feedback.verse}
+            detail={feedback.versesOff > 0 ? `(${feedback.versesOff} off)` : undefined}
+          />
         </div>
 
         <div className="surface-card p-4 sm:p-5 mb-6">
