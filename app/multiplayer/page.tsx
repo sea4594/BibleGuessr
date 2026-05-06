@@ -10,8 +10,8 @@ import { isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
 
-// ── Scroll-wheel picker ─────────────────────────────────────────────────────
-function ScrollPicker({
+// ── Horizontal Scroll-wheel picker ──────────────────────────────────────────
+function HScrollPicker({
   label,
   values,
   selected,
@@ -23,46 +23,33 @@ function ScrollPicker({
   onChange: (v: number) => void;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
-  const ITEM_H = 44;
-  const isScrolling = useRef(false);
+  const ITEM_W = 60;
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Scroll to selected on mount / external change
   useEffect(() => {
     const idx = values.indexOf(selected);
     if (idx < 0 || !listRef.current) return;
-    listRef.current.scrollTop = idx * ITEM_H;
+    listRef.current.scrollLeft = idx * ITEM_W;
   }, [selected, values]);
 
   const handleScroll = () => {
     if (!listRef.current) return;
-    isScrolling.current = true;
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     scrollTimeout.current = setTimeout(() => {
-      isScrolling.current = false;
       if (!listRef.current) return;
-      const idx = Math.round(listRef.current.scrollTop / ITEM_H);
+      const idx = Math.round(listRef.current.scrollLeft / ITEM_W);
       const clamped = Math.max(0, Math.min(values.length - 1, idx));
-      // Snap
-      listRef.current.scrollTop = clamped * ITEM_H;
+      listRef.current.scrollLeft = clamped * ITEM_W;
       onChange(values[clamped]);
     }, 120);
   };
 
   return (
-    <div className="scroll-picker-wrap">
-      <span className="scroll-picker-label">{label}</span>
-      <div
-        ref={listRef}
-        className="scroll-picker"
-        onScroll={handleScroll}
-      >
+    <div className="h-scroll-picker-wrap">
+      <span className="h-scroll-picker-label">{label}</span>
+      <div ref={listRef} className="h-scroll-picker" onScroll={handleScroll}>
         {values.map(v => (
-          <div
-            key={v}
-            className={`scroll-picker-item${v === selected ? ' selected' : ''}`}
-            onClick={() => onChange(v)}
-          >
+          <div key={v} className={`h-scroll-picker-item${v === selected ? ' selected' : ''}`} onClick={() => onChange(v)}>
             {v}
           </div>
         ))}
@@ -74,7 +61,6 @@ function ScrollPicker({
 const PLAYER_VALUES = [2, 3, 4, 5, 6, 7, 8];
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-// ── Main Component ──────────────────────────────────────────────────────────
 export default function MultiplayerPage() {
   const router = useRouter();
   const [tab, setTab] = useState<'hot-seat' | 'party'>('hot-seat');
@@ -103,7 +89,9 @@ export default function MultiplayerPage() {
     let cancelled = false;
     const run = async () => {
       if (room?.code) {
-        unsubscribe = subscribeToParty(room.code, next => { if (!cancelled) setRoom(next); });
+        unsubscribe = subscribeToParty(room.code, next => {
+          if (!cancelled) setRoom(next);
+        });
         return;
       }
       const created = await hostParty({
@@ -115,11 +103,16 @@ export default function MultiplayerPage() {
       });
       if (!cancelled && created) {
         setRoom(created);
-        unsubscribe = subscribeToParty(created.code, next => { if (!cancelled) setRoom(next); });
+        unsubscribe = subscribeToParty(created.code, next => {
+          if (!cancelled) setRoom(next);
+        });
       }
     };
     void run();
-    return () => { cancelled = true; unsubscribe(); };
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [tab, clientId, profile.avatar, profile.name, room?.code]);
 
   useEffect(() => {
@@ -155,7 +148,7 @@ export default function MultiplayerPage() {
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-4xl">
-          <section className="surface-card p-3 sm:p-4">
+          <section className="surface-card p-3 sm:p-4 mb-3">
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
               <button onClick={() => setTab('party')} className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Party</button>
@@ -163,69 +156,47 @@ export default function MultiplayerPage() {
           </section>
 
           {tab === 'hot-seat' && (
-            <section className="surface-card p-5">
-              <h2 className="headline-serif text-2xl mb-5">Local Multiplayer</h2>
+            <div className="space-y-4 pb-6">
+              <div>
+                <h1 className="headline-serif text-3xl mb-5">Local Multiplayer</h1>
 
-              {/* Pickers row */}
-              <div className="flex gap-6 justify-center mb-5">
-                <ScrollPicker
-                  label="Players"
-                  values={PLAYER_VALUES}
-                  selected={players}
-                  onChange={applyPlayers}
-                />
-                <ScrollPicker
-                  label="Rounds/Player"
-                  values={ROUND_VALUES}
-                  selected={rounds}
-                  onChange={setRounds}
-                />
-              </div>
+                {/* Horizontal pickers row */}
+                <div className="flex gap-6 justify-center mb-6 px-2">
+                  <HScrollPicker label="Players" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
+                  <HScrollPicker label="Rounds/Player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+                </div>
 
-              {/* Player names – right below pickers */}
-              <div className="mb-5">
+                {/* Player names */}
                 <p className="text-sm font-semibold mb-2">Player Names</p>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2 mb-5">
                   {names.slice(0, players).map((name, idx) => (
-                    <input
-                      key={idx}
-                      value={name}
-                      onChange={e => {
-                        const next = names.slice();
-                        next[idx] = e.target.value;
-                        setNames(next);
-                      }}
-                      className="settings-input !w-full"
-                    />
+                    <input key={idx} value={name} onChange={e => { const n = names.slice(); n[idx] = e.target.value; setNames(n); }} className="settings-input !w-full" />
                   ))}
                 </div>
-              </div>
 
-              {/* Turn style */}
-              <div className="settings-list mb-5">
-                <label className="setting-row">
+                {/* Turn style */}
+                <label className="setting-row mb-5">
                   <span>Turn style</span>
                   <div className="flex gap-2">
                     <button onClick={() => setTurnStyle('alternate')} className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>Alternate</button>
                     <button onClick={() => setTurnStyle('all-at-once')} className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>All at once</button>
                   </div>
                 </label>
-              </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button onClick={() => { setPlayers(defaultHotSeatSettings.players); setRounds(defaultHotSeatSettings.rounds); setTurnStyle(defaultHotSeatSettings.turnStyle); setNames(defaultHotSeatSettings.names); }} className="btn-outline py-2.5">Reset defaults</button>
-                <button onClick={selectGamemode} className="btn-primary py-2.5">Select Gamemode</button>
+                {/* Buttons */}
+                <div className="grid gap-2 sm:grid-cols-2 mb-5">
+                  <button onClick={() => { setPlayers(defaultHotSeatSettings.players); setRounds(defaultHotSeatSettings.rounds); setTurnStyle(defaultHotSeatSettings.turnStyle); setNames(defaultHotSeatSettings.names); }} className="btn-outline py-2.5">Reset</button>
+                  <button onClick={selectGamemode} className="btn-primary py-4 text-lg font-semibold">Select Gamemode</button>
+                </div>
               </div>
-            </section>
+            </div>
           )}
 
           {tab === 'party' && (
             <section className="surface-card p-5 relative">
               <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm absolute right-5 top-5">Join by code</button>
               <h2 className="headline-serif text-3xl mb-5">Hosted Party</h2>
-              {!isFirebaseConfigured() && (
-                <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>
-              )}
+              {!isFirebaseConfigured() && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
               {isFirebaseConfigured() && room && (
                 <>
                   <div className="surface-card-soft p-4 mb-4">
@@ -259,21 +230,13 @@ export default function MultiplayerPage() {
             <h3 className="headline-serif text-2xl mb-4">Enter 4-letter code</h3>
             <div className="grid grid-cols-4 gap-2 mb-5">
               {joinCode.map((value, idx) => (
-                <input
-                  key={idx}
-                  ref={el => { joinRefs.current[idx] = el; }}
-                  value={value}
-                  maxLength={1}
-                  onChange={e => {
-                    const char = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '');
-                    const next = joinCode.slice();
-                    next[idx] = char;
-                    setJoinCode(next);
-                    if (char && idx < 3) joinRefs.current[idx + 1]?.focus();
-                  }}
-                  className="settings-input !w-full text-center text-2xl font-bold"
-                  inputMode="text"
-                />
+                <input key={idx} ref={el => { joinRefs.current[idx] = el; }} value={value} maxLength={1} onChange={e => {
+                  const char = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '');
+                  const next = joinCode.slice();
+                  next[idx] = char;
+                  setJoinCode(next);
+                  if (char && idx < 3) joinRefs.current[idx + 1]?.focus();
+                }} className="settings-input !w-full text-center text-2xl font-bold" inputMode="text" />
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">

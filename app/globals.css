@@ -957,3 +957,70 @@ input[type='range']::-moz-range-thumb {
   display: block;
   height: 44px;
 }
+
+/* ====== Horizontal Scroll Picker ====== */
+.h-scroll-picker-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.h-scroll-picker-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.h-scroll-picker {
+  width: 100%;
+  height: 70px;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  scrollbar-width: none;
+  display: flex;
+  gap: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.h-scroll-picker::-webkit-scrollbar { display: none; }
+.h-scroll-picker-item {
+  flex-shrink: 0;
+  width: 60px;
+  height: 100%;
+  scroll-snap-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.h-scroll-picker-item.selected {
+  color: var(--text-main);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* ====== Verse window max-size constraint ====== */
+.verse-scroll-area {
+  max-height: 300px;
+}
+
+/* ====== Sliders full height ====== */
+.vslider-track-wrap {
+  min-height: 180px;
+}
+.vslider-book-item {
+  font-size: 6px;
+  line-height: 1.4;
+  padding: 0 2px;
+}

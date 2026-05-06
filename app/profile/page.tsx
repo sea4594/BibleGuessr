@@ -55,17 +55,17 @@ function AvatarEditor({
             <div key={attr.key}>
               <p className="eyebrow mb-1.5">{attr.label}</p>
               {attr.type === 'color' ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {(colorOptions[attr.key] ?? []).map(opt => (
                     <button
                       key={opt}
                       onClick={() => update(attr.key, opt)}
-                      className="w-11 h-11 rounded-full border-2 transition-transform hover:scale-110"
+                      className="w-16 h-16 rounded-full border-3 transition-transform hover:scale-110"
                       style={{
                         background: opt,
                         borderColor: local[attr.key] === opt ? 'var(--text-main)' : 'transparent',
-                        transform: local[attr.key] === opt ? 'scale(1.18)' : undefined,
-                        boxShadow: local[attr.key] === opt ? '0 0 0 2px var(--bg), 0 0 0 4px var(--text-main)' : undefined,
+                        transform: local[attr.key] === opt ? 'scale(1.15)' : undefined,
+                        boxShadow: local[attr.key] === opt ? '0 0 0 3px var(--bg), 0 0 0 5px var(--text-main)' : undefined,
                       }}
                       title={opt}
                     />

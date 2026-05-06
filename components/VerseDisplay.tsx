@@ -68,10 +68,7 @@ export default function VerseDisplay({
 
       {/* Scrollable verse area */}
       <div className="verse-scroll-area">
-        <div className="surface-card relative p-3 sm:p-4">
-          <div className="absolute -top-3 left-4 bg-[var(--accent)] text-[var(--text-main)] text-xs font-bold px-2 py-0.5 border border-[var(--line-strong)]">
-            KJV
-          </div>
+        <div className="surface-card p-3 sm:p-4">
           <div className="space-y-3">
             {versesToDisplay.map(item => (
               <p

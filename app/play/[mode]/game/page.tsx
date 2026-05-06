@@ -6,11 +6,12 @@ import { useGame } from '@/lib/gameContext';
 import { GameModeId } from '@/lib/gameModes';
 import { calculateScore } from '@/lib/scoring';
 import { bibleData, BookData } from '@/lib/bibleData';
+import { SeededRandom } from '@/lib/seededRandom';
 import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import RoundResult from '@/components/RoundResult';
 import GameSummary from '@/components/GameSummary';
-import { Pause } from 'lucide-react';
+import { Pause, X } from 'lucide-react';
 
 interface VerseInfo {
   book: string;
@@ -21,24 +22,19 @@ interface VerseInfo {
 
 type NeighborDirection = 'previous' | 'next';
 
-function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
-  const book = books[Math.floor(Math.random() * books.length)];
-  const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
+function pickRandomVerse(books: BookData[], rng?: SeededRandom): { book: BookData; chapter: number; verse: number } {
+  const rnd = (max: number) => rng ? Math.floor(rng.next() * max) : Math.floor(Math.random() * max);
+  const book = books[rnd(books.length)];
+  const chapterData = book.chapters[rnd(book.chapters.length)];
   const chapter = parseInt(chapterData.chapter);
   const verseCount = parseInt(chapterData.verses);
-  const verse = Math.floor(Math.random() * verseCount) + 1;
+  const verse = rnd(verseCount) + 1;
   return { book, chapter, verse };
 }
 
-function resolveNeighborVerse(
-  book: string,
-  chapter: number,
-  verse: number,
-  direction: NeighborDirection
-): { book: string; chapter: number; verse: number } | null {
+function resolveNeighborVerse(book: string, chapter: number, verse: number, direction: NeighborDirection): { book: string; chapter: number; verse: number } | null {
   const bookIndex = bibleData.findIndex(b => b.book === book);
   if (bookIndex < 0) return null;
-
   const bookData = bibleData[bookIndex];
   const chapterData = bookData.chapters[chapter - 1];
   const maxVerse = chapterData ? parseInt(chapterData.verses, 10) : 1;
@@ -46,9 +42,8 @@ function resolveNeighborVerse(
   if (direction === 'previous') {
     if (verse > 1) return { book, chapter, verse: verse - 1 };
     if (chapter > 1) {
-      const prevChapter = chapter - 1;
-      const prevChData = bookData.chapters[prevChapter - 1];
-      return { book, chapter: prevChapter, verse: parseInt(prevChData?.verses ?? '1', 10) };
+      const prevChData = bookData.chapters[chapter - 2];
+      return { book, chapter: chapter - 1, verse: parseInt(prevChData?.verses ?? '1', 10) };
     }
     if (bookIndex === 0) return null;
     const prevBook = bibleData[bookIndex - 1];
@@ -77,9 +72,11 @@ export default function GamePage() {
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [rng, setRng] = useState<SeededRandom | null>(null);
 
   useEffect(() => {
     if (!session) router.replace('/');
+    else if (session.seed) setRng(new SeededRandom(session.seed));
   }, [session, router]);
 
   useEffect(() => {
@@ -115,7 +112,7 @@ export default function GamePage() {
     setNextVerses([]);
     let attempts = 0;
     while (attempts < 5) {
-      const { book, chapter, verse } = pickRandomVerse(books);
+      const { book, chapter, verse } = pickRandomVerse(books, rng);
       const data = await fetchVerseByReference({ book: book.book, chapter, verse });
       if (data) {
         setCurrentVerse(data);
@@ -127,7 +124,7 @@ export default function GamePage() {
     }
     setVerseError('Failed to load verse. Please try again.');
     setIsLoadingVerse(false);
-  }, [fetchVerseByReference]);
+  }, [fetchVerseByReference, rng]);
 
   useEffect(() => {
     if (session?.gameState === 'playing' && session.modeConfig) {
@@ -235,19 +232,14 @@ export default function GamePage() {
   const contextPenalty = (previousVerses.length + nextVerses.length) * 10;
 
   return (
-    <div className="app-screen game-shell">
-      {/* Condensed top bar */}
+    <div className="app-screen game-shell" onClick={() => isPaused && setIsPaused(false)}>
       <header className="game-topbar">
         <span className="game-topbar-round">
           Round {displayRound}/{displayTotal}
           {currentPlayerName && <span className="game-topbar-player"> · {currentPlayerName}</span>}
         </span>
         <span className="game-topbar-time">{formatTime(elapsedSeconds)}</span>
-        <button
-          onClick={() => setIsPaused(true)}
-          className="game-topbar-pause"
-          aria-label="Pause"
-        >
+        <button onClick={() => setIsPaused(true)} className="game-topbar-pause" aria-label="Pause">
           <Pause size={15} />
         </button>
       </header>
@@ -280,40 +272,27 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* Pause overlay */}
       {isPaused && (
-        <div className="pause-overlay">
+        <div className="pause-overlay" onClick={e => e.currentTarget === e.target && setIsPaused(false)}>
           <div className="pause-card fade-up">
+            <button onClick={() => setIsPaused(false)} className="absolute top-3 right-3 p-1 hover:opacity-75">
+              <X size={24} />
+            </button>
             <h2 className="headline-serif text-2xl mb-1">Paused</h2>
             <p className="content-muted text-sm mb-5">Round {displayRound} of {displayTotal}</p>
-            <button onClick={() => setIsPaused(false)} className="btn-primary block w-full py-3 mb-2">
-              Resume
-            </button>
-            <Link href="/profile" className="btn-outline block w-full py-2.5 text-center mb-2">
-              Settings
-            </Link>
-            <button
-              onClick={() => setShowQuitConfirm(true)}
-              className="btn-outline block w-full py-2.5 text-[var(--danger)]"
-            >
-              Quit
-            </button>
+            <Link href="/profile" className="btn-outline block w-full py-2.5 text-center mb-2">Settings</Link>
+            <button onClick={() => setShowQuitConfirm(true)} className="btn-outline block w-full py-2.5 text-[var(--danger)]">Quit</button>
           </div>
         </div>
       )}
 
-      {/* Quit confirmation overlay */}
       {showQuitConfirm && (
-        <div className="pause-overlay" style={{ zIndex: 60 }}>
+        <div className="pause-overlay" style={{ zIndex: 60 }} onClick={e => e.currentTarget === e.target && setShowQuitConfirm(false)}>
           <div className="pause-card fade-up">
             <h2 className="headline-serif text-xl mb-2">Quit game?</h2>
             <p className="content-muted text-sm mb-5">Your progress will be lost.</p>
-            <button onClick={handleQuit} className="btn-primary block w-full py-3 mb-2 bg-[var(--danger)] border-[var(--danger)]">
-              Yes, Quit
-            </button>
-            <button onClick={() => setShowQuitConfirm(false)} className="btn-outline block w-full py-2.5">
-              Cancel
-            </button>
+            <button onClick={handleQuit} className="btn-primary block w-full py-3 mb-2 bg-[var(--danger)] border-[var(--danger)]">Yes, Quit</button>
+            <button onClick={() => setShowQuitConfirm(false)} className="btn-outline block w-full py-2.5">Cancel</button>
           </div>
         </div>
       )}
