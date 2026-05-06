@@ -6,7 +6,7 @@ import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import {
   AvatarSpec, avatarToDataUri, AVATAR_ATTRIBUTES,
-  BACKGROUND_OPTIONS, SKIN_OPTIONS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS,
+  SKIN_OPTIONS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS,
   SHOE_COLORS, EYE_COLORS,
 } from '@/lib/avatarSystem';
 import { getFirebaseAuth, getGoogleProvider, isFirebaseConfigured } from '@/lib/firebaseClient';
@@ -30,7 +30,6 @@ function AvatarEditor({
   };
 
   const colorOptions: Record<string, string[]> = {
-    background: BACKGROUND_OPTIONS,
     skinColor: SKIN_OPTIONS,
     hairColor: HAIR_COLORS,
     eyeColor: EYE_COLORS,
@@ -60,7 +59,7 @@ function AvatarEditor({
                     <button
                       key={opt}
                       onClick={() => update(attr.key, opt)}
-                      className="w-16 h-16 rounded-full border-3 transition-transform hover:scale-110"
+                      className="w-16 h-16 rounded-full border-[3px] transition-transform hover:scale-110"
                       style={{
                         background: opt,
                         borderColor: local[attr.key] === opt ? 'var(--text-main)' : 'transparent',

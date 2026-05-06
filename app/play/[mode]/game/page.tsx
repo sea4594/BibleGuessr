@@ -72,11 +72,14 @@ export default function GamePage() {
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
-  const [rng, setRng] = useState<SeededRandom | null>(null);
+  const [rng, setRng] = useState<SeededRandom | undefined>(undefined);
 
   useEffect(() => {
     if (!session) router.replace('/');
-    else if (session.seed) setRng(new SeededRandom(session.seed));
+    else if (session.seed) {
+      const t = setTimeout(() => setRng(new SeededRandom(session.seed!)), 0);
+      return () => clearTimeout(t);
+    }
   }, [session, router]);
 
   useEffect(() => {

@@ -24,7 +24,7 @@ const STORAGE_KEY = 'bg-ui-settings-v1';
 
 const DEFAULT_SETTINGS: UiSettings = {
   theme: 'ocean',
-  mode: 'dark',
+  mode: 'light',
   preferredRounds: 5,
   preferredGameMode: 'full-bible',
 };
@@ -65,7 +65,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
-    document.documentElement.setAttribute('data-mode', 'dark');
+    document.documentElement.setAttribute('data-mode', settings.mode);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 

@@ -1,6 +1,6 @@
 'use client';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { gameModes, GameModeId } from '@/lib/gameModes';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
@@ -16,6 +16,15 @@ export default function ModePage() {
   const modeConfig = gameModes[modeId];
   const [rounds, setRounds] = useState<5 | 10>(settings.preferredRounds);
   const [selectedBook, setSelectedBook] = useState(bibleData[0].book);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const isDirectLoad = !document.referrer || !document.referrer.includes(window.location.host);
+    if (isDirectLoad && (navEntry?.type === 'navigate' || navEntry?.type === 'reload')) {
+      router.replace('/');
+    }
+  }, [router]);
 
 
   if (!modeConfig) {
