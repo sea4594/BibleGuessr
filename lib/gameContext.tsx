@@ -39,6 +39,7 @@ export interface GameSession {
   currentRound: number;
   rounds: RoundData[];
   selectedBook?: string;
+  randomizeBookOnReplay?: boolean;
   returnPath?: string;
   multiplayer?: MultiplayerConfig;
   gameState: 'setup' | 'playing' | 'result' | 'summary';
@@ -101,7 +102,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
         score,
         scoreBreakdown: breakdown,
       };
-      return { ...prev, rounds: [...prev.rounds, newRound], gameState: 'result' };
+
+      const nextRounds = [...prev.rounds, newRound];
+      const skipResultScreen = !prev.multiplayer?.enabled && prev.totalRounds === 1;
+
+      return {
+        ...prev,
+        rounds: nextRounds,
+        gameState: skipResultScreen ? 'summary' : 'result',
+      };
     });
   };
 

@@ -10,7 +10,7 @@ interface Props {
   onHome: () => void;
 }
 
-export default function GameSummary({ session, onPlayAgain }: Props) {
+export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
   const totalScore = session.rounds.reduce((sum, r) => sum + r.score, 0);
   const maxPossible = session.totalRounds * 100;
   const accuracy = Math.round((totalScore / Math.max(maxPossible, 1)) * 100);
@@ -45,12 +45,13 @@ export default function GameSummary({ session, onPlayAgain }: Props) {
   return (
     <main className="app-screen">
       <header className="topbar">
-        <div className="font-semibold">Session Summary</div>
+        <button onClick={onHome} className="btn-outline px-3 py-2 text-sm">Exit</button>
+        <div className="font-semibold">Game Summary</div>
+        <span className="topbar-placeholder" aria-hidden="true" />
       </header>
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-lg setup-page">
-          <h2 className="headline-serif text-5xl mb-1">Game Over</h2>
           <p className="content-muted mb-3">{session.modeConfig.name}</p>
 
           <div className="surface-card p-4 sm:p-5 mb-4 w-full">

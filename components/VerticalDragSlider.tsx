@@ -59,7 +59,6 @@ export default function VerticalDragSlider({
   };
 
   const activeIdx = dragging ? hoverIdx : selectedIndex;
-  const thumbPct = items.length <= 1 ? 0 : (activeIdx / (items.length - 1)) * 100;
   const itemHeightPercent = items.length > 0 ? 100 / items.length : 100;
   const dynamicFontPx = Math.max(4, Math.min(14, Math.floor(220 / Math.max(items.length, 1))));
 
@@ -104,7 +103,6 @@ export default function VerticalDragSlider({
             ))}
           </div>
 
-          <div className="vslider-thumb-line" style={{ top: `${thumbPct}%` }} aria-hidden="true" />
         </div>
 
         {dragging && (

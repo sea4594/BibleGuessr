@@ -35,14 +35,14 @@ export default function HorizontalWheel({
   useEffect(() => {
     const idx = values.indexOf(selected);
     if (idx < 0 || !listRef.current) return;
-    listRef.current.scrollLeft = getScrollLeftForIndex(idx);
+    listRef.current.scrollTo({ left: getScrollLeftForIndex(idx), behavior: 'smooth' });
   }, [selected, values, getScrollLeftForIndex]);
 
   const snapToNearest = () => {
     if (!listRef.current) return;
     const idx = getIndexForScrollLeft(listRef.current.scrollLeft);
     const clamped = Math.max(0, Math.min(values.length - 1, idx));
-    listRef.current.scrollLeft = getScrollLeftForIndex(clamped);
+    listRef.current.scrollTo({ left: getScrollLeftForIndex(clamped), behavior: 'smooth' });
     onChange(values[clamped]);
   };
 
@@ -55,6 +55,7 @@ export default function HorizontalWheel({
     <div className="h-wheel-wrap">
       <span className="h-wheel-label">{label}</span>
       <div className="h-wheel-track" ref={listRef} onScroll={onScroll}>
+        <div className="h-wheel-spacer" style={{ width: `${itemWidth}px`, minWidth: `${itemWidth}px` }} aria-hidden="true" />
         {values.map(value => (
           <button
             key={value}
@@ -66,6 +67,8 @@ export default function HorizontalWheel({
             {value}
           </button>
         ))}
+        <div className="h-wheel-spacer" style={{ width: `${itemWidth}px`, minWidth: `${itemWidth}px` }} aria-hidden="true" />
+        <div className="h-wheel-center-box" aria-hidden="true" />
       </div>
     </div>
   );

@@ -55,14 +55,6 @@ export default function HotSeatSectionSetupPage() {
         <div className="page max-w-xl">
           <section className="surface-card p-5">
             <h1 className="headline-serif text-3xl mb-4">{mode.name}</h1>
-            <p className="text-sm font-semibold mb-2 text-[var(--text-muted)]">Books in play ({mode.books.length})</p>
-            <div className="surface-card-soft p-3 mb-5 max-h-48 overflow-y-auto">
-              <div className="flex flex-wrap gap-1">
-                {mode.books.map(b => (
-                  <span key={b.book} className="text-xs bg-[var(--panel)] border border-[var(--line)] rounded px-1.5 py-0.5">{b.book}</span>
-                ))}
-              </div>
-            </div>
             <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
           </section>
         </div>

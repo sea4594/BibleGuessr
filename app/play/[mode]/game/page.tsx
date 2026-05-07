@@ -89,6 +89,7 @@ export default function GamePage() {
   const [previousVerses, setPreviousVerses] = useState<VerseInfo[]>([]);
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
+  const [canStartRound, setCanStartRound] = useState(false);
 
   useEffect(() => {
     if (!session) router.replace('/');
@@ -163,14 +164,17 @@ export default function GamePage() {
     setIsLoadingVerse(false);
   }, [fetchVerseByReference, session, sharedVerseByRound]);
 
+  const isHotSeatGame = Boolean(session?.multiplayer?.enabled && session?.multiplayer?.lobbyType === 'hot-seat');
+  const roundCanStart = !isHotSeatGame || canStartRound;
+
   useEffect(() => {
-    if (session?.gameState === 'playing' && session.modeConfig) {
+    if (session?.gameState === 'playing' && session.modeConfig && roundCanStart) {
       const timer = setTimeout(() => {
         void fetchVerse(session.modeConfig.books);
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [session?.currentRound, session?.gameState, session?.modeConfig, fetchVerse]);
+  }, [session?.currentRound, session?.gameState, session?.modeConfig, fetchVerse, roundCanStart]);
 
   useEffect(() => {
     if (!currentVerse || isLoadingVerse || isPaused) return;
@@ -266,6 +270,7 @@ export default function GamePage() {
     setElapsedSeconds(0);
     setPreviousVerses([]);
     setNextVerses([]);
+    if (isHotSeatGame) setCanStartRound(false);
     nextRound();
   };
 
@@ -276,11 +281,21 @@ export default function GamePage() {
   };
 
   const handlePlayAgain = () => {
+    const shouldRandomizeBook = session.mode === 'book-selection' && session.randomizeBookOnReplay;
+    const randomBook = shouldRandomizeBook
+      ? bibleData[Math.floor(Math.random() * bibleData.length)]
+      : undefined;
+
     startGame({
       mode: modeId,
-      modeConfig: session.modeConfig,
+      modeConfig: shouldRandomizeBook && randomBook
+        ? { ...session.modeConfig, books: [randomBook] }
+        : session.modeConfig,
       totalRounds: session.totalRounds,
-      selectedBook: session.selectedBook,
+      selectedBook: shouldRandomizeBook && randomBook ? randomBook.book : session.selectedBook,
+      randomizeBookOnReplay: Boolean(session.randomizeBookOnReplay),
+      returnPath: session.returnPath,
+      multiplayer: session.multiplayer,
     });
   };
 
@@ -299,6 +314,7 @@ export default function GamePage() {
         onHome={handleExitToHome}
         isLastRound={session.currentRound >= session.totalRounds}
         rounds={session.rounds}
+        multiplayer={session.multiplayer}
       />
     );
   }
@@ -308,14 +324,19 @@ export default function GamePage() {
   return (
     <div className="app-screen game-shell">
       <header className="game-topbar">
+        <div className="game-topbar-exit">
+          <button onClick={() => setShowQuitConfirm(true)} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
+        </div>
         <p className="game-topbar-round">
           Round {displayRound} / {displayTotalRounds}
           {currentPlayerName && <span className="game-topbar-player"> · {currentPlayerName}</span>}
         </p>
-        <p className="game-topbar-time">{formatTime(elapsedSeconds)}</p>
-        <button onClick={() => setIsPaused(true)} className="game-topbar-pause" aria-label="Pause game">
-          <Pause size={15} />
-        </button>
+        <div className="game-topbar-actions">
+          <p className="game-topbar-time">{formatTime(elapsedSeconds)}</p>
+          <button onClick={() => setIsPaused(true)} className="game-topbar-pause" aria-label="Pause game">
+            <Pause size={15} />
+          </button>
+        </div>
       </header>
 
       <div className="app-content app-content-fixed game-content">
@@ -341,6 +362,18 @@ export default function GamePage() {
               )}
             </div>
           </div>
+
+          {isHotSeatGame && !roundCanStart && session.gameState === 'playing' && (
+            <div className="pause-overlay" onClick={e => e.stopPropagation()}>
+              <div className="pause-card fade-up turn-gate-card">
+                <h2 className="headline-serif text-3xl mb-2">Pass device</h2>
+                <p className="content-muted mb-6">Start when ready for the next turn.</p>
+                <button onClick={() => setCanStartRound(true)} className="btn-primary block w-full py-4 text-lg">
+                  I&apos;m {currentPlayerName ?? 'Player'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -356,10 +389,6 @@ export default function GamePage() {
             <Link href="/profile" className="btn-outline block w-full py-3 mb-2 text-center" onClick={() => setIsPaused(false)}>
               Settings
             </Link>
-
-            <button onClick={() => setShowQuitConfirm(true)} className="btn-outline block w-full py-3 text-[var(--danger)]">
-              Quit
-            </button>
           </div>
         </div>
       )}
@@ -367,9 +396,9 @@ export default function GamePage() {
       {showQuitConfirm && (
         <div className="pause-overlay" onClick={() => setShowQuitConfirm(false)}>
           <div className="pause-card fade-up" onClick={e => e.stopPropagation()}>
-            <h2 className="headline-serif text-2xl mb-2">Quit game?</h2>
+            <h2 className="headline-serif text-2xl mb-2">Exit game?</h2>
             <p className="content-muted mb-5">Your current progress will be lost.</p>
-            <button onClick={handleExitToHome} className="btn-primary block w-full py-3 mb-2">Yes, Quit</button>
+            <button onClick={handleExitToHome} className="btn-primary block w-full py-3 mb-2">Yes, Exit</button>
             <button onClick={() => setShowQuitConfirm(false)} className="btn-outline block w-full py-3">Cancel</button>
           </div>
         </div>

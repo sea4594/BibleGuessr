@@ -45,10 +45,10 @@ export function calculateScore(
   const chaptersOff = Math.abs(correct.chapter - guess.chapter);
   const versesOff = Math.abs(correct.verse - guess.verse);
 
-  const chapterProximity = (basePoints: number): number =>
-    basePoints * Math.max(1 - chaptersOff / (chaptersInBook / 4), 0);
-  const verseProximity = (basePoints: number): number =>
-    basePoints * Math.max(1 - versesOff / (versesInChapter / 4), 0);
+  const chapterProximity = (basePoints: number, divisor = 4): number =>
+    basePoints * Math.max(1 - chaptersOff / (chaptersInBook / divisor), 0);
+  const verseProximity = (basePoints: number, divisor = 4): number =>
+    basePoints * Math.max(1 - versesOff / (versesInChapter / divisor), 0);
 
   let bookPoints = 0;
   let testamentPoints: number | undefined;
@@ -103,10 +103,10 @@ export function calculateScore(
     }
   } else {
     // single-book
-    chapterPoints = chapterProximity(35);
+    chapterPoints = chapterProximity(35, 2);
     if (guess.chapter === correct.chapter) {
       chapterPoints = 35 + 15;
-      versePoints = verseProximity(35);
+      versePoints = verseProximity(35, 2);
       if (guess.verse === correct.verse) {
         versePoints = 35 + 15;
       }

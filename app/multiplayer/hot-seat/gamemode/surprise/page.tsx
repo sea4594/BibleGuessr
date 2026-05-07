@@ -32,6 +32,7 @@ export default function HotSeatSurprisePage() {
         modeConfig: { ...gameModes[selected], books: [randomBook] },
         totalRounds: settings.players * settings.rounds,
         selectedBook: randomBook.book,
+        randomizeBookOnReplay: true,
         returnPath: '/multiplayer/hot-seat/gamemode',
         multiplayer: {
           enabled: true,

@@ -113,10 +113,10 @@ export default function MultiplayerPage() {
               <div>
                 <h1 className="headline-serif text-3xl mb-5">Local Multiplayer</h1>
 
-                {/* Horizontal pickers row */}
-                <div className="flex gap-6 justify-center mb-6 px-2">
-                  <HorizontalWheel label="Players" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
-                  <HorizontalWheel label="Rounds/Player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+                {/* Horizontal pickers */}
+                <div className="grid gap-4 mb-6 px-2">
+                  <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+                  <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
                 </div>
 
                 {/* Player names */}

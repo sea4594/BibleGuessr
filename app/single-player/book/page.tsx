@@ -24,6 +24,7 @@ export default function BookModeSetupPage() {
       mode: 'book-selection',
       modeConfig: { ...gameModes['book-selection'], books: [selected] },
       selectedBook: selected.book,
+      randomizeBookOnReplay: surprise,
       totalRounds: rounds,
       returnPath: '/single-player',
     });
@@ -46,7 +47,7 @@ export default function BookModeSetupPage() {
               value={book}
               onChange={e => setBook(e.target.value)}
               disabled={surprise}
-              className="settings-input !w-full mb-3 disabled:opacity-40"
+              className="settings-input !w-full mb-3 disabled:opacity-40 text-lg py-4"
             >
               {bibleData.map(item => (
                 <option key={item.book} value={item.book}>{item.book}</option>

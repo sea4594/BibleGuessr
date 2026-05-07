@@ -121,14 +121,30 @@ body {
 }
 
 .main-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   text-align: center;
   text-decoration: none;
   color: var(--text-muted);
   font-weight: 700;
   font-size: 0.85rem;
-  padding: 10px 6px;
+  line-height: 1.05;
+  min-height: 56px;
+  padding: 8px 6px;
   border: 1px solid var(--line);
   background: color-mix(in oklab, var(--panel-soft) 92%, transparent);
+}
+
+.main-nav-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.main-nav-label {
+  display: block;
 }
 
 .main-nav-item.active {
@@ -758,7 +774,8 @@ input[type='range']::-moz-range-thumb {
 
 /* ====== Game: condensed top bar ====== */
 .game-topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
   padding: max(6px, env(safe-area-inset-top)) 10px 6px;
@@ -772,10 +789,23 @@ input[type='range']::-moz-range-thumb {
 .game-topbar-round {
   font-size: 0.8rem;
   font-weight: 700;
-  flex: 1;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.game-topbar-exit,
+.game-topbar-actions {
+  display: flex;
+  align-items: center;
+  min-width: 76px;
+}
+.game-topbar-exit {
+  justify-content: flex-start;
+}
+.game-topbar-actions {
+  justify-content: flex-end;
+  gap: 6px;
 }
 .game-topbar-player {
   font-weight: 500;
@@ -799,6 +829,11 @@ input[type='range']::-moz-range-thumb {
   color: var(--text-main);
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.turn-gate-card {
+  max-width: 440px;
+  margin: 0 auto;
 }
 
 /* ====== Game content layout ====== */
@@ -997,6 +1032,7 @@ input[type='range']::-moz-range-thumb {
 .h-wheel-track {
   width: 100%;
   display: flex;
+  align-items: center;
   gap: 0;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -1008,6 +1044,10 @@ input[type='range']::-moz-range-thumb {
   position: relative;
 }
 .h-wheel-track::-webkit-scrollbar { display: none; }
+.h-wheel-spacer {
+  flex-shrink: 0;
+  height: 1px;
+}
 .h-wheel-item {
   height: 54px;
   border: 0;
@@ -1021,6 +1061,18 @@ input[type='range']::-moz-range-thumb {
 .h-wheel-item.selected {
   color: var(--text-main);
   font-size: 1.25rem;
+}
+.h-wheel-center-box {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 50%;
+  width: 64px;
+  transform: translateX(-50%);
+  border: 1px solid color-mix(in oklab, var(--accent) 70%, var(--line));
+  border-radius: 10px;
+  pointer-events: none;
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
 }
 
 /* ====== Slider fit and readability ====== */
@@ -1065,10 +1117,8 @@ input[type='range']::-moz-range-thumb {
   height: 100%;
 }
 .verse-scroll-area {
-  flex: 0 0 auto;
-  height: clamp(220px, 36dvh, 360px);
-  max-height: clamp(220px, 36dvh, 360px);
-  min-height: 220px;
+  flex: 1;
+  min-height: 180px;
   overflow-y: auto;
 }
 
