@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useGame } from '@/lib/gameContext';
 import { GameModeId } from '@/lib/gameModes';
 import { calculateScore } from '@/lib/scoring';
@@ -13,6 +12,7 @@ import RoundResult from '@/components/RoundResult';
 import GameSummary from '@/components/GameSummary';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 import { Pause, X } from 'lucide-react';
+import { useSettingsModal } from '@/components/SettingsModalProvider';
 
 interface VerseInfo {
   book: string;
@@ -90,6 +90,7 @@ export default function GamePage() {
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
   const [canStartRound, setCanStartRound] = useState(false);
+  const { openSettings } = useSettingsModal();
 
   useEffect(() => {
     if (!session) router.replace('/');
@@ -386,9 +387,15 @@ export default function GamePage() {
 
             <h2 className="headline-serif text-3xl mb-5">Paused</h2>
 
-            <Link href="/profile" className="btn-outline block w-full py-3 mb-2 text-center" onClick={() => setIsPaused(false)}>
+            <button
+              onClick={() => {
+                setIsPaused(false);
+                openSettings();
+              }}
+              className="btn-outline block w-full py-3 mb-2 text-center"
+            >
               Settings
-            </Link>
+            </button>
           </div>
         </div>
       )}

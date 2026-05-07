@@ -109,12 +109,12 @@ export default function MultiplayerPage() {
           </section>
 
           {tab === 'hot-seat' && (
-            <div className="space-y-4 pb-6">
-              <div>
+            <div className="space-y-4 pb-6 overflow-x-hidden min-w-0">
+              <div className="min-w-0">
                 <h1 className="headline-serif text-3xl mb-5">Local Multiplayer</h1>
 
                 {/* Horizontal pickers */}
-                <div className="grid gap-4 mb-6 px-2">
+                <div className="grid gap-4 mb-6 px-2 min-w-0">
                   <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
                   <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
                 </div>

@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { RoundData } from '@/lib/gameContext';
+import { useSettingsModal } from './SettingsModalProvider';
 
 interface Props {
   round: RoundData;
@@ -34,6 +34,7 @@ export default function RoundResult({
   const { verse, guess, score, scoreBreakdown } = round;
   const { feedback } = scoreBreakdown;
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const { openSettings } = useSettingsModal();
 
   const bookCorrect = feedback.book === 'correct';
   const chapterCorrect = bookCorrect && feedback.chapter === 'correct';
@@ -69,9 +70,9 @@ export default function RoundResult({
       <header className="topbar">
         <button onClick={() => setShowExitConfirm(true)} className="btn-outline px-3 py-2 text-sm">Exit</button>
         <div className="font-semibold">Round Result</div>
-        <Link href="/profile" className="btn-outline px-3 py-2 text-sm settings-icon-btn inline-flex items-center justify-center" aria-label="Profile settings">
+        <button onClick={openSettings} className="btn-outline px-3 py-2 text-sm settings-icon-btn inline-flex items-center justify-center" aria-label="Open settings">
           <Settings size={16} />
-        </Link>
+        </button>
       </header>
 
       <div className="app-content app-content-scroll">

@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Settings } from 'lucide-react';
+import { useSettingsModal } from './SettingsModalProvider';
 
 interface AppTopBarProps {
   title: string;
@@ -12,6 +12,7 @@ interface AppTopBarProps {
 
 export default function AppTopBar({ title, backHref, backLabel = 'Back' }: AppTopBarProps) {
   const router = useRouter();
+  const { openSettings } = useSettingsModal();
 
   return (
     <header className="topbar app-topbar">
@@ -30,9 +31,9 @@ export default function AppTopBar({ title, backHref, backLabel = 'Back' }: AppTo
       </div>
 
       <div className="topbar-right-slot">
-        <Link href="/profile" className="btn-outline p-2 settings-icon-btn inline-flex items-center justify-center" aria-label="Profile settings">
+        <button onClick={openSettings} className="btn-outline p-2 settings-icon-btn inline-flex items-center justify-center" aria-label="Open settings">
           <Settings size={18} />
-        </Link>
+        </button>
       </div>
     </header>
   );

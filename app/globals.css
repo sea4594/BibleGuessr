@@ -205,14 +205,17 @@ body {
 
 .page {
   width: min(860px, 100%);
+  max-width: 100%;
   margin: 0 auto;
   padding: clamp(12px, 2.2vw, 20px);
   display: grid;
   gap: 12px;
+  overflow-x: hidden;
 }
 
 .surface-card {
   background: var(--panel);
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: var(--shadow), inset 0 1px rgba(255, 255, 255, 0.06);
@@ -220,6 +223,7 @@ body {
 
 .surface-card-soft {
   background: var(--panel-soft);
+  max-width: 100%;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
 }
@@ -1023,6 +1027,7 @@ input[type='range']::-moz-range-thumb {
   align-items: center;
   gap: 4px;
   width: 100%;
+  min-width: 0;
 }
 .h-wheel-label {
   font-size: 0.68rem;
@@ -1033,6 +1038,7 @@ input[type='range']::-moz-range-thumb {
 }
 .h-wheel-track {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 0;
@@ -1052,6 +1058,7 @@ input[type='range']::-moz-range-thumb {
 }
 .h-wheel-item {
   height: 54px;
+  flex-shrink: 0;
   border: 0;
   background: transparent;
   color: var(--text-muted);
@@ -1121,6 +1128,44 @@ input[type='range']::-moz-range-thumb {
 .verse-scroll-area {
   flex: 1;
   min-height: 180px;
+  max-height: clamp(220px, 40dvh, 420px);
+  overflow-y: auto;
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+  padding: 16px;
+}
+
+.settings-modal {
+  width: min(720px, 100%);
+  max-height: min(86dvh, 800px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-modal-body {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
   overflow-y: auto;
 }
 

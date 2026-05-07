@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Props {
   label: string;
@@ -19,31 +19,47 @@ export default function HorizontalWheel({
 }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const spacerWidth = itemWidth;
+  const [sidePadding, setSidePadding] = useState(itemWidth);
 
   const getScrollLeftForIndex = useCallback((idx: number) => {
-    if (!listRef.current) return 0;
-    const centerX = spacerWidth + idx * itemWidth + itemWidth / 2;
-    return Math.max(0, centerX - listRef.current.clientWidth / 2);
-  }, [itemWidth, spacerWidth]);
+    return Math.max(0, idx * itemWidth);
+  }, [itemWidth]);
 
   const getIndexForScrollLeft = useCallback((scrollLeft: number) => {
-    if (!listRef.current) return 0;
-    const centerX = scrollLeft + listRef.current.clientWidth / 2;
-    return Math.round((centerX - spacerWidth - itemWidth / 2) / itemWidth);
-  }, [itemWidth, spacerWidth]);
+    return Math.round(scrollLeft / itemWidth);
+  }, [itemWidth]);
+
+  const scrollToIndex = useCallback((idx: number, smooth = true) => {
+    if (!listRef.current) return;
+    listRef.current.scrollTo({ left: getScrollLeftForIndex(idx), behavior: smooth ? 'smooth' : 'auto' });
+  }, [getScrollLeftForIndex]);
+
+  useEffect(() => {
+    if (!listRef.current) return;
+
+    const updatePadding = () => {
+      if (!listRef.current) return;
+      const nextPadding = Math.max(0, (listRef.current.clientWidth - itemWidth) / 2);
+      setSidePadding(nextPadding);
+    };
+
+    updatePadding();
+    const observer = new ResizeObserver(updatePadding);
+    observer.observe(listRef.current);
+    return () => observer.disconnect();
+  }, [itemWidth]);
 
   useEffect(() => {
     const idx = values.indexOf(selected);
     if (idx < 0 || !listRef.current) return;
-    listRef.current.scrollTo({ left: getScrollLeftForIndex(idx), behavior: 'smooth' });
-  }, [selected, values, getScrollLeftForIndex]);
+    scrollToIndex(idx);
+  }, [selected, values, scrollToIndex]);
 
   const snapToNearest = () => {
     if (!listRef.current) return;
     const idx = getIndexForScrollLeft(listRef.current.scrollLeft);
     const clamped = Math.max(0, Math.min(values.length - 1, idx));
-    listRef.current.scrollTo({ left: getScrollLeftForIndex(clamped), behavior: 'smooth' });
+    scrollToIndex(clamped);
     onChange(values[clamped]);
   };
 
@@ -56,19 +72,25 @@ export default function HorizontalWheel({
     <div className="h-wheel-wrap">
       <span className="h-wheel-label">{label}</span>
       <div className="h-wheel-track" ref={listRef} onScroll={onScroll}>
-        <div className="h-wheel-spacer" style={{ width: `${spacerWidth}px`, minWidth: `${spacerWidth}px` }} aria-hidden="true" />
+        <div className="h-wheel-spacer" style={{ width: `${sidePadding}px`, minWidth: `${sidePadding}px` }} aria-hidden="true" />
         {values.map(value => (
           <button
             key={value}
             type="button"
-            onClick={() => onChange(value)}
+            onClick={() => {
+              const idx = values.indexOf(value);
+              if (idx >= 0) {
+                scrollToIndex(idx);
+                onChange(value);
+              }
+            }}
             className={`h-wheel-item${value === selected ? ' selected' : ''}`}
             style={{ width: `${itemWidth}px`, minWidth: `${itemWidth}px` }}
           >
             {value}
           </button>
         ))}
-        <div className="h-wheel-spacer" style={{ width: `${spacerWidth}px`, minWidth: `${spacerWidth}px` }} aria-hidden="true" />
+        <div className="h-wheel-spacer" style={{ width: `${sidePadding}px`, minWidth: `${sidePadding}px` }} aria-hidden="true" />
         <div className="h-wheel-center-box" style={{ width: `${itemWidth}px` }} aria-hidden="true" />
       </div>
     </div>

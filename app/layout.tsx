@@ -4,6 +4,7 @@ import './globals.css';
 import { GameProvider } from '@/lib/gameContext';
 import { UiSettingsProvider } from '@/lib/uiSettingsContext';
 import EnsureHomeOnLaunch from '@/components/EnsureHomeOnLaunch';
+import { SettingsModalProvider } from '@/components/SettingsModalProvider';
 
 const bodyFont = Barlow({
   subsets: ['latin'],
@@ -35,8 +36,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${bodyFont.variable} min-h-screen font-[var(--font-body)] antialiased`}>
         <UiSettingsProvider>
           <GameProvider>
-            <EnsureHomeOnLaunch />
-            {children}
+            <SettingsModalProvider>
+              <EnsureHomeOnLaunch />
+              {children}
+            </SettingsModalProvider>
           </GameProvider>
         </UiSettingsProvider>
       </body>

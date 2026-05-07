@@ -56,6 +56,15 @@ export default function VerseDisplay({
 
   return (
     <div className="verse-display-wrap">
+      <button
+        onClick={onAddPrevious}
+        disabled={Boolean(isLoadingNeighbor)}
+        className="btn-outline w-full py-1.5 text-xs mb-1 disabled:opacity-50 flex-shrink-0"
+      >
+        ↑ Previous verse&nbsp;
+        <span className="text-[var(--danger)] font-semibold">-10</span>
+      </button>
+
       {/* Scrollable verse area */}
       <div className="verse-scroll-area">
         <div className="surface-card relative p-3 sm:p-4">
@@ -76,19 +85,9 @@ export default function VerseDisplay({
       <button
         onClick={onAddNext}
         disabled={Boolean(isLoadingNeighbor)}
-        className="btn-outline w-full py-1.5 text-xs mt-1 disabled:opacity-50 flex-shrink-0"
+        className="btn-outline w-full py-1.5 text-xs mt-1 mb-1 disabled:opacity-50 flex-shrink-0"
       >
         ↓ Next verse&nbsp;
-        <span className="text-[var(--danger)] font-semibold">-10</span>
-      </button>
-
-      {/* Previous button – placed below next button */}
-      <button
-        onClick={onAddPrevious}
-        disabled={Boolean(isLoadingNeighbor)}
-        className="btn-outline w-full py-1.5 text-xs mt-1 disabled:opacity-50 flex-shrink-0"
-      >
-        ↑ Previous verse&nbsp;
         <span className="text-[var(--danger)] font-semibold">-10</span>
       </button>
     </div>

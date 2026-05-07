@@ -9,6 +9,7 @@ import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
 import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
+import { useSettingsModal } from "@/components/SettingsModalProvider";
 
 interface VerseOfDay {
   book: string;
@@ -32,6 +33,7 @@ function getDailyVerseRef(): { book: string; chapter: number; verse: number } {
 export default function HomePage() {
   const { settings } = useUiSettings();
   const { startGame } = useGame();
+  const { openSettings } = useSettingsModal();
   const router = useRouter();
   const [verseOfDay, setVerseOfDay] = useState<VerseOfDay | null>(null);
   const [loadingVerse, setLoadingVerse] = useState(true);
@@ -86,7 +88,7 @@ export default function HomePage() {
           <p className="content-muted text-xs text-center -mt-1">
             {settings.preferredRounds} rounds &middot; {settings.preferredGameMode.replace(/-/g, " ")}
             {" - "}
-            <span className="underline cursor-pointer" onClick={() => router.push("/profile")}>
+            <span className="underline cursor-pointer" onClick={openSettings}>
               change in settings
             </span>
           </p>
