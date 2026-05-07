@@ -8,15 +8,52 @@ import MainBottomNav from '@/components/MainBottomNav';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
 import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
-import { hostParty, joinParty, PartyRoom, subscribeToParty } from '@/lib/partyEngine';
+import { BookData } from '@/lib/bibleData';
+import { gameModes, GameModeId } from '@/lib/gameModes';
+import {
+  hostParty,
+  joinParty,
+  PartyRoom,
+  PartyVerse,
+  startPartyGame,
+  subscribeToParty,
+  upsertPartyMember,
+} from '@/lib/partyEngine';
 import { isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
-import { clampTimerMinutes, clampTimerSeconds } from '@/lib/timerOptions';
+import { clampTimerMinutes, clampTimerSeconds, toTimerDurationSeconds } from '@/lib/timerOptions';
 import { useAccountSync } from '@/lib/accountSync';
+import { fetchVerseTextByReference } from '@/lib/verseClient';
 
 const PLAYER_VALUES = [2, 3, 4, 5, 6, 7, 8];
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
+  const book = books[Math.floor(Math.random() * books.length)];
+  const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
+  const chapter = parseInt(chapterData.chapter, 10);
+  const verseCount = parseInt(chapterData.verses, 10);
+  const verse = Math.floor(Math.random() * verseCount) + 1;
+  return { book, chapter, verse };
+}
+
+async function buildRandomPartyVerse(books: BookData[]): Promise<PartyVerse | null> {
+  for (let attempts = 0; attempts < 8; attempts += 1) {
+    const picked = pickRandomVerse(books);
+    const text = await fetchVerseTextByReference(picked.book.book, picked.chapter, picked.verse);
+    if (text) {
+      return {
+        book: picked.book.book,
+        chapter: picked.chapter,
+        verse: picked.verse,
+        text,
+      };
+    }
+  }
+
+  return null;
+}
 
 export default function MultiplayerPage() {
   const router = useRouter();
@@ -35,9 +72,29 @@ export default function MultiplayerPage() {
   const [joinCode, setJoinCode] = useState(['', '', '', '']);
   const joinRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const { appStateNonce } = useAccountSync();
+  const { appStateNonce, user } = useAccountSync();
   const [profile, setProfile] = useState(() => readLocalProfile());
   const clientId = useMemo(() => readClientId(), []);
+  const [partyMode, setPartyMode] = useState<GameModeId>('full-bible');
+  const [partyRounds, setPartyRounds] = useState(initialHotSeat.rounds);
+  const [partyTimerMinutes, setPartyTimerMinutes] = useState(initialHotSeat.timerMinutes);
+  const [partyTimerSeconds, setPartyTimerSeconds] = useState(initialHotSeat.timerSeconds);
+  const [partyStartError, setPartyStartError] = useState('');
+  const [partyStartPending, setPartyStartPending] = useState(false);
+
+  const displayName = useMemo(() => {
+    const accountName = user?.displayName?.trim();
+    if (accountName) return accountName;
+    return profile.name;
+  }, [profile.name, user?.displayName]);
+
+  const partyModeOptions = useMemo(
+    () =>
+      Object.values(gameModes)
+        .filter(mode => !mode.isSingleBook)
+        .map(mode => ({ id: mode.id, name: mode.name })),
+    []
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -70,7 +127,7 @@ export default function MultiplayerPage() {
       }
       const created = await hostParty({
         id: clientId,
-        name: profile.name,
+        name: displayName,
         avatar: profile.avatar,
         isHost: true,
         joinedAt: Date.now(),
@@ -87,7 +144,25 @@ export default function MultiplayerPage() {
       cancelled = true;
       unsubscribe();
     };
-  }, [tab, clientId, profile.avatar, profile.name, room?.code]);
+  }, [tab, clientId, displayName, profile.avatar, room?.code]);
+
+  useEffect(() => {
+    if (tab !== 'party' || !isFirebaseConfigured() || !room?.code) return;
+
+    void upsertPartyMember(room.code, {
+      id: clientId,
+      name: displayName,
+      avatar: profile.avatar,
+      isHost: room.hostId === clientId,
+      joinedAt: Date.now(),
+    });
+  }, [clientId, displayName, profile.avatar, room?.code, room?.hostId, tab]);
+
+  useEffect(() => {
+    if (tab !== 'party' || !room?.code) return;
+    if (!room.game || room.game.status === 'lobby') return;
+    router.push(`/multiplayer/party/game/${room.code}`);
+  }, [room?.code, room?.game, router, tab]);
 
   useEffect(() => {
     if (joinOpen) queueMicrotask(() => joinRefs.current[0]?.focus());
@@ -108,12 +183,43 @@ export default function MultiplayerPage() {
   const submitJoin = async () => {
     const code = joinCode.join('').toUpperCase();
     if (code.length !== 4 || !isFirebaseConfigured()) return;
-    const ok = await joinParty(code, { id: clientId, name: profile.name, avatar: profile.avatar, isHost: false, joinedAt: Date.now() });
+    const ok = await joinParty(code, { id: clientId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: Date.now() });
     if (ok) {
       setJoinOpen(false);
       setJoinCode(['', '', '', '']);
       subscribeToParty(code, next => setRoom(next));
     }
+  };
+
+  const startParty = async () => {
+    if (!room || room.hostId !== clientId) return;
+    setPartyStartError('');
+    setPartyStartPending(true);
+
+    const modeConfig = gameModes[partyMode];
+    const firstVerse = await buildRandomPartyVerse(modeConfig.books);
+
+    if (!firstVerse) {
+      setPartyStartPending(false);
+      setPartyStartError('Could not load the first verse. Please try again.');
+      return;
+    }
+
+    const ok = await startPartyGame(room.code, clientId, {
+      modeId: partyMode,
+      roundsPerPlayer: partyRounds,
+      timerDurationSeconds: toTimerDurationSeconds(partyTimerMinutes, partyTimerSeconds),
+      firstVerse,
+    });
+
+    setPartyStartPending(false);
+
+    if (!ok) {
+      setPartyStartError('Unable to start party game. Please retry.');
+      return;
+    }
+
+    router.push(`/multiplayer/party/game/${room.code}`);
   };
 
   return (
@@ -199,6 +305,54 @@ export default function MultiplayerPage() {
                       ))}
                     </div>
                   </div>
+
+                  {room.hostId === clientId ? (
+                    <div className="party-host-controls mb-4">
+                      <p className="eyebrow mb-2">Host Controls</p>
+
+                      <label className="text-sm font-semibold block mb-1">Game Mode</label>
+                      <select
+                        value={partyMode}
+                        onChange={e => setPartyMode(e.target.value as GameModeId)}
+                        className="settings-input !w-full mb-3"
+                      >
+                        {partyModeOptions.map(option => (
+                          <option key={option.id} value={option.id}>{option.name}</option>
+                        ))}
+                      </select>
+
+                      <div className="mb-3">
+                        <HorizontalWheel
+                          label="Rounds"
+                          values={ROUND_VALUES}
+                          selected={partyRounds}
+                          onChange={setPartyRounds}
+                        />
+                      </div>
+
+                      <TimerSetupControls
+                        minutes={partyTimerMinutes}
+                        seconds={partyTimerSeconds}
+                        onMinutesChange={setPartyTimerMinutes}
+                        onSecondsChange={setPartyTimerSeconds}
+                      />
+
+                      {partyStartError && <p className="text-xs text-[var(--danger)] mt-2">{partyStartError}</p>}
+
+                      <button
+                        onClick={() => void startParty()}
+                        className="btn-primary w-full py-2.5 mt-3"
+                        disabled={partyStartPending}
+                      >
+                        {partyStartPending ? 'Starting...' : 'Start Party Game'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="party-host-controls mb-4">
+                      <p className="text-sm content-muted">Waiting for host to choose mode and start the party game.</p>
+                    </div>
+                  )}
+
                   <div className="text-center">
                     <p className="content-muted text-sm">Party Code</p>
                     <p className="headline-serif text-5xl tracking-[0.2em] mt-1">{room.code}</p>

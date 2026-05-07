@@ -1391,6 +1391,29 @@ input[type='range']::-moz-range-thumb {
   background: color-mix(in oklab, var(--panel) 90%, transparent);
 }
 
+.party-host-controls {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--panel-soft) 88%, transparent);
+}
+
+.party-wait-card,
+.party-round-summary {
+  max-width: 100%;
+}
+
+.party-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: color-mix(in oklab, var(--panel) 92%, transparent);
+}
+
 @media (max-width: 760px) {
   .hotseat-rounds-turn-row {
     grid-template-columns: 1fr;
