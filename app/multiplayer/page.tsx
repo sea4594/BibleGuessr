@@ -130,7 +130,7 @@ export default function MultiplayerPage() {
                 {/* Turn style */}
                 <label className="setting-row mb-5">
                   <span>Turn style</span>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
                     <button onClick={() => setTurnStyle('alternate')} className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>Alternate</button>
                     <button onClick={() => setTurnStyle('all-at-once')} className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>All at once</button>
                   </div>

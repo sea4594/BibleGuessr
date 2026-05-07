@@ -18,6 +18,8 @@ import { themeOptions, useUiSettings } from '@/lib/uiSettingsContext';
 import { Pencil, X } from 'lucide-react';
 import { gameModes } from '@/lib/gameModes';
 
+const commitSha = process.env.NEXT_PUBLIC_COMMIT_SHA || 'unknown';
+
 function AvatarEditor({
   avatar,
   onChange,
@@ -251,6 +253,11 @@ export default function ProfilePage() {
                   <span className="theme-description">{theme.description}</span>
                 </button>
               ))}
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-[var(--line)]">
+              <p className="eyebrow mb-1">Build</p>
+              <p className="text-sm content-muted">Commit: {commitSha}</p>
             </div>
           </section>
 

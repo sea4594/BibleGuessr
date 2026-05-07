@@ -19,18 +19,19 @@ export default function HorizontalWheel({
 }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spacerWidth = itemWidth;
 
   const getScrollLeftForIndex = useCallback((idx: number) => {
     if (!listRef.current) return 0;
-    const centeredOffset = (listRef.current.clientWidth - itemWidth) / 2;
-    return Math.max(0, idx * itemWidth - centeredOffset);
-  }, [itemWidth]);
+    const centerX = spacerWidth + idx * itemWidth + itemWidth / 2;
+    return Math.max(0, centerX - listRef.current.clientWidth / 2);
+  }, [itemWidth, spacerWidth]);
 
   const getIndexForScrollLeft = useCallback((scrollLeft: number) => {
     if (!listRef.current) return 0;
-    const centeredOffset = (listRef.current.clientWidth - itemWidth) / 2;
-    return Math.round((scrollLeft + centeredOffset) / itemWidth);
-  }, [itemWidth]);
+    const centerX = scrollLeft + listRef.current.clientWidth / 2;
+    return Math.round((centerX - spacerWidth - itemWidth / 2) / itemWidth);
+  }, [itemWidth, spacerWidth]);
 
   useEffect(() => {
     const idx = values.indexOf(selected);
@@ -55,7 +56,7 @@ export default function HorizontalWheel({
     <div className="h-wheel-wrap">
       <span className="h-wheel-label">{label}</span>
       <div className="h-wheel-track" ref={listRef} onScroll={onScroll}>
-        <div className="h-wheel-spacer" style={{ width: `${itemWidth}px`, minWidth: `${itemWidth}px` }} aria-hidden="true" />
+        <div className="h-wheel-spacer" style={{ width: `${spacerWidth}px`, minWidth: `${spacerWidth}px` }} aria-hidden="true" />
         {values.map(value => (
           <button
             key={value}
@@ -67,8 +68,8 @@ export default function HorizontalWheel({
             {value}
           </button>
         ))}
-        <div className="h-wheel-spacer" style={{ width: `${itemWidth}px`, minWidth: `${itemWidth}px` }} aria-hidden="true" />
-        <div className="h-wheel-center-box" aria-hidden="true" />
+        <div className="h-wheel-spacer" style={{ width: `${spacerWidth}px`, minWidth: `${spacerWidth}px` }} aria-hidden="true" />
+        <div className="h-wheel-center-box" style={{ width: `${itemWidth}px` }} aria-hidden="true" />
       </div>
     </div>
   );

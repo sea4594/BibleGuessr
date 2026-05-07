@@ -97,6 +97,7 @@ body {
 
 .app-content-scroll {
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
 }
@@ -342,6 +343,7 @@ input:not([type='range']) {
 
 .setting-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
