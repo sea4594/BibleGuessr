@@ -48,9 +48,12 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
         <div className="settings-overlay" onClick={closeSettings}>
           <div className="settings-modal surface-card" onClick={e => e.stopPropagation()}>
             <div className="settings-modal-header">
-              <div className="inline-flex items-center gap-2 font-semibold">
-                <Settings size={18} />
-                Settings
+              <div>
+                <div className="inline-flex items-center gap-2 font-semibold">
+                  <Settings size={18} />
+                  Settings
+                </div>
+                <p className="text-xs content-muted mt-0.5">Commit: {commitSha}</p>
               </div>
               <button onClick={closeSettings} className="btn-outline p-2" aria-label="Close settings">
                 <X size={16} />
@@ -59,19 +62,35 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
 
             <div className="settings-modal-body">
               <section className="surface-card-soft p-4">
-                <p className="eyebrow mb-2">Defaults</p>
-                <h3 className="text-base font-semibold mb-2">Default Mode</h3>
-                <div className="grid gap-2 mb-4">
-                  {modeOptions.map(option => (
+                <p className="eyebrow mb-2">Theme</p>
+                <div className="theme-grid">
+                  {themeOptions.map(theme => (
                     <button
-                      key={option.id}
-                      onClick={() => setPreferredGameMode(option.id)}
-                      className={settings.preferredGameMode === option.id ? 'btn-primary w-full px-3 py-2 text-left' : 'btn-outline w-full px-3 py-2 text-left'}
+                      key={theme.id}
+                      onClick={() => setTheme(theme.id)}
+                      className={`theme-option ${settings.theme === theme.id ? 'active' : ''}`}
                     >
-                      {option.name}
+                      <span className="theme-name">{theme.name}</span>
+                      <span className="theme-description">{theme.description}</span>
                     </button>
                   ))}
                 </div>
+              </section>
+
+              <section className="surface-card-soft p-4">
+                <p className="eyebrow mb-2">Defaults</p>
+                <h3 className="text-base font-semibold mb-2">Default Mode</h3>
+                <select
+                  value={settings.preferredGameMode}
+                  onChange={e => setPreferredGameMode(e.target.value)}
+                  className="settings-input !w-full mb-4"
+                >
+                  {modeOptions.map(option => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
 
                 <h3 className="text-base font-semibold mb-2">Default Rounds</h3>
                 <div className="grid grid-cols-2 gap-2 mb-3">
@@ -96,27 +115,6 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                 >
                   Reset Defaults
                 </button>
-              </section>
-
-              <section className="surface-card-soft p-4">
-                <p className="eyebrow mb-2">Theme</p>
-                <div className="theme-grid">
-                  {themeOptions.map(theme => (
-                    <button
-                      key={theme.id}
-                      onClick={() => setTheme(theme.id)}
-                      className={`theme-option ${settings.theme === theme.id ? 'active' : ''}`}
-                    >
-                      <span className="theme-name">{theme.name}</span>
-                      <span className="theme-description">{theme.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              <section className="surface-card-soft p-4">
-                <p className="eyebrow mb-1">Build</p>
-                <p className="text-sm content-muted">Commit: {commitSha}</p>
               </section>
             </div>
           </div>
