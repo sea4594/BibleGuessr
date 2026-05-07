@@ -64,7 +64,7 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
             </div>
 
             <div className="settings-modal-body">
-              <section className="surface-card-soft p-4">
+              <section className="settings-section">
                 <p className="eyebrow mb-2">Account</p>
 
                 <div className="text-sm font-semibold mb-1">
@@ -106,7 +106,7 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                 )}
               </section>
 
-              <section className="surface-card-soft p-4">
+              <section className="settings-section">
                 <p className="eyebrow mb-2">Theme</p>
                 <select
                   value={settings.themePreset}
@@ -119,7 +119,7 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                 </select>
               </section>
 
-              <section className="surface-card-soft p-4">
+              <section className="settings-section">
                 <p className="eyebrow mb-2">Defaults</p>
                 <h3 className="text-base font-semibold mb-2">Default Mode</h3>
                 <select

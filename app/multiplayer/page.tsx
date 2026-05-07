@@ -7,7 +7,7 @@ import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
-import { defaultHotSeatSettings, readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
+import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
 import { hostParty, joinParty, PartyRoom, subscribeToParty } from '@/lib/partyEngine';
 import { isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
@@ -129,34 +129,25 @@ export default function MultiplayerPage() {
 
           {tab === 'hot-seat' && (
             <div className="hotseat-shell min-w-0">
-              <div className="hotseat-title-row">
-                <h1 className="headline-serif text-3xl">Local Multiplayer</h1>
+              <div className="hotseat-rounds-turn-row">
+                <div className="min-w-0">
+                  <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+                </div>
                 <button
-                  onClick={() => {
-                    setPlayers(defaultHotSeatSettings.players);
-                    setRounds(defaultHotSeatSettings.rounds);
-                    setTurnStyle(defaultHotSeatSettings.turnStyle);
-                    setNames(defaultHotSeatSettings.names);
-                    setTimerMinutes(defaultHotSeatSettings.timerMinutes);
-                    setTimerSeconds(defaultHotSeatSettings.timerSeconds);
-                  }}
-                  className="btn-outline px-3 py-1.5 text-sm"
+                  onClick={() => setTurnStyle('alternate')}
+                  className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
                 >
-                  Reset
+                  Alternate
+                </button>
+                <button
+                  onClick={() => setTurnStyle('all-at-once')}
+                  className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                >
+                  All at once
                 </button>
               </div>
 
               <div className="grid gap-4 min-w-0">
-                <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
-
-                <section className="surface-card p-3 hotseat-turn-style-row">
-                  <span className="text-sm font-semibold">Turn style</span>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setTurnStyle('alternate')} className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>Alternate</button>
-                    <button onClick={() => setTurnStyle('all-at-once')} className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>All at once</button>
-                  </div>
-                </section>
-
                 <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
 
                 <TimerSetupControls
@@ -167,7 +158,7 @@ export default function MultiplayerPage() {
                 />
               </div>
 
-              <section className="surface-card p-3 hotseat-names-window">
+              <section className="hotseat-names-window">
                 <p className="text-sm font-semibold mb-2">Player Names</p>
                 <div className="grid gap-2 sm:grid-cols-2 hotseat-names-list">
                   {names.slice(0, players).map((name, idx) => (
@@ -187,11 +178,11 @@ export default function MultiplayerPage() {
               {!isFirebaseConfigured() && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
               {isFirebaseConfigured() && room && (
                 <>
-                  <div className="surface-card-soft p-4 mb-4">
+                  <div className="party-members-block mb-4">
                     <p className="font-semibold mb-2">Party Members</p>
                     <div className="grid gap-2">
                       {room.members.map(member => (
-                        <div key={member.id} className="surface-card p-3 flex items-center gap-3">
+                        <div key={member.id} className="party-member-row">
                           <Image
                             src={avatarToDataUri(member.avatar)}
                             alt={`${member.name} avatar`}

@@ -1258,8 +1258,8 @@ input[type='range']::-moz-range-thumb {
 
 .settings-modal-body {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 0;
+  padding: 8px 12px 12px;
   overflow-y: auto;
   overflow-x: hidden;
   min-width: 0;
@@ -1267,6 +1267,14 @@ input[type='range']::-moz-range-thumb {
 
 .settings-modal-body > * {
   min-width: 0;
+}
+
+.settings-section {
+  padding: 12px 2px;
+}
+
+.settings-section + .settings-section {
+  border-top: 1px solid var(--line);
 }
 
 .settings-modal .h-wheel-wrap,
@@ -1289,18 +1297,20 @@ input[type='range']::-moz-range-thumb {
   padding-bottom: 96px;
 }
 
-.hotseat-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.hotseat-rounds-turn-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
   gap: 10px;
 }
 
-.hotseat-turn-style-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+.hotseat-turn-style-btn {
+  min-height: 54px;
+  min-width: 92px;
+  padding: 0 10px;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .hotseat-names-window {
@@ -1309,6 +1319,10 @@ input[type='range']::-moz-range-thumb {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--panel-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 10px;
 }
 
 .hotseat-names-list {
@@ -1329,6 +1343,67 @@ input[type='range']::-moz-range-thumb {
   font-size: 1.15rem;
   font-weight: 800;
   z-index: 30;
+}
+
+.timer-inline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.timer-inline-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.timer-inline-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.timer-inline-select {
+  width: 82px;
+  min-width: 82px;
+}
+
+.party-members-block {
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--panel-soft) 92%, transparent);
+}
+
+.party-member-row {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: color-mix(in oklab, var(--panel) 90%, transparent);
+}
+
+@media (max-width: 760px) {
+  .hotseat-rounds-turn-row {
+    grid-template-columns: 1fr;
+  }
+
+  .hotseat-turn-style-btn {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .timer-inline-controls {
+    justify-content: flex-start;
+  }
 }
 
 .avatar-option-row {

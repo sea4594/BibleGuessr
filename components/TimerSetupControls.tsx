@@ -15,36 +15,37 @@ export default function TimerSetupControls({
   onSecondsChange,
 }: Props) {
   return (
-    <section className="surface-card p-4 sm:p-5">
-      <p className="text-sm font-semibold mb-3">Round Timer</p>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="grid gap-1.5 text-sm font-semibold">
-          <span>Minutes</span>
+    <section className="surface-card p-3 sm:p-4">
+      <div className="timer-inline-row">
+        <p className="text-sm font-semibold">Timer</p>
+        <div className="timer-inline-controls">
+          <label className="timer-inline-label">
           <select
             value={minutes}
             onChange={e => onMinutesChange(Number(e.target.value))}
-            className="settings-input !w-full"
+              className="settings-input timer-inline-select"
           >
             {minuteOptions.map(value => (
               <option key={value} value={value}>{value}</option>
             ))}
           </select>
-        </label>
+            <span>Minutes</span>
+          </label>
 
-        <label className="grid gap-1.5 text-sm font-semibold">
-          <span>Seconds</span>
+          <label className="timer-inline-label">
           <select
             value={seconds}
             onChange={e => onSecondsChange(Number(e.target.value))}
-            className="settings-input !w-full"
+              className="settings-input timer-inline-select"
           >
             {secondOptions.map(value => (
               <option key={value} value={value}>{value}</option>
             ))}
           </select>
-        </label>
+            <span>Seconds</span>
+          </label>
+        </div>
       </div>
-      <p className="text-xs content-muted mt-2">The timer counts down every round and auto-submits when it reaches 0.</p>
     </section>
   );
 }
