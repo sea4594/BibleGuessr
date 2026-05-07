@@ -71,26 +71,28 @@ export default function HorizontalWheel({
   return (
     <div className="h-wheel-wrap">
       <span className="h-wheel-label">{label}</span>
-      <div className="h-wheel-track" ref={listRef} onScroll={onScroll}>
-        <div className="h-wheel-spacer" style={{ width: `${sidePadding}px`, minWidth: `${sidePadding}px` }} aria-hidden="true" />
-        {values.map(value => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => {
-              const idx = values.indexOf(value);
-              if (idx >= 0) {
-                scrollToIndex(idx);
-                onChange(value);
-              }
-            }}
-            className={`h-wheel-item${value === selected ? ' selected' : ''}`}
-            style={{ width: `${itemWidth}px`, minWidth: `${itemWidth}px` }}
-          >
-            {value}
-          </button>
-        ))}
-        <div className="h-wheel-spacer" style={{ width: `${sidePadding}px`, minWidth: `${sidePadding}px` }} aria-hidden="true" />
+      <div className="h-wheel-viewport">
+        <div className="h-wheel-track" ref={listRef} onScroll={onScroll}>
+          <div className="h-wheel-spacer" style={{ width: `${sidePadding}px`, minWidth: `${sidePadding}px` }} aria-hidden="true" />
+          {values.map(value => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => {
+                const idx = values.indexOf(value);
+                if (idx >= 0) {
+                  scrollToIndex(idx);
+                  onChange(value);
+                }
+              }}
+              className={`h-wheel-item${value === selected ? ' selected' : ''}`}
+              style={{ width: `${itemWidth}px`, minWidth: `${itemWidth}px` }}
+            >
+              {value}
+            </button>
+          ))}
+          <div className="h-wheel-spacer" style={{ width: `${sidePadding}px`, minWidth: `${sidePadding}px` }} aria-hidden="true" />
+        </div>
         <div className="h-wheel-center-box" style={{ width: `${itemWidth}px` }} aria-hidden="true" />
       </div>
     </div>

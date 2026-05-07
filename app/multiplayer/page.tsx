@@ -99,7 +99,7 @@ export default function MultiplayerPage() {
     <main className="app-screen">
       <AppTopBar title="Multiplayer" />
 
-      <div className="app-content app-content-scroll">
+      <div className={`app-content ${tab === 'hot-seat' ? 'app-content-fixed' : 'app-content-scroll'}`}>
         <div className="page max-w-4xl">
           <section className="surface-card p-3 sm:p-4 mb-3">
             <div className="grid grid-cols-2 gap-2">
@@ -109,39 +109,46 @@ export default function MultiplayerPage() {
           </section>
 
           {tab === 'hot-seat' && (
-            <div className="space-y-4 pb-6 overflow-x-hidden min-w-0">
-              <div className="min-w-0">
-                <h1 className="headline-serif text-3xl mb-5">Local Multiplayer</h1>
+            <div className="hotseat-shell min-w-0">
+              <div className="hotseat-title-row">
+                <h1 className="headline-serif text-3xl">Local Multiplayer</h1>
+                <button
+                  onClick={() => {
+                    setPlayers(defaultHotSeatSettings.players);
+                    setRounds(defaultHotSeatSettings.rounds);
+                    setTurnStyle(defaultHotSeatSettings.turnStyle);
+                    setNames(defaultHotSeatSettings.names);
+                  }}
+                  className="btn-outline px-3 py-1.5 text-sm"
+                >
+                  Reset
+                </button>
+              </div>
 
-                {/* Horizontal pickers */}
-                <div className="grid gap-4 mb-6 px-2 min-w-0">
-                  <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
-                  <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
+              <div className="grid gap-4 min-w-0">
+                <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+
+                <div className="hotseat-turn-style-row">
+                  <span className="text-sm font-semibold">Turn style</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setTurnStyle('alternate')} className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>Alternate</button>
+                    <button onClick={() => setTurnStyle('all-at-once')} className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>All at once</button>
+                  </div>
                 </div>
 
-                {/* Player names */}
+                <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
+              </div>
+
+              <section className="surface-card p-3 hotseat-names-window">
                 <p className="text-sm font-semibold mb-2">Player Names</p>
-                <div className="grid gap-2 sm:grid-cols-2 mb-5">
+                <div className="grid gap-2 sm:grid-cols-2 hotseat-names-list">
                   {names.slice(0, players).map((name, idx) => (
                     <input key={idx} value={name} onChange={e => { const n = names.slice(); n[idx] = e.target.value; setNames(n); }} className="settings-input !w-full" />
                   ))}
                 </div>
+              </section>
 
-                {/* Turn style */}
-                <label className="setting-row mb-5">
-                  <span>Turn style</span>
-                  <div className="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
-                    <button onClick={() => setTurnStyle('alternate')} className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>Alternate</button>
-                    <button onClick={() => setTurnStyle('all-at-once')} className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>All at once</button>
-                  </div>
-                </label>
-
-                {/* Buttons */}
-                <div className="grid gap-2 sm:grid-cols-2 mb-5">
-                  <button onClick={() => { setPlayers(defaultHotSeatSettings.players); setRounds(defaultHotSeatSettings.rounds); setTurnStyle(defaultHotSeatSettings.turnStyle); setNames(defaultHotSeatSettings.names); }} className="btn-outline py-2.5">Reset</button>
-                  <button onClick={selectGamemode} className="btn-primary py-4 text-lg font-semibold">Select Gamemode</button>
-                </div>
-              </div>
+              <button onClick={selectGamemode} className="btn-primary hotseat-select-gamemode-btn">Select Gamemode</button>
             </div>
           )}
 

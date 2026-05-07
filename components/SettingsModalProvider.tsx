@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { X, Settings } from 'lucide-react';
 import { gameModes } from '@/lib/gameModes';
 import { themeOptions, useUiSettings } from '@/lib/uiSettingsContext';
+import HorizontalWheel from './HorizontalWheel';
 
 const commitSha = process.env.NEXT_PUBLIC_COMMIT_SHA || 'unknown';
 
@@ -93,16 +94,13 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                 </select>
 
                 <h3 className="text-base font-semibold mb-2">Default Rounds</h3>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  {[5, 10].map(roundValue => (
-                    <button
-                      key={roundValue}
-                      onClick={() => setPreferredRounds(roundValue as 5 | 10)}
-                      className={settings.preferredRounds === roundValue ? 'btn-primary py-2' : 'btn-outline py-2'}
-                    >
-                      {roundValue}
-                    </button>
-                  ))}
+                <div className="mb-3">
+                  <HorizontalWheel
+                    label="Rounds"
+                    values={[5, 10]}
+                    selected={settings.preferredRounds}
+                    onChange={value => setPreferredRounds(value as 5 | 10)}
+                  />
                 </div>
 
                 <button

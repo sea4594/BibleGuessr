@@ -1036,6 +1036,14 @@ input[type='range']::-moz-range-thumb {
   color: var(--text-muted);
   font-weight: 700;
 }
+.h-wheel-viewport {
+  width: 100%;
+  min-width: 0;
+  position: relative;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--panel-soft);
+}
 .h-wheel-track {
   width: 100%;
   min-width: 0;
@@ -1045,11 +1053,9 @@ input[type='range']::-moz-range-thumb {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--line-strong);
   border-radius: 12px;
-  background: var(--panel-soft);
+  background: transparent;
   scrollbar-width: none;
-  position: relative;
 }
 .h-wheel-track::-webkit-scrollbar { display: none; }
 .h-wheel-spacer {
@@ -1167,6 +1173,49 @@ input[type='range']::-moz-range-thumb {
   gap: 10px;
   padding: 12px;
   overflow-y: auto;
+}
+
+.hotseat-shell {
+  height: calc(100dvh - 200px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.hotseat-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hotseat-turn-style-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hotseat-names-window {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hotseat-names-list {
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.hotseat-select-gamemode-btn {
+  margin-top: auto;
+  width: 100%;
+  padding: 16px 14px;
+  font-size: 1.15rem;
+  font-weight: 800;
 }
 
 /* ====== Pause close button ====== */
