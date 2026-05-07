@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { onSyncedLocalDataApplied, setSyncedLocalStorageItem } from './localDataState';
 
 export type ThemePresetId =
   | 'light'
@@ -47,34 +48,44 @@ const DEFAULT_SETTINGS: UiSettings = {
 
 const UiSettingsContext = createContext<UiSettingsContextType | null>(null);
 
+function readInitialSettings(): UiSettings {
+  if (typeof window === 'undefined') {
+    return DEFAULT_SETTINGS;
+  }
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return DEFAULT_SETTINGS;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<UiSettings>;
+    return {
+      themePreset: parsed.themePreset ?? DEFAULT_SETTINGS.themePreset,
+      preferredRounds: Math.min(10, Math.max(1, parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds)),
+      preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
+    };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
 export function UiSettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<UiSettings>(() => {
-    if (typeof window === 'undefined') {
-      return DEFAULT_SETTINGS;
-    }
+  const [settings, setSettings] = useState<UiSettings>(() => readInitialSettings());
 
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        return DEFAULT_SETTINGS;
-      }
-
-      const parsed = JSON.parse(raw) as Partial<UiSettings>;
-      return {
-        themePreset: parsed.themePreset ?? DEFAULT_SETTINGS.themePreset,
-        preferredRounds: Math.min(10, Math.max(1, parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds)),
-        preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
-      };
-    } catch {
-      return DEFAULT_SETTINGS;
-    }
-  });
+  useEffect(() => {
+    return onSyncedLocalDataApplied(() => {
+      setTimeout(() => {
+        setSettings(readInitialSettings());
+      }, 0);
+    });
+  }, []);
 
   useEffect(() => {
     const preset = themePresets.find(item => item.id === settings.themePreset) ?? themePresets[0];
     document.documentElement.setAttribute('data-theme', preset.color);
     document.documentElement.setAttribute('data-mode', preset.mode);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    setSyncedLocalStorageItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 
   const value = useMemo<UiSettingsContextType>(

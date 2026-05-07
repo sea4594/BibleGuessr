@@ -1,7 +1,5 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import type { User } from 'firebase/auth';
 import { AvatarSpec, defaultAvatarSpec } from './avatarSystem';
-import { getFirebaseDb } from './firebaseClient';
+import { setSyncedLocalStorageItem } from './localDataState';
 
 export interface UserProfile {
   name: string;
@@ -44,7 +42,7 @@ export function readLocalProfile(): UserProfile {
 
 export function writeLocalProfile(profile: UserProfile) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  setSyncedLocalStorageItem(STORAGE_KEY, JSON.stringify(profile));
 }
 
 export function readClientId(): string {
@@ -54,24 +52,4 @@ export function readClientId(): string {
   const created = `client-${Math.random().toString(36).slice(2, 10)}`;
   localStorage.setItem(CLIENT_ID_KEY, created);
   return created;
-}
-
-export async function loadRemoteProfile(user: User): Promise<UserProfile | null> {
-  const db = getFirebaseDb();
-  if (!db) return null;
-  const snapshot = await getDoc(doc(db, 'users', user.uid));
-  if (!snapshot.exists()) return null;
-  const data = snapshot.data() as Partial<UserProfile>;
-  if (!data.name || !data.avatar) return null;
-  return { name: data.name, avatar: data.avatar };
-}
-
-export async function saveRemoteProfile(user: User, profile: UserProfile) {
-  const db = getFirebaseDb();
-  if (!db) return;
-  await setDoc(
-    doc(db, 'users', user.uid),
-    { name: profile.name, avatar: profile.avatar, updatedAt: serverTimestamp() },
-    { merge: true }
-  );
 }

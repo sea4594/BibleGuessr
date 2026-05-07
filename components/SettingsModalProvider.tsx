@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { X, Settings } from 'lucide-react';
+import { useAccountSync } from '@/lib/accountSync';
 import { gameModes } from '@/lib/gameModes';
 import { themePresets, useUiSettings } from '@/lib/uiSettingsContext';
 import HorizontalWheel from './HorizontalWheel';
@@ -17,6 +18,7 @@ const SettingsModalContext = createContext<SettingsModalContextType | null>(null
 
 export function SettingsModalProvider({ children }: { children: React.ReactNode }) {
   const { settings, setPreferredGameMode, setPreferredRounds, setThemePreset } = useUiSettings();
+  const { firebaseEnabled, login, loginPending, logout, syncError, syncStatus, user } = useAccountSync();
   const [isOpen, setIsOpen] = useState(false);
 
   const modeOptions = useMemo(
@@ -62,6 +64,48 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
             </div>
 
             <div className="settings-modal-body">
+              <section className="surface-card-soft p-4">
+                <p className="eyebrow mb-2">Account</p>
+
+                <div className="text-sm font-semibold mb-1">
+                  {user ? (user.displayName || user.email || 'Signed in') : 'Not signed in'}
+                </div>
+
+                <p className="text-xs content-muted mb-3">
+                  {!firebaseEnabled
+                    ? 'Google sync is disabled until Firebase env vars are configured.'
+                    : syncStatus === 'syncing'
+                      ? 'Syncing your BibleGuessr data...'
+                      : syncError
+                        ? syncError
+                        : user
+                          ? 'Your profile, history, settings, and hot-seat config sync to this Google account.'
+                          : 'Sign in with Google to sync everything across devices.'}
+                </p>
+
+                {user ? (
+                  <button
+                    onClick={() => {
+                      void logout();
+                    }}
+                    className="btn-outline w-full py-2"
+                    disabled={syncStatus === 'syncing'}
+                  >
+                    Logout
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      void login();
+                    }}
+                    className="btn-primary w-full py-2"
+                    disabled={!firebaseEnabled || syncStatus === 'syncing' || loginPending}
+                  >
+                    {loginPending ? 'Opening Google...' : 'Google Login'}
+                  </button>
+                )}
+              </section>
+
               <section className="surface-card-soft p-4">
                 <p className="eyebrow mb-2">Theme</p>
                 <select

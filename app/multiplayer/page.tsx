@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
@@ -12,6 +13,7 @@ import { isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
 import { clampTimerMinutes, clampTimerSeconds } from '@/lib/timerOptions';
+import { useAccountSync } from '@/lib/accountSync';
 
 const PLAYER_VALUES = [2, 3, 4, 5, 6, 7, 8];
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -33,8 +35,16 @@ export default function MultiplayerPage() {
   const [joinCode, setJoinCode] = useState(['', '', '', '']);
   const joinRefs = useRef<Array<HTMLInputElement | null>>([]);
 
-  const profile = useMemo(() => readLocalProfile(), []);
+  const { appStateNonce } = useAccountSync();
+  const [profile, setProfile] = useState(() => readLocalProfile());
   const clientId = useMemo(() => readClientId(), []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setProfile(readLocalProfile());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [appStateNonce]);
 
   useEffect(() => {
     writeHotSeatSettings({
@@ -182,7 +192,14 @@ export default function MultiplayerPage() {
                     <div className="grid gap-2">
                       {room.members.map(member => (
                         <div key={member.id} className="surface-card p-3 flex items-center gap-3">
-                          <img src={avatarToDataUri(member.avatar)} alt={`${member.name} avatar`} className="w-12 h-12 border border-[var(--line)]" />
+                          <Image
+                            src={avatarToDataUri(member.avatar)}
+                            alt={`${member.name} avatar`}
+                            width={48}
+                            height={48}
+                            unoptimized
+                            className="w-12 h-12 border border-[var(--line)]"
+                          />
                           <div className="flex-1">
                             <p className="text-sm font-semibold">{member.name}</p>
                             <p className="text-xs content-muted">{member.isHost ? 'Host' : 'Joined'}</p>

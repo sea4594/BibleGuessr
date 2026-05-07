@@ -3,6 +3,7 @@ import { Barlow } from 'next/font/google';
 import './globals.css';
 import { GameProvider } from '@/lib/gameContext';
 import { UiSettingsProvider } from '@/lib/uiSettingsContext';
+import { AccountSyncProvider } from '@/lib/accountSync';
 import EnsureHomeOnLaunch from '@/components/EnsureHomeOnLaunch';
 import { SettingsModalProvider } from '@/components/SettingsModalProvider';
 
@@ -34,14 +35,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${bodyFont.variable} min-h-screen font-[var(--font-body)] antialiased`}>
-        <UiSettingsProvider>
-          <GameProvider>
-            <SettingsModalProvider>
-              <EnsureHomeOnLaunch />
-              {children}
-            </SettingsModalProvider>
-          </GameProvider>
-        </UiSettingsProvider>
+        <AccountSyncProvider>
+          <UiSettingsProvider>
+            <GameProvider>
+              <SettingsModalProvider>
+                <EnsureHomeOnLaunch />
+                {children}
+              </SettingsModalProvider>
+            </GameProvider>
+          </UiSettingsProvider>
+        </AccountSyncProvider>
       </body>
     </html>
   );

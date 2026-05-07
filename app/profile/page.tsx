@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
+import Image from 'next/image';
 import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import {
@@ -9,11 +9,8 @@ import {
   SKIN_OPTIONS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS,
   SHOE_COLORS, EYE_COLORS,
 } from '@/lib/avatarSystem';
-import { getFirebaseAuth, getGoogleProvider, isFirebaseConfigured } from '@/lib/firebaseClient';
-import {
-  loadRemoteProfile, readLocalProfile, saveRemoteProfile,
-  UserProfile, writeLocalProfile,
-} from '@/lib/userProfile';
+import { readLocalProfile, UserProfile, writeLocalProfile } from '@/lib/userProfile';
+import { useAccountSync } from '@/lib/accountSync';
 import { Pencil, X } from 'lucide-react';
 
 function AvatarEditor({
@@ -45,7 +42,14 @@ function AvatarEditor({
         </div>
         <div className="avatar-editor-preview p-3 border-b border-[var(--line)]">
           <div className="flex justify-center">
-            <img src={avatarToDataUri(local)} alt="Preview" className="w-24 h-auto rounded-xl border border-[var(--line)]" />
+            <Image
+              src={avatarToDataUri(local)}
+              alt="Preview"
+              width={96}
+              height={96}
+              unoptimized
+              className="w-24 h-auto rounded-xl border border-[var(--line)]"
+            />
           </div>
         </div>
 
@@ -98,49 +102,43 @@ function AvatarEditor({
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile>(() => readLocalProfile());
-  const [accountUser, setAccountUser] = useState<User | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [showEditor, setShowEditor] = useState(false);
+  const {
+    appStateNonce,
+    firebaseEnabled,
+    login,
+    loginPending,
+    logout,
+    ready,
+    syncError,
+    syncStatus,
+    user,
+  } = useAccountSync();
 
   useEffect(() => { writeLocalProfile(profile); }, [profile]);
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      setAccountUser(user);
-      if (!user) return;
-      void (async () => {
-        const remote = await loadRemoteProfile(user);
-        if (remote) setProfile(remote);
-      })();
-    });
-    return () => unsubscribe();
-  }, []);
+    const timer = setTimeout(() => {
+      setProfile(readLocalProfile());
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [appStateNonce]);
 
   const handleSave = async () => {
     writeLocalProfile(profile);
-    if (accountUser) {
-      await saveRemoteProfile(accountUser, profile);
-      setStatusMessage('Saved to your account.');
-    } else {
-      setStatusMessage('Saved on this device as guest profile.');
-    }
+    setStatusMessage(user ? 'Saved locally and queued for sync.' : 'Saved on this device as guest profile.');
     setTimeout(() => setStatusMessage(''), 3000);
   };
 
   const handleSignIn = async () => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-    const provider = getGoogleProvider();
-    await signInWithPopup(auth, provider!);
-    setStatusMessage('Signed in successfully.');
+    await login();
+    setStatusMessage('Opening Google login...');
+    setTimeout(() => setStatusMessage(''), 3000);
   };
 
   const handleSignOut = async () => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-    await signOut(auth);
+    await logout();
     setStatusMessage('Signed out.');
   };
 
@@ -161,9 +159,12 @@ export default function ProfilePage() {
           <section className="surface-card p-5">
             <p className="eyebrow mb-2">Identity</p>
             <div className="flex flex-col items-center gap-3 mb-4">
-              <img
+              <Image
                 src={avatarToDataUri(profile.avatar)}
                 alt="Your avatar"
+                width={96}
+                height={96}
+                unoptimized
                 className="w-24 h-auto rounded-2xl border-2 border-[var(--line)]"
               />
               <button
@@ -181,15 +182,46 @@ export default function ProfilePage() {
               placeholder="Your name"
             />
             <p className="content-muted text-xs mb-4">
-              {accountUser ? `Signed in as ${accountUser.email ?? 'account user'}` : 'Using guest profile (device only)'}
+              {!firebaseEnabled
+                ? 'Google sync is disabled until Firebase env vars are configured.'
+                : !ready
+                  ? 'Initializing account sync...'
+                  : user
+                    ? `Signed in as ${user.email ?? 'account user'}`
+                    : 'Using guest profile (device only)'}
             </p>
+
+            {firebaseEnabled && (
+              <p className="content-muted text-xs mb-4">
+                {syncStatus === 'syncing'
+                  ? 'Syncing your profile and app data...'
+                  : syncError
+                    ? syncError
+                    : user
+                      ? 'Your profile, history, settings, and hot-seat config sync to this Google account.'
+                      : 'Sign in with Google to sync everything across devices.'}
+              </p>
+            )}
+
             <div className="flex flex-wrap gap-2">
               <button onClick={() => void handleSave()} className="btn-primary px-4 py-2">Save Profile</button>
-              {isFirebaseConfigured() && !accountUser && (
-                <button onClick={() => void handleSignIn()} className="btn-outline px-4 py-2">Log in with Google</button>
+              {firebaseEnabled && !user && (
+                <button
+                  onClick={() => void handleSignIn()}
+                  className="btn-outline px-4 py-2"
+                  disabled={syncStatus === 'syncing' || loginPending}
+                >
+                  {loginPending ? 'Opening Google...' : 'Log in with Google'}
+                </button>
               )}
-              {accountUser && (
-                <button onClick={() => void handleSignOut()} className="btn-outline px-4 py-2">Log out</button>
+              {user && (
+                <button
+                  onClick={() => void handleSignOut()}
+                  className="btn-outline px-4 py-2"
+                  disabled={syncStatus === 'syncing'}
+                >
+                  Log out
+                </button>
               )}
             </div>
             {statusMessage && <p className="text-sm content-muted mt-3">{statusMessage}</p>}

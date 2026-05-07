@@ -4,6 +4,7 @@ import {
   clampTimerMinutes,
   clampTimerSeconds,
 } from './timerOptions';
+import { setSyncedLocalStorageItem } from './localDataState';
 
 export interface HotSeatSettings {
   players: number;
@@ -54,5 +55,5 @@ export function readHotSeatSettings(): HotSeatSettings {
 
 export function writeHotSeatSettings(settings: HotSeatSettings) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  setSyncedLocalStorageItem(STORAGE_KEY, JSON.stringify(settings));
 }

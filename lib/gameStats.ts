@@ -1,3 +1,5 @@
+import { setSyncedLocalStorageItem } from './localDataState';
+
 export interface GameRecord {
   timestamp: number;
   modeId: string;
@@ -36,7 +38,7 @@ export function writeGameHistory(history: GameRecord[]) {
   if (typeof window === 'undefined') {
     return;
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  setSyncedLocalStorageItem(STORAGE_KEY, JSON.stringify(history));
 }
 
 export function addGameRecord(record: GameRecord) {
