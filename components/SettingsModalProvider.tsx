@@ -94,9 +94,9 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                 <div className="mb-3">
                   <HorizontalWheel
                     label="Rounds"
-                    values={[5, 10]}
+                    values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
                     selected={settings.preferredRounds}
-                    onChange={value => setPreferredRounds(value as 5 | 10)}
+                    onChange={value => setPreferredRounds(value)}
                   />
                 </div>
 

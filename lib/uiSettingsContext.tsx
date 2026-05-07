@@ -16,14 +16,14 @@ export type ColorMode = 'dark' | 'light';
 
 export interface UiSettings {
   themePreset: ThemePresetId;
-  preferredRounds: 5 | 10;
+  preferredRounds: number;
   preferredGameMode: string;
 }
 
 interface UiSettingsContextType {
   settings: UiSettings;
   setThemePreset: (themePreset: ThemePresetId) => void;
-  setPreferredRounds: (rounds: 5 | 10) => void;
+  setPreferredRounds: (rounds: number) => void;
   setPreferredGameMode: (mode: string) => void;
 }
 
@@ -62,7 +62,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       const parsed = JSON.parse(raw) as Partial<UiSettings>;
       return {
         themePreset: parsed.themePreset ?? DEFAULT_SETTINGS.themePreset,
-        preferredRounds: parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds,
+        preferredRounds: Math.min(10, Math.max(1, parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds)),
         preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
       };
     } catch {
@@ -83,8 +83,9 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       setThemePreset: (themePreset: ThemePresetId) => {
         setSettings(prev => ({ ...prev, themePreset }));
       },
-      setPreferredRounds: (preferredRounds: 5 | 10) => {
-        setSettings(prev => ({ ...prev, preferredRounds }));
+      setPreferredRounds: (preferredRounds: number) => {
+        const clamped = Math.min(10, Math.max(1, preferredRounds));
+        setSettings(prev => ({ ...prev, preferredRounds: clamped }));
       },
       setPreferredGameMode: (preferredGameMode: string) => {
         setSettings(prev => ({ ...prev, preferredGameMode }));

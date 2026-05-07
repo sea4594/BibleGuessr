@@ -95,35 +95,50 @@ export function defaultAvatarSpec(seed = 0): AvatarSpec {
 // SVG generation — 200x320 viewBox, standing full-body cartoon
 // Head center: (100, 82), r=44. Bottom: y=126. Top: y=38.
 
+function shiftChannel(value: number, delta: number) {
+  return Math.max(0, Math.min(255, value + delta));
+}
+
+function shiftHex(hex: string, delta: number) {
+  const s = hex.trim();
+  if (!/^#[0-9a-fA-F]{6}$/.test(s)) return hex;
+  const n = parseInt(s.slice(1), 16);
+  const r = shiftChannel((n >> 16) & 0xff, delta);
+  const g = shiftChannel((n >> 8) & 0xff, delta);
+  const b = shiftChannel(n & 0xff, delta);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
 function hairBack(style: string, color: string): string {
   const c = color;
+  const highlight = shiftHex(c, 30);
   switch (style) {
     case 'bald': return '';
     case 'buzz':
       return `<ellipse cx="100" cy="67" rx="43" ry="28" fill="${c}"/>`;
     case 'crop':
-      return `<ellipse cx="100" cy="66" rx="47" ry="33" fill="${c}"/>
-        <rect x="54" y="76" width="10" height="26" rx="5" fill="${c}"/>
-        <rect x="136" y="76" width="10" height="26" rx="5" fill="${c}"/>`;
+      return `<ellipse cx="100" cy="67" rx="48" ry="33" fill="${c}"/>
+        <path d="M 62 58 Q 82 45 100 50 Q 118 45 138 58" stroke="${highlight}" stroke-width="3" fill="none"/>`;
     case 'side-part':
-      return `<ellipse cx="100" cy="66" rx="49" ry="35" fill="${c}"/>
-        <path d="M 84 40 Q 98 56 95 80" stroke="color-mix(in oklab, ${c} 70%, #fff)" stroke-width="3" fill="none"/>`;
-    case 'waves':
-      return `<ellipse cx="100" cy="66" rx="50" ry="36" fill="${c}"/>
-        <path d="M 62 60 Q 74 52 86 60 Q 98 68 110 60 Q 122 52 134 60" stroke="color-mix(in oklab, ${c} 60%, #fff)" stroke-width="3" fill="none"/>`;
-    case 'bob':
-      return `<ellipse cx="100" cy="66" rx="50" ry="37" fill="${c}"/>
-        <rect x="47" y="80" width="13" height="86" rx="6" fill="${c}"/>
-        <rect x="140" y="80" width="13" height="86" rx="6" fill="${c}"/>`;
-    case 'ponytail':
       return `<ellipse cx="100" cy="66" rx="49" ry="34" fill="${c}"/>
-        <path d="M 148 82 Q 168 106 152 138" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+        <path d="M 84 42 Q 98 58 95 80" stroke="${highlight}" stroke-width="3" fill="none"/>`;
+    case 'waves':
+      return `<ellipse cx="100" cy="67" rx="50" ry="35" fill="${c}"/>
+        <path d="M 62 58 Q 72 50 84 58 Q 96 66 108 58 Q 120 50 132 58" stroke="${highlight}" stroke-width="3" fill="none"/>`;
+    case 'bob':
+      return `<ellipse cx="100" cy="67" rx="50" ry="36" fill="${c}"/>
+        <path d="M 52 78 Q 48 124 56 166" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>
+        <path d="M 148 78 Q 152 124 144 166" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+    case 'ponytail':
+      return `<ellipse cx="100" cy="67" rx="48" ry="34" fill="${c}"/>
+        <path d="M 147 80 Q 170 106 150 142" stroke="${c}" stroke-width="13" fill="none" stroke-linecap="round"/>
+        <circle cx="144" cy="80" r="5" fill="${highlight}"/>`;
     case 'locs':
-      return `<ellipse cx="100" cy="66" rx="50" ry="36" fill="${c}"/>
-        <rect x="50" y="82" width="9" height="104" rx="4" fill="${c}"/>
-        <rect x="66" y="84" width="9" height="108" rx="4" fill="${c}"/>
-        <rect x="125" y="84" width="9" height="108" rx="4" fill="${c}"/>
-        <rect x="141" y="82" width="9" height="104" rx="4" fill="${c}"/>`;
+      return `<ellipse cx="100" cy="67" rx="50" ry="35" fill="${c}"/>
+        <path d="M 56 84 Q 52 132 58 182" stroke="${c}" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M 70 86 Q 68 136 74 188" stroke="${c}" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M 130 86 Q 132 136 126 188" stroke="${c}" stroke-width="9" fill="none" stroke-linecap="round"/>
+        <path d="M 144 84 Q 148 132 142 182" stroke="${c}" stroke-width="9" fill="none" stroke-linecap="round"/>`;
     default:
       return `<ellipse cx="100" cy="66" rx="47" ry="33" fill="${c}"/>`;
   }
@@ -131,30 +146,32 @@ function hairBack(style: string, color: string): string {
 
 function hairFront(style: string, color: string): string {
   const c = color;
+  const highlight = shiftHex(c, 30);
+  const low = shiftHex(c, -24);
   switch (style) {
     case 'bald': return '';
     case 'buzz':
       return `<path d="M 70 44 Q 100 34 130 44" stroke="${c}" stroke-width="8" fill="none" stroke-linecap="round"/>`;
     case 'crop':
-      return `<path d="M 64 44 Q 100 28 136 44" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
+      return `<path d="M 64 46 Q 100 28 136 46" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <path d="M 74 52 Q 100 42 126 52" stroke="${highlight}" stroke-width="3" fill="none"/>`;
     case 'side-part':
       return `<path d="M 62 46 Q 86 28 116 34 Q 130 38 138 48" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
-        <path d="M 90 42 Q 98 56 94 78" stroke="color-mix(in oklab, ${c} 55%, #fff)" stroke-width="3" fill="none"/>`;
+        <path d="M 90 42 Q 98 56 94 78" stroke="${highlight}" stroke-width="3" fill="none"/>`;
     case 'waves':
-      return `<path d="M 60 52 Q 72 44 84 52 Q 96 60 108 52 Q 120 44 132 52 Q 142 58 148 52" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>`;
+      return `<path d="M 60 54 Q 72 46 84 54 Q 96 62 108 54 Q 120 46 132 54 Q 142 60 148 54" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <path d="M 70 58 Q 86 50 100 56 Q 114 50 130 58" stroke="${highlight}" stroke-width="2.5" fill="none"/>`;
     case 'bob':
-      return `<path d="M 62 46 Q 100 28 138 46" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
-        <path d="M 58 96 Q 56 126 62 156" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
-        <path d="M 142 96 Q 144 126 138 156" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>`;
+      return `<path d="M 62 48 Q 100 30 138 48" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <path d="M 60 98 Q 60 128 64 156" stroke="${low}" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M 140 98 Q 140 128 136 156" stroke="${low}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
     case 'ponytail':
       return `<path d="M 64 44 Q 100 28 136 44" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
-        <rect x="138" y="76" width="14" height="10" rx="5" fill="color-mix(in oklab, ${c} 75%, #000)"/>`;
+        <rect x="138" y="76" width="14" height="10" rx="5" fill="${low}"/>`;
     case 'locs':
       return `<path d="M 64 44 Q 100 28 136 44" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
-        <rect x="58" y="98" width="8" height="76" rx="4" fill="${c}"/>
-        <rect x="68" y="102" width="8" height="82" rx="4" fill="${c}"/>
-        <rect x="124" y="102" width="8" height="82" rx="4" fill="${c}"/>
-        <rect x="134" y="98" width="8" height="76" rx="4" fill="${c}"/>`;
+        <path d="M 60 102 Q 58 136 62 170" stroke="${low}" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M 140 102 Q 142 136 138 170" stroke="${low}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
     default: return '';
   }
 }
@@ -220,17 +237,18 @@ function mouthSvg(type: string): string {
 }
 
 function shirtBodySvg(style: string, shirtColor: string, skinColor: string): string {
+  const shade = shiftHex(shirtColor, -24);
   const baseBody = `<rect x="60" y="148" width="80" height="82" rx="10" fill="${shirtColor}"/>`;
   switch (style) {
     case 'hoodie':
       return `${baseBody}
-        <rect x="60" y="148" width="80" height="20" rx="10" fill="color-mix(in oklab, ${shirtColor} 70%, #000)"/>
+        <rect x="60" y="148" width="80" height="20" rx="10" fill="${shade}"/>
         <path d="M 80 148 Q 100 168 120 148" fill="${shirtColor}"/>`;
     case 'tank':
       return `<rect x="66" y="148" width="68" height="82" rx="8" fill="${shirtColor}"/>`;
     case 'suit':
       return `${baseBody}
-        <path d="M 84 148 L 76 200 L 100 190 L 124 200 L 116 148" fill="color-mix(in oklab, ${shirtColor} 60%, #000)"/>
+        <path d="M 84 148 L 76 200 L 100 190 L 124 200 L 116 148" fill="${shade}"/>
         <path d="M 100 155 L 100 195" stroke="white" stroke-width="2"/>`;
     case 'polo':
       return `${baseBody}

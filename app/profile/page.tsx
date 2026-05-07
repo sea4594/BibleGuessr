@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
@@ -14,11 +14,7 @@ import {
   loadRemoteProfile, readLocalProfile, saveRemoteProfile,
   UserProfile, writeLocalProfile,
 } from '@/lib/userProfile';
-import { themePresets, useUiSettings } from '@/lib/uiSettingsContext';
 import { Pencil, X } from 'lucide-react';
-import { gameModes } from '@/lib/gameModes';
-
-const commitSha = process.env.NEXT_PUBLIC_COMMIT_SHA || 'unknown';
 
 function AvatarEditor({
   avatar,
@@ -53,7 +49,7 @@ function AvatarEditor({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
           {AVATAR_ATTRIBUTES.map(attr => (
             <div key={attr.key}>
               <p className="eyebrow mb-1.5">{attr.label}</p>
@@ -101,7 +97,6 @@ function AvatarEditor({
 }
 
 export default function ProfilePage() {
-  const { settings, setThemePreset, setPreferredRounds, setPreferredGameMode } = useUiSettings();
   const [profile, setProfile] = useState<UserProfile>(() => readLocalProfile());
   const [accountUser, setAccountUser] = useState<User | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -148,14 +143,6 @@ export default function ProfilePage() {
     await signOut(auth);
     setStatusMessage('Signed out.');
   };
-
-  const quickPlayModes = useMemo(() =>
-    Object.entries(gameModes)
-      .filter(([, m]) => !m.isSingleBook)
-      .map(([id, m]) => ({ id, name: m.name }))
-      .slice(0, 8),
-    []
-  );
 
   return (
     <main className="app-screen">
@@ -206,59 +193,6 @@ export default function ProfilePage() {
               )}
             </div>
             {statusMessage && <p className="text-sm content-muted mt-3">{statusMessage}</p>}
-          </section>
-
-          {/* Quick Play settings */}
-          <section className="surface-card p-5">
-            <p className="eyebrow mb-2">Quick Play Settings</p>
-            <h2 className="text-xl font-semibold mb-3">Default Mode</h2>
-            <div className="grid gap-2 mb-5">
-              {quickPlayModes.map(({ id, name }) => (
-                <button
-                  key={id}
-                  onClick={() => setPreferredGameMode(id)}
-                  className={settings.preferredGameMode === id ? 'btn-primary w-full px-4 py-2.5 text-left' : 'btn-outline w-full px-4 py-2.5 text-left'}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
-
-            <h2 className="text-xl font-semibold mb-3">Default Rounds</h2>
-            <div className="grid gap-2">
-              {([5, 10] as const).map(n => (
-                <button
-                  key={n}
-                  onClick={() => setPreferredRounds(n)}
-                  className={settings.preferredRounds === n ? 'btn-primary w-full px-4 py-2.5 text-left' : 'btn-outline w-full px-4 py-2.5 text-left'}
-                >
-                  {n} rounds
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Appearance */}
-          <section className="surface-card p-5">
-            <p className="eyebrow mb-2">Appearance</p>
-            <h2 className="text-xl font-semibold mb-3">Theme</h2>
-            <div className="theme-grid">
-              {themePresets.map(theme => (
-                <button
-                  key={theme.id}
-                  onClick={() => setThemePreset(theme.id)}
-                  className={`theme-option ${settings.themePreset === theme.id ? 'active' : ''}`}
-                >
-                  <span className="theme-name">{theme.name}</span>
-                  <span className="theme-description">{theme.color} / {theme.mode}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-[var(--line)]">
-              <p className="eyebrow mb-1">Build</p>
-              <p className="text-sm content-muted">Commit: {commitSha}</p>
-            </div>
           </section>
 
         </div>
