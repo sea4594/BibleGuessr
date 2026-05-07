@@ -1149,14 +1149,17 @@ input[type='range']::-moz-range-thumb {
   justify-content: center;
   z-index: 120;
   padding: 16px;
+  overflow: hidden;
 }
 
 .settings-modal {
-  width: min(720px, 100%);
+  width: min(640px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
   max-height: min(86dvh, 800px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .settings-modal-header {
@@ -1173,6 +1176,22 @@ input[type='range']::-moz-range-thumb {
   gap: 10px;
   padding: 12px;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+.settings-modal-body > * {
+  min-width: 0;
+}
+
+.settings-modal .h-wheel-wrap,
+.settings-modal .h-wheel-viewport,
+.settings-modal .h-wheel-track {
+  max-width: 100%;
+}
+
+.settings-modal .h-wheel-viewport {
+  overflow: hidden;
 }
 
 .hotseat-shell {
