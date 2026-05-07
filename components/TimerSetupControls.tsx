@@ -15,7 +15,7 @@ export default function TimerSetupControls({
   onSecondsChange,
 }: Props) {
   return (
-    <section className="surface-card p-3 sm:p-4">
+    <section className="surface-card p-2.5 sm:p-3">
       <div className="timer-inline-row">
         <p className="text-sm font-semibold">Timer</p>
         <div className="timer-inline-controls">

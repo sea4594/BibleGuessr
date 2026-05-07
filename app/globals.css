@@ -573,7 +573,7 @@ input[type='range']::-moz-range-thumb {
   outline-offset: -2px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1200px) {
   .play-layout {
     grid-template-columns: 1fr;
   }
@@ -1299,11 +1299,19 @@ input[type='range']::-moz-range-thumb {
 
 .hotseat-rounds-turn-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 84px) minmax(0, 92px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
   align-items: end;
   gap: 8px;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hotseat-turn-buttons {
+  display: grid;
+  grid-template-columns: minmax(0, 84px) minmax(0, 92px);
+  gap: 8px;
   min-width: 0;
 }
 
@@ -1353,30 +1361,51 @@ input[type='range']::-moz-range-thumb {
 .timer-inline-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .timer-inline-controls {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  margin-left: auto;
 }
 
 .timer-inline-label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.92rem;
+  gap: 5px;
+  font-size: 0.76rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .timer-inline-select {
-  width: 82px;
-  min-width: 82px;
+  width: 56px;
+  min-width: 56px;
+  min-height: 34px;
+  padding: 4px 6px;
+}
+
+.party-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.party-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .party-members-block {
@@ -1424,13 +1453,22 @@ input[type='range']::-moz-range-thumb {
     grid-template-columns: 1fr;
   }
 
+  .hotseat-turn-buttons {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .hotseat-turn-style-btn {
     min-width: 0;
     width: 100%;
   }
 
   .timer-inline-controls {
+    margin-left: 0;
     justify-content: flex-start;
+  }
+
+  .party-header-row {
+    flex-direction: column;
   }
 }
 

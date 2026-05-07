@@ -13,6 +13,7 @@ import { gameModes, GameModeId } from '@/lib/gameModes';
 import {
   hostParty,
   joinParty,
+  leaveParty,
   PartyRoom,
   PartyVerse,
   startPartyGame,
@@ -183,11 +184,37 @@ export default function MultiplayerPage() {
   const submitJoin = async () => {
     const code = joinCode.join('').toUpperCase();
     if (code.length !== 4 || !isFirebaseConfigured()) return;
+
+    if (room?.code && room.code !== code) {
+      await leaveParty(room.code, clientId);
+    }
+
     const ok = await joinParty(code, { id: clientId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: Date.now() });
     if (ok) {
       setJoinOpen(false);
       setJoinCode(['', '', '', '']);
       subscribeToParty(code, next => setRoom(next));
+    }
+  };
+
+  const hostNewPartyCode = async () => {
+    if (!isFirebaseConfigured()) return;
+
+    if (room?.code) {
+      await leaveParty(room.code, clientId);
+    }
+
+    const created = await hostParty({
+      id: clientId,
+      name: displayName,
+      avatar: profile.avatar,
+      isHost: true,
+      joinedAt: Date.now(),
+    });
+
+    if (created) {
+      setRoom(created);
+      subscribeToParty(created.code, next => setRoom(next));
     }
   };
 
@@ -239,18 +266,20 @@ export default function MultiplayerPage() {
                 <div className="min-w-0">
                   <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
                 </div>
-                <button
-                  onClick={() => setTurnStyle('alternate')}
-                  className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
-                >
-                  Alternate
-                </button>
-                <button
-                  onClick={() => setTurnStyle('all-at-once')}
-                  className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
-                >
-                  All at once
-                </button>
+                <div className="hotseat-turn-buttons">
+                  <button
+                    onClick={() => setTurnStyle('alternate')}
+                    className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                  >
+                    Alternate
+                  </button>
+                  <button
+                    onClick={() => setTurnStyle('all-at-once')}
+                    className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                  >
+                    All at once
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-4 min-w-0">
@@ -278,9 +307,14 @@ export default function MultiplayerPage() {
           )}
 
           {tab === 'party' && (
-            <section className="surface-card p-5 relative">
-              <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm absolute right-5 top-5">Join by code</button>
-              <h2 className="headline-serif text-3xl mb-5">Hosted Party</h2>
+            <section className="surface-card p-5">
+              <div className="party-header-row mb-4">
+                <h2 className="headline-serif text-3xl">Hosted Party</h2>
+                <div className="party-header-actions">
+                  <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Join by code</button>
+                  <button onClick={() => void hostNewPartyCode()} className="btn-outline px-3 py-2 text-sm">New code</button>
+                </div>
+              </div>
               {!isFirebaseConfigured() && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
               {isFirebaseConfigured() && room && (
                 <>
@@ -365,8 +399,8 @@ export default function MultiplayerPage() {
       </div>
 
       {joinOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="surface-card w-full max-w-sm p-5">
+        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={() => setJoinOpen(false)}>
+          <div className="surface-card w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
             <h3 className="headline-serif text-2xl mb-4">Enter 4-letter code</h3>
             <div className="grid grid-cols-4 gap-2 mb-5">
               {joinCode.map((value, idx) => (
