@@ -6,7 +6,7 @@ import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import {
   AvatarSpec, avatarToDataUri, AVATAR_ATTRIBUTES,
-  BACKGROUND_OPTIONS, SKIN_OPTIONS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS,
+  SKIN_OPTIONS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS,
   SHOE_COLORS, EYE_COLORS,
 } from '@/lib/avatarSystem';
 import { getFirebaseAuth, getGoogleProvider, isFirebaseConfigured } from '@/lib/firebaseClient';
@@ -32,7 +32,6 @@ function AvatarEditor({
   };
 
   const colorOptions: Record<string, string[]> = {
-    background: BACKGROUND_OPTIONS,
     skinColor: SKIN_OPTIONS,
     hairColor: HAIR_COLORS,
     eyeColor: EYE_COLORS,
@@ -48,38 +47,39 @@ function AvatarEditor({
           <h2 className="text-lg font-bold">Edit Avatar</h2>
           <button onClick={onClose} className="btn-ghost p-2"><X size={20} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="avatar-editor-preview p-3 border-b border-[var(--line)]">
           <div className="flex justify-center">
-            <img src={avatarToDataUri(local)} alt="Preview" className="w-28 h-auto rounded-xl border border-[var(--line)]" />
+            <img src={avatarToDataUri(local)} alt="Preview" className="w-24 h-auto rounded-xl border border-[var(--line)]" />
           </div>
+        </div>
 
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {AVATAR_ATTRIBUTES.map(attr => (
             <div key={attr.key}>
               <p className="eyebrow mb-1.5">{attr.label}</p>
               {attr.type === 'color' ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="avatar-option-row">
                   {(colorOptions[attr.key] ?? []).map(opt => (
                     <button
                       key={opt}
                       onClick={() => update(attr.key, opt)}
-                      className="w-11 h-11 rounded-full border-2 transition-transform hover:scale-110"
+                      className="avatar-choice-color-btn"
                       style={{
                         background: opt,
-                        borderColor: local[attr.key] === opt ? 'var(--text-main)' : 'transparent',
-                        transform: local[attr.key] === opt ? 'scale(1.18)' : undefined,
-                        boxShadow: local[attr.key] === opt ? '0 0 0 2px var(--bg), 0 0 0 4px var(--text-main)' : undefined,
+                        borderColor: local[attr.key] === opt ? 'var(--text-main)' : 'var(--line-strong)',
+                        boxShadow: local[attr.key] === opt ? '0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent)' : undefined,
                       }}
                       title={opt}
                     />
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="avatar-option-row">
                   {attr.options.map(opt => (
                     <button
                       key={opt}
                       onClick={() => update(attr.key, opt)}
-                      className={local[attr.key] === opt ? 'btn-primary px-3 py-1.5 text-sm capitalize' : 'btn-outline px-3 py-1.5 text-sm capitalize'}
+                      className={local[attr.key] === opt ? 'btn-primary avatar-choice-pill-btn capitalize' : 'btn-outline avatar-choice-pill-btn capitalize'}
                     >
                       {opt}
                     </button>
@@ -177,7 +177,7 @@ export default function ProfilePage() {
               <img
                 src={avatarToDataUri(profile.avatar)}
                 alt="Your avatar"
-                className="w-32 h-auto rounded-2xl border-2 border-[var(--line)]"
+                className="w-24 h-auto rounded-2xl border-2 border-[var(--line)]"
               />
               <button
                 onClick={() => setShowEditor(true)}

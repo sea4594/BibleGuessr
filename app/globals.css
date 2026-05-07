@@ -1218,6 +1218,37 @@ input[type='range']::-moz-range-thumb {
   font-weight: 800;
 }
 
+.avatar-option-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.avatar-option-row::-webkit-scrollbar {
+  height: 6px;
+}
+
+.avatar-choice-color-btn {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 2px solid var(--line-strong);
+  flex-shrink: 0;
+}
+
+.avatar-choice-pill-btn {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 9px 14px;
+  font-size: 0.88rem;
+}
+
 /* ====== Pause close button ====== */
 .pause-card {
   position: relative;

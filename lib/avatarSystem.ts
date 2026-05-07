@@ -1,7 +1,8 @@
 // Full-body avatar system with selectable attributes
 
 export interface AvatarSpec {
-  background: string;
+  // Legacy field kept for backward compatibility with saved profiles.
+  background?: string;
   skinColor: string;
   hairStyle: string;
   hairColor: string;
@@ -15,10 +16,6 @@ export interface AvatarSpec {
   accessory: string;
 }
 
-export const BACKGROUND_OPTIONS = [
-  '#1a3a5c','#2c5f2e','#6b2737','#4a1f6e','#1d4a3a',
-  '#5c3a1a','#1a4a5c','#3a1a5c','#5c1a3a','#2a2a3a',
-];
 export const SKIN_OPTIONS = [
   '#FDDBB4','#F5C592','#E8A96A','#D4884A',
   '#B5712A','#8B4D20','#6B3416','#4A2110',
@@ -28,7 +25,14 @@ export const HAIR_COLORS = [
   '#d4a032','#f0d060','#602060','#c08070',
 ];
 export const HAIR_STYLES = [
-  'bald','short','medium','long','curly','bun','afro','braids',
+  'bald',
+  'buzz',
+  'crop',
+  'side-part',
+  'waves',
+  'bob',
+  'ponytail',
+  'locs',
 ] as const;
 export const EYE_TYPES = [
   'dot','round','sleepy','almond','wide','wink',
@@ -59,7 +63,6 @@ export const ACCESSORIES = [
 
 // Attribute metadata for the editor UI
 export const AVATAR_ATTRIBUTES = [
-  { key: 'background' as const, label: 'Background', type: 'color', options: BACKGROUND_OPTIONS },
   { key: 'skinColor' as const, label: 'Skin', type: 'color', options: SKIN_OPTIONS },
   { key: 'hairStyle' as const, label: 'Hair Style', type: 'label', options: HAIR_STYLES as unknown as string[] },
   { key: 'hairColor' as const, label: 'Hair Color', type: 'color', options: HAIR_COLORS },
@@ -75,7 +78,6 @@ export const AVATAR_ATTRIBUTES = [
 
 export function defaultAvatarSpec(seed = 0): AvatarSpec {
   return {
-    background: BACKGROUND_OPTIONS[seed % BACKGROUND_OPTIONS.length],
     skinColor: SKIN_OPTIONS[Math.floor(seed / 2) % SKIN_OPTIONS.length],
     hairStyle: HAIR_STYLES[Math.floor(seed / 3) % HAIR_STYLES.length],
     hairColor: HAIR_COLORS[Math.floor(seed / 5) % HAIR_COLORS.length],
@@ -97,39 +99,33 @@ function hairBack(style: string, color: string): string {
   const c = color;
   switch (style) {
     case 'bald': return '';
-    case 'short':
-      // compact cap that hugs the head
-      return `<ellipse cx="100" cy="70" rx="47" ry="34" fill="${c}"/>
-        <rect x="53" y="78" width="8" height="28" rx="4" fill="${c}"/>
-        <rect x="139" y="78" width="8" height="28" rx="4" fill="${c}"/>`;
-    case 'medium':
-      return `<ellipse cx="100" cy="66" rx="50" ry="40" fill="${c}"/>
-        <rect x="47" y="78" width="12" height="64" rx="6" fill="${c}"/>
-        <rect x="141" y="78" width="12" height="64" rx="6" fill="${c}"/>`;
-    case 'long':
-      return `<ellipse cx="100" cy="66" rx="50" ry="40" fill="${c}"/>
-        <rect x="44" y="78" width="14" height="110" rx="7" fill="${c}"/>
-        <rect x="142" y="78" width="14" height="110" rx="7" fill="${c}"/>`;
-    case 'curly':
-      // large poofy mass behind head
-      return `<circle cx="100" cy="68" r="58" fill="${c}"/>
-        <circle cx="58" cy="88" r="24" fill="${c}"/>
-        <circle cx="142" cy="88" r="24" fill="${c}"/>
-        <circle cx="68" cy="130" r="18" fill="${c}"/>
-        <circle cx="132" cy="130" r="18" fill="${c}"/>`;
-    case 'bun':
-      return `<ellipse cx="100" cy="70" rx="48" ry="32" fill="${c}"/>
-        <circle cx="100" cy="36" r="18" fill="${c}"/>`;
-    case 'afro':
-      return `<circle cx="100" cy="72" r="68" fill="${c}"/>
-        <circle cx="58" cy="98" r="28" fill="${c}"/>
-        <circle cx="142" cy="98" r="28" fill="${c}"/>`;
-    case 'braids':
-      return `<ellipse cx="100" cy="68" rx="50" ry="36" fill="${c}"/>
-        <rect x="44" y="80" width="14" height="100" rx="7" fill="${c}"/>
-        <rect x="142" y="80" width="14" height="100" rx="7" fill="${c}"/>`;
+    case 'buzz':
+      return `<ellipse cx="100" cy="67" rx="43" ry="28" fill="${c}"/>`;
+    case 'crop':
+      return `<ellipse cx="100" cy="66" rx="47" ry="33" fill="${c}"/>
+        <rect x="54" y="76" width="10" height="26" rx="5" fill="${c}"/>
+        <rect x="136" y="76" width="10" height="26" rx="5" fill="${c}"/>`;
+    case 'side-part':
+      return `<ellipse cx="100" cy="66" rx="49" ry="35" fill="${c}"/>
+        <path d="M 84 40 Q 98 56 95 80" stroke="color-mix(in oklab, ${c} 70%, #fff)" stroke-width="3" fill="none"/>`;
+    case 'waves':
+      return `<ellipse cx="100" cy="66" rx="50" ry="36" fill="${c}"/>
+        <path d="M 62 60 Q 74 52 86 60 Q 98 68 110 60 Q 122 52 134 60" stroke="color-mix(in oklab, ${c} 60%, #fff)" stroke-width="3" fill="none"/>`;
+    case 'bob':
+      return `<ellipse cx="100" cy="66" rx="50" ry="37" fill="${c}"/>
+        <rect x="47" y="80" width="13" height="86" rx="6" fill="${c}"/>
+        <rect x="140" y="80" width="13" height="86" rx="6" fill="${c}"/>`;
+    case 'ponytail':
+      return `<ellipse cx="100" cy="66" rx="49" ry="34" fill="${c}"/>
+        <path d="M 148 82 Q 168 106 152 138" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+    case 'locs':
+      return `<ellipse cx="100" cy="66" rx="50" ry="36" fill="${c}"/>
+        <rect x="50" y="82" width="9" height="104" rx="4" fill="${c}"/>
+        <rect x="66" y="84" width="9" height="108" rx="4" fill="${c}"/>
+        <rect x="125" y="84" width="9" height="108" rx="4" fill="${c}"/>
+        <rect x="141" y="82" width="9" height="104" rx="4" fill="${c}"/>`;
     default:
-      return `<ellipse cx="100" cy="70" rx="47" ry="34" fill="${c}"/>`;
+      return `<ellipse cx="100" cy="66" rx="47" ry="33" fill="${c}"/>`;
   }
 }
 
@@ -137,44 +133,28 @@ function hairFront(style: string, color: string): string {
   const c = color;
   switch (style) {
     case 'bald': return '';
-    case 'short':
-      // side burns + short bangs fringe
-      return `<path d="M 56 86 Q 52 110 56 130" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
-        <path d="M 144 86 Q 148 110 144 130" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
-        <path d="M 66 42 Q 100 28 134 42" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
-    case 'medium':
-      // side curtains + fringe
-      return `<path d="M 52 82 Q 46 126 54 170" stroke="${c}" stroke-width="13" fill="none" stroke-linecap="round"/>
-        <path d="M 148 82 Q 154 126 146 170" stroke="${c}" stroke-width="13" fill="none" stroke-linecap="round"/>
-        <path d="M 64 40 Q 100 24 136 40" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
-    case 'long':
-      // long flowing front strands
-      return `<path d="M 50 84 Q 42 130 48 200" stroke="${c}" stroke-width="15" fill="none" stroke-linecap="round"/>
-        <path d="M 150 84 Q 158 130 152 200" stroke="${c}" stroke-width="15" fill="none" stroke-linecap="round"/>
-        <path d="M 64 40 Q 100 22 136 40" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>`;
-    case 'curly':
-      // curly wisps in front of face
-      return `<circle cx="68" cy="72" r="14" fill="${c}"/>
-        <circle cx="132" cy="72" r="14" fill="${c}"/>
-        <circle cx="82" cy="56" r="12" fill="${c}"/>
-        <circle cx="118" cy="56" r="12" fill="${c}"/>
-        <circle cx="100" cy="46" r="13" fill="${c}"/>`;
-    case 'bun':
-      // side pieces + fringe with bun show-through above
-      return `<path d="M 56 84 Q 50 110 56 134" stroke="${c}" stroke-width="11" fill="none" stroke-linecap="round"/>
-        <path d="M 144 84 Q 150 110 144 134" stroke="${c}" stroke-width="11" fill="none" stroke-linecap="round"/>
-        <path d="M 66 42 Q 100 28 134 42" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
-    case 'afro':
-      // round textured edge peeking in front
-      return `<circle cx="60" cy="68" r="18" fill="${c}"/>
-        <circle cx="140" cy="68" r="18" fill="${c}"/>
-        <circle cx="78" cy="46" r="16" fill="${c}"/>
-        <circle cx="122" cy="46" r="16" fill="${c}"/>`;
-    case 'braids':
-      // braids drape in front
-      return `<path d="M 56 126 Q 44 170 50 218" stroke="${c}" stroke-width="11" fill="none" stroke-linecap="round"/>
-        <path d="M 144 126 Q 156 170 150 218" stroke="${c}" stroke-width="11" fill="none" stroke-linecap="round"/>
-        <path d="M 66 40 Q 100 24 134 40" stroke="${c}" stroke-width="13" fill="none" stroke-linecap="round"/>`;
+    case 'buzz':
+      return `<path d="M 70 44 Q 100 34 130 44" stroke="${c}" stroke-width="8" fill="none" stroke-linecap="round"/>`;
+    case 'crop':
+      return `<path d="M 64 44 Q 100 28 136 44" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
+    case 'side-part':
+      return `<path d="M 62 46 Q 86 28 116 34 Q 130 38 138 48" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <path d="M 90 42 Q 98 56 94 78" stroke="color-mix(in oklab, ${c} 55%, #fff)" stroke-width="3" fill="none"/>`;
+    case 'waves':
+      return `<path d="M 60 52 Q 72 44 84 52 Q 96 60 108 52 Q 120 44 132 52 Q 142 58 148 52" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>`;
+    case 'bob':
+      return `<path d="M 62 46 Q 100 28 138 46" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <path d="M 58 96 Q 56 126 62 156" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <path d="M 142 96 Q 144 126 138 156" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>`;
+    case 'ponytail':
+      return `<path d="M 64 44 Q 100 28 136 44" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <rect x="138" y="76" width="14" height="10" rx="5" fill="color-mix(in oklab, ${c} 75%, #000)"/>`;
+    case 'locs':
+      return `<path d="M 64 44 Q 100 28 136 44" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <rect x="58" y="98" width="8" height="76" rx="4" fill="${c}"/>
+        <rect x="68" y="102" width="8" height="82" rx="4" fill="${c}"/>
+        <rect x="124" y="102" width="8" height="82" rx="4" fill="${c}"/>
+        <rect x="134" y="98" width="8" height="76" rx="4" fill="${c}"/>`;
     default: return '';
   }
 }
@@ -323,12 +303,11 @@ function accessorySvg(acc: string): string {
 }
 
 export function avatarToSvg(spec: AvatarSpec): string {
-  const { background, skinColor, hairStyle, hairColor, eyeType, eyeColor,
+  const { skinColor, hairStyle, hairColor, eyeType, eyeColor,
     mouthType, shirtStyle, shirtColor, pantsColor, shoeColor, accessory } = spec;
   const isDress = shirtStyle === 'dress';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 ${isDress ? 320 : 320}" width="200" height="320">
-  <rect width="200" height="320" rx="20" fill="${background}"/>
   ${isDress ? '' : legsSvg(shirtStyle, pantsColor, shoeColor)}
   ${isDress ? legsSvg(shirtStyle, pantsColor, shoeColor) : ''}
   ${shirtBodySvg(shirtStyle, shirtColor, skinColor)}
