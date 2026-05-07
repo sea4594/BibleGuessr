@@ -51,7 +51,7 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
       </header>
 
       <div className="app-content app-content-scroll">
-        <div className="page max-w-lg setup-page">
+        <div className="page max-w-lg">
           <p className="content-muted mb-3">{session.modeConfig.name}</p>
 
           <div className="surface-card p-4 sm:p-5 mb-4 w-full">
@@ -83,7 +83,12 @@ export default function GameSummary({ session, onPlayAgain, onHome }: Props) {
             </div>
           )}
 
-          <button onClick={onPlayAgain} className="btn-primary setup-start-btn">
+        </div>
+      </div>
+
+      <div className="round-screen-footer">
+        <div className="footer-inner">
+          <button onClick={onPlayAgain} className="btn-primary w-full py-4 text-lg">
             Play Again
           </button>
         </div>

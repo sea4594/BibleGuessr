@@ -37,8 +37,8 @@ function AvatarEditor({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }}>
-      <div className="surface-card w-full sm:max-w-lg max-h-[90dvh] flex flex-col overflow-hidden">
+    <div className="avatar-editor-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }}>
+      <div className="avatar-editor-modal surface-card w-full max-h-[90dvh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-[var(--line)]">
           <h2 className="text-lg font-bold">Edit Avatar</h2>
           <button onClick={onClose} className="btn-ghost p-2"><X size={20} /></button>
@@ -49,9 +49,9 @@ function AvatarEditor({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-w-0">
           {AVATAR_ATTRIBUTES.map(attr => (
-            <div key={attr.key}>
+            <div key={attr.key} className="min-w-0">
               <p className="eyebrow mb-1.5">{attr.label}</p>
               {attr.type === 'color' ? (
                 <div className="avatar-option-row">

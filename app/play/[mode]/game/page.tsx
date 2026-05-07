@@ -310,7 +310,6 @@ export default function GamePage() {
       <RoundResult
         round={lastRound}
         roundNumber={displayRound}
-        totalRounds={displayTotalRounds}
         onNext={handleNextRound}
         onHome={handleExitToHome}
         isLastRound={session.currentRound >= session.totalRounds}

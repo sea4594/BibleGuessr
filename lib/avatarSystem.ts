@@ -26,13 +26,13 @@ export const HAIR_COLORS = [
 ];
 export const HAIR_STYLES = [
   'bald',
-  'buzz',
-  'crop',
+  'short',
   'side-part',
-  'waves',
+  'crew',
+  'curly',
+  'long',
   'bob',
   'ponytail',
-  'locs',
 ] as const;
 export const EYE_TYPES = [
   'dot','round','sleepy','almond','wide','wink',
@@ -115,16 +115,27 @@ function hairBack(style: string, color: string): string {
   switch (style) {
     case 'bald': return '';
     case 'buzz':
+    case 'short':
       return `<ellipse cx="100" cy="67" rx="43" ry="28" fill="${c}"/>`;
     case 'crop':
+    case 'crew':
       return `<ellipse cx="100" cy="67" rx="48" ry="33" fill="${c}"/>
         <path d="M 62 58 Q 82 45 100 50 Q 118 45 138 58" stroke="${highlight}" stroke-width="3" fill="none"/>`;
     case 'side-part':
       return `<ellipse cx="100" cy="66" rx="49" ry="34" fill="${c}"/>
         <path d="M 84 42 Q 98 58 95 80" stroke="${highlight}" stroke-width="3" fill="none"/>`;
     case 'waves':
-      return `<ellipse cx="100" cy="67" rx="50" ry="35" fill="${c}"/>
-        <path d="M 62 58 Q 72 50 84 58 Q 96 66 108 58 Q 120 50 132 58" stroke="${highlight}" stroke-width="3" fill="none"/>`;
+    case 'curly':
+      return `<ellipse cx="100" cy="67" rx="49" ry="34" fill="${c}"/>
+        <circle cx="70" cy="58" r="9" fill="${c}"/>
+        <circle cx="86" cy="50" r="9" fill="${c}"/>
+        <circle cx="100" cy="47" r="9" fill="${c}"/>
+        <circle cx="114" cy="50" r="9" fill="${c}"/>
+        <circle cx="130" cy="58" r="9" fill="${c}"/>`;
+    case 'long':
+      return `<ellipse cx="100" cy="67" rx="50" ry="36" fill="${c}"/>
+        <path d="M 56 80 Q 54 132 60 194" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <path d="M 144 80 Q 146 132 140 194" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>`;
     case 'bob':
       return `<ellipse cx="100" cy="67" rx="50" ry="36" fill="${c}"/>
         <path d="M 52 78 Q 48 124 56 166" stroke="${c}" stroke-width="14" fill="none" stroke-linecap="round"/>
@@ -133,12 +144,6 @@ function hairBack(style: string, color: string): string {
       return `<ellipse cx="100" cy="67" rx="48" ry="34" fill="${c}"/>
         <path d="M 147 80 Q 170 106 150 142" stroke="${c}" stroke-width="13" fill="none" stroke-linecap="round"/>
         <circle cx="144" cy="80" r="5" fill="${highlight}"/>`;
-    case 'locs':
-      return `<ellipse cx="100" cy="67" rx="50" ry="35" fill="${c}"/>
-        <path d="M 56 84 Q 52 132 58 182" stroke="${c}" stroke-width="9" fill="none" stroke-linecap="round"/>
-        <path d="M 70 86 Q 68 136 74 188" stroke="${c}" stroke-width="9" fill="none" stroke-linecap="round"/>
-        <path d="M 130 86 Q 132 136 126 188" stroke="${c}" stroke-width="9" fill="none" stroke-linecap="round"/>
-        <path d="M 144 84 Q 148 132 142 182" stroke="${c}" stroke-width="9" fill="none" stroke-linecap="round"/>`;
     default:
       return `<ellipse cx="100" cy="66" rx="47" ry="33" fill="${c}"/>`;
   }
@@ -151,16 +156,23 @@ function hairFront(style: string, color: string): string {
   switch (style) {
     case 'bald': return '';
     case 'buzz':
+    case 'short':
       return `<path d="M 70 44 Q 100 34 130 44" stroke="${c}" stroke-width="8" fill="none" stroke-linecap="round"/>`;
     case 'crop':
+    case 'crew':
       return `<path d="M 64 46 Q 100 28 136 46" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
         <path d="M 74 52 Q 100 42 126 52" stroke="${highlight}" stroke-width="3" fill="none"/>`;
     case 'side-part':
       return `<path d="M 62 46 Q 86 28 116 34 Q 130 38 138 48" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
         <path d="M 90 42 Q 98 56 94 78" stroke="${highlight}" stroke-width="3" fill="none"/>`;
     case 'waves':
-      return `<path d="M 60 54 Q 72 46 84 54 Q 96 62 108 54 Q 120 46 132 54 Q 142 60 148 54" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
+    case 'curly':
+      return `<path d="M 60 56 Q 70 48 82 56 Q 94 64 106 56 Q 118 48 130 56 Q 140 62 148 56" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="round"/>
         <path d="M 70 58 Q 86 50 100 56 Q 114 50 130 58" stroke="${highlight}" stroke-width="2.5" fill="none"/>`;
+    case 'long':
+      return `<path d="M 62 46 Q 100 28 138 46" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <path d="M 64 102 Q 64 142 68 188" stroke="${low}" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 136 102 Q 136 142 132 188" stroke="${low}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
     case 'bob':
       return `<path d="M 62 48 Q 100 30 138 48" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
         <path d="M 60 98 Q 60 128 64 156" stroke="${low}" stroke-width="6" fill="none" stroke-linecap="round"/>
@@ -168,10 +180,6 @@ function hairFront(style: string, color: string): string {
     case 'ponytail':
       return `<path d="M 64 44 Q 100 28 136 44" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
         <rect x="138" y="76" width="14" height="10" rx="5" fill="${low}"/>`;
-    case 'locs':
-      return `<path d="M 64 44 Q 100 28 136 44" stroke="${c}" stroke-width="12" fill="none" stroke-linecap="round"/>
-        <path d="M 60 102 Q 58 136 62 170" stroke="${low}" stroke-width="6" fill="none" stroke-linecap="round"/>
-        <path d="M 140 102 Q 142 136 138 170" stroke="${low}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
     default: return '';
   }
 }

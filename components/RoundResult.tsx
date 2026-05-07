@@ -8,7 +8,6 @@ import { useSettingsModal } from './SettingsModalProvider';
 interface Props {
   round: RoundData;
   roundNumber: number;
-  totalRounds: number;
   onNext: () => void;
   onHome: () => void;
   isLastRound: boolean;
@@ -24,7 +23,6 @@ interface Props {
 export default function RoundResult({
   round,
   roundNumber,
-  totalRounds,
   onNext,
   onHome,
   isLastRound,
@@ -39,6 +37,8 @@ export default function RoundResult({
   const bookCorrect = feedback.book === 'correct';
   const chapterCorrect = bookCorrect && feedback.chapter === 'correct';
   const verseCorrect = chapterCorrect && feedback.verse === 'correct';
+  const correctnessUnits = (bookCorrect ? 1 : 0) + (chapterCorrect ? 1 : 0) + (verseCorrect ? 1 : 0);
+  const correctnessPercent = Math.round((correctnessUnits / 3) * 100);
 
   const runningTotal = rounds.reduce((sum, r) => sum + r.score, 0);
   const isHotSeat = Boolean(multiplayer?.enabled);
@@ -69,7 +69,7 @@ export default function RoundResult({
     <main className="app-screen">
       <header className="topbar">
         <button onClick={() => setShowExitConfirm(true)} className="btn-outline px-3 py-2 text-sm">Exit</button>
-        <div className="font-semibold">Round Result</div>
+        <div className="font-semibold">Round {roundNumber} Score</div>
         <button onClick={openSettings} className="btn-outline px-3 py-2 text-sm settings-icon-btn inline-flex items-center justify-center" aria-label="Open settings">
           <Settings size={16} />
         </button>
@@ -77,23 +77,20 @@ export default function RoundResult({
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-lg">
-          <div className="text-center mb-4 fade-up">
-            <p className="eyebrow">Round {roundNumber} of {totalRounds}</p>
-            <div className="text-7xl font-bold mt-2">{score}</div>
-          </div>
-
           <div className="surface-card p-4 sm:p-5 mb-4">
-            <p className="text-xs uppercase tracking-[0.12em] content-muted mb-1">Correct</p>
-            <p className="text-lg sm:text-xl font-semibold mb-3">{verse.book} {verse.chapter}:{verse.verse}</p>
+            <p className="text-4xl sm:text-5xl font-extrabold mb-3">{verse.book} {verse.chapter}:{verse.verse}</p>
+
+            <div className="result-progress-track mb-4" aria-label="Guess correctness progress">
+              <div
+                className="result-progress-fill"
+                style={{
+                  background: `linear-gradient(90deg, #22c55e 0%, #22c55e ${correctnessPercent}%, #ef4444 ${correctnessPercent}%, #ef4444 100%)`,
+                }}
+              />
+            </div>
 
             <p className="text-xs uppercase tracking-[0.12em] content-muted mb-1">Your Guess</p>
             <p className="text-base sm:text-lg font-semibold mb-4">{guess.book} {guess.chapter}:{guess.verse}</p>
-
-            <div className="result-segment-bar" aria-label="Guess correctness by book, chapter, and verse">
-              <div className={`result-segment ${bookCorrect ? 'ok' : 'bad'}`}>Book</div>
-              <div className={`result-segment ${chapterCorrect ? 'ok' : 'bad'}`}>Chapter</div>
-              <div className={`result-segment ${verseCorrect ? 'ok' : 'bad'}`}>Verse</div>
-            </div>
           </div>
 
           <div className="surface-card p-4 sm:p-5 mb-4">
@@ -122,9 +119,12 @@ export default function RoundResult({
                 <span className="font-semibold">-{round.contextPenalty}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm py-1 border-t border-[var(--line)] mt-1 font-bold">
+            <div className="flex justify-between text-base py-2 border-t border-[var(--line)] mt-1 font-extrabold">
               <span>Total</span>
               <span>{score}</span>
+            </div>
+            <div className="text-center mt-2">
+              <div className="text-6xl sm:text-7xl font-extrabold leading-none">{score}</div>
             </div>
           </div>
 
@@ -146,12 +146,16 @@ export default function RoundResult({
                 <span className="font-semibold">{item.score}</span>
               </div>
             ))}
-            <div className="flex justify-between text-sm py-2 mt-1 border-t border-[var(--line)] font-bold">
+            <div className="flex justify-between text-lg py-2 mt-1 border-t border-[var(--line)] font-extrabold">
               <span>Current Total</span>
               <span>{runningTotal}</span>
             </div>
           </div>
+        </div>
+      </div>
 
+      <div className="round-screen-footer">
+        <div className="footer-inner">
           <button onClick={onNext} className="btn-primary w-full py-4 text-lg">
             {isLastRound ? 'See Final Score' : isHotSeat ? 'Next Player' : 'Next Round'}
           </button>

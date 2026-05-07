@@ -81,11 +81,10 @@ export default function VerseDisplay({
         </div>
       </div>
 
-      {/* Next button – sticky, does not scroll with text */}
       <button
         onClick={onAddNext}
         disabled={Boolean(isLoadingNeighbor)}
-        className="btn-outline w-full py-1.5 text-xs mt-0 mb-1 disabled:opacity-50 flex-shrink-0"
+        className="btn-outline w-full py-1.5 text-xs mt-0 disabled:opacity-50 flex-shrink-0"
       >
         ↓ Next verse&nbsp;
         <span className="text-[var(--danger)] font-semibold">-10</span>
