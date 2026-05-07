@@ -3,20 +3,30 @@
 @tailwind utilities;
 
 :root {
-  --bg: #191c22;
-  --panel: #2a2f39;
-  --panel-soft: #303643;
-  --text-main: #f6f8ff;
-  --text-muted: #aeb8ce;
-  --accent: #5f95ff;
+  --bg: #edf2f7;
+  --panel: #ffffff;
+  --panel-soft: #d9e2ec;
+  --text-main: #1f2f3d;
+  --text-muted: #455a6f;
+  --accent: #475f73;
   --danger: #e86474;
-  --line: color-mix(in oklab, var(--text-main) 16%, transparent);
-  --line-strong: color-mix(in oklab, var(--text-main) 28%, transparent);
-  --shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+  --line: color-mix(in oklab, #000 14%, transparent);
+  --line-strong: color-mix(in oklab, #000 24%, transparent);
+  --shadow: 0 10px 24px rgba(27, 34, 44, 0.12);
 }
 
 html[data-mode='dark'] {
   color-scheme: dark;
+  --line: color-mix(in oklab, var(--text-main) 28%, transparent);
+  --line-strong: color-mix(in oklab, var(--text-main) 44%, transparent);
+  --shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+}
+
+html[data-mode='light'] {
+  color-scheme: light;
+  --line: color-mix(in oklab, #000 14%, transparent);
+  --line-strong: color-mix(in oklab, #000 24%, transparent);
+  --shadow: 0 10px 24px rgba(27, 34, 44, 0.12);
 }
 
 html[data-theme='bw'][data-mode='dark'] {
@@ -28,13 +38,31 @@ html[data-theme='bw'][data-mode='dark'] {
   --accent: #d7d7d7;
 }
 
+html[data-theme='bw'][data-mode='light'] {
+  --bg: #f2f2f2;
+  --panel: #ffffff;
+  --panel-soft: #f8f8f8;
+  --text-main: #1f1f1f;
+  --text-muted: #656565;
+  --accent: #404040;
+}
+
 html[data-theme='ocean'][data-mode='dark'] {
-  --bg: #191c22;
-  --panel: #2a2f39;
-  --panel-soft: #303643;
-  --text-main: #f6f8ff;
-  --text-muted: #aeb8ce;
-  --accent: #5f95ff;
+  --bg: #151d25;
+  --panel: #2c3a47;
+  --panel-soft: #475f73;
+  --text-main: #f1f6fb;
+  --text-muted: #c5d3e0;
+  --accent: #93a7bf;
+}
+
+html[data-theme='ocean'][data-mode='light'] {
+  --bg: #edf2f7;
+  --panel: #ffffff;
+  --panel-soft: #d9e2ec;
+  --text-main: #1f2f3d;
+  --text-muted: #455a6f;
+  --accent: #475f73;
 }
 
 html[data-theme='forest'][data-mode='dark'] {
@@ -46,6 +74,15 @@ html[data-theme='forest'][data-mode='dark'] {
   --accent: #93a390;
 }
 
+html[data-theme='forest'][data-mode='light'] {
+  --bg: #eef2ed;
+  --panel: #ffffff;
+  --panel-soft: #dfe6dd;
+  --text-main: #1f2c1e;
+  --text-muted: #465845;
+  --accent: #5e6e5b;
+}
+
 html[data-theme='clay'][data-mode='dark'] {
   --bg: #1d1918;
   --panel: #4f453f;
@@ -55,6 +92,15 @@ html[data-theme='clay'][data-mode='dark'] {
   --accent: #e8dfda;
 }
 
+html[data-theme='clay'][data-mode='light'] {
+  --bg: #f5f1ee;
+  --panel: #ffffff;
+  --panel-soft: #e8dfda;
+  --text-main: #433630;
+  --text-muted: #675851;
+  --accent: #cbb5a9;
+}
+
 html[data-theme='berry'][data-mode='dark'] {
   --bg: #1a1419;
   --panel: #3f2e3a;
@@ -62,6 +108,15 @@ html[data-theme='berry'][data-mode='dark'] {
   --text-main: #fff6fb;
   --text-muted: #f4e3ec;
   --accent: #debfce;
+}
+
+html[data-theme='berry'][data-mode='light'] {
+  --bg: #f8f2f5;
+  --panel: #ffffff;
+  --panel-soft: #e9d6df;
+  --text-main: #4a2f3f;
+  --text-muted: #704f61;
+  --accent: #9e6a84;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -1195,7 +1250,7 @@ input[type='range']::-moz-range-thumb {
 }
 
 .hotseat-shell {
-  height: calc(100dvh - 200px);
+  height: calc(100dvh - 180px);
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1230,11 +1285,15 @@ input[type='range']::-moz-range-thumb {
 }
 
 .hotseat-select-gamemode-btn {
-  margin-top: auto;
-  width: 100%;
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 72px);
+  width: auto;
   padding: 16px 14px;
   font-size: 1.15rem;
   font-weight: 800;
+  z-index: 30;
 }
 
 .avatar-option-row {

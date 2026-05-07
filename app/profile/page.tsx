@@ -14,7 +14,7 @@ import {
   loadRemoteProfile, readLocalProfile, saveRemoteProfile,
   UserProfile, writeLocalProfile,
 } from '@/lib/userProfile';
-import { themeOptions, useUiSettings } from '@/lib/uiSettingsContext';
+import { themePresets, useUiSettings } from '@/lib/uiSettingsContext';
 import { Pencil, X } from 'lucide-react';
 import { gameModes } from '@/lib/gameModes';
 
@@ -101,7 +101,7 @@ function AvatarEditor({
 }
 
 export default function ProfilePage() {
-  const { settings, setTheme, setPreferredRounds, setPreferredGameMode } = useUiSettings();
+  const { settings, setThemePreset, setPreferredRounds, setPreferredGameMode } = useUiSettings();
   const [profile, setProfile] = useState<UserProfile>(() => readLocalProfile());
   const [accountUser, setAccountUser] = useState<User | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -243,14 +243,14 @@ export default function ProfilePage() {
             <p className="eyebrow mb-2">Appearance</p>
             <h2 className="text-xl font-semibold mb-3">Theme</h2>
             <div className="theme-grid">
-              {themeOptions.map(theme => (
+              {themePresets.map(theme => (
                 <button
                   key={theme.id}
-                  onClick={() => setTheme(theme.id)}
-                  className={`theme-option ${settings.theme === theme.id ? 'active' : ''}`}
+                  onClick={() => setThemePreset(theme.id)}
+                  className={`theme-option ${settings.themePreset === theme.id ? 'active' : ''}`}
                 >
                   <span className="theme-name">{theme.name}</span>
-                  <span className="theme-description">{theme.description}</span>
+                  <span className="theme-description">{theme.color} / {theme.mode}</span>
                 </button>
               ))}
             </div>

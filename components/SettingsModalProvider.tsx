@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { X, Settings } from 'lucide-react';
 import { gameModes } from '@/lib/gameModes';
-import { themeOptions, useUiSettings } from '@/lib/uiSettingsContext';
+import { themePresets, useUiSettings } from '@/lib/uiSettingsContext';
 import HorizontalWheel from './HorizontalWheel';
 
 const commitSha = process.env.NEXT_PUBLIC_COMMIT_SHA || 'unknown';
@@ -16,7 +16,7 @@ interface SettingsModalContextType {
 const SettingsModalContext = createContext<SettingsModalContextType | null>(null);
 
 export function SettingsModalProvider({ children }: { children: React.ReactNode }) {
-  const { settings, setPreferredGameMode, setPreferredRounds, setTheme } = useUiSettings();
+  const { settings, setPreferredGameMode, setPreferredRounds, setThemePreset } = useUiSettings();
   const [isOpen, setIsOpen] = useState(false);
 
   const modeOptions = useMemo(
@@ -64,18 +64,15 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
             <div className="settings-modal-body">
               <section className="surface-card-soft p-4">
                 <p className="eyebrow mb-2">Theme</p>
-                <div className="theme-grid">
-                  {themeOptions.map(theme => (
-                    <button
-                      key={theme.id}
-                      onClick={() => setTheme(theme.id)}
-                      className={`theme-option ${settings.theme === theme.id ? 'active' : ''}`}
-                    >
-                      <span className="theme-name">{theme.name}</span>
-                      <span className="theme-description">{theme.description}</span>
-                    </button>
+                <select
+                  value={settings.themePreset}
+                  onChange={e => setThemePreset(e.target.value as typeof settings.themePreset)}
+                  className="settings-input !w-full"
+                >
+                  {themePresets.map(preset => (
+                    <option key={preset.id} value={preset.id}>{preset.name}</option>
                   ))}
-                </div>
+                </select>
               </section>
 
               <section className="surface-card-soft p-4">
@@ -107,7 +104,7 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                   onClick={() => {
                     setPreferredGameMode('full-bible');
                     setPreferredRounds(5);
-                    setTheme('ocean');
+                    setThemePreset('ocean-light');
                   }}
                   className="btn-outline w-full py-2"
                 >

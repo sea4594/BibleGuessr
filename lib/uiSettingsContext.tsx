@@ -2,42 +2,50 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-export type ThemeId = 'ocean' | 'forest' | 'clay' | 'berry' | 'bw';
+export type ThemePresetId =
+  | 'light'
+  | 'dark'
+  | 'clay'
+  | 'ocean-light'
+  | 'ocean-dark'
+  | 'forest'
+  | 'berry';
+
+export type ThemeColor = 'bw' | 'ocean' | 'forest' | 'clay' | 'berry';
 export type ColorMode = 'dark' | 'light';
 
 export interface UiSettings {
-  theme: ThemeId;
-  mode: ColorMode;
+  themePreset: ThemePresetId;
   preferredRounds: 5 | 10;
   preferredGameMode: string;
 }
 
 interface UiSettingsContextType {
   settings: UiSettings;
-  setTheme: (theme: ThemeId) => void;
-  setMode: (mode: ColorMode) => void;
+  setThemePreset: (themePreset: ThemePresetId) => void;
   setPreferredRounds: (rounds: 5 | 10) => void;
   setPreferredGameMode: (mode: string) => void;
 }
 
 const STORAGE_KEY = 'bg-ui-settings-v1';
 
+export const themePresets: Array<{ id: ThemePresetId; name: string; mode: ColorMode; color: ThemeColor }> = [
+  { id: 'light', name: 'Light', mode: 'light', color: 'bw' },
+  { id: 'dark', name: 'Dark', mode: 'dark', color: 'bw' },
+  { id: 'clay', name: 'Clay', mode: 'light', color: 'clay' },
+  { id: 'ocean-light', name: 'Ocean (light)', mode: 'light', color: 'ocean' },
+  { id: 'ocean-dark', name: 'Ocean (dark)', mode: 'dark', color: 'ocean' },
+  { id: 'forest', name: 'Forest', mode: 'light', color: 'forest' },
+  { id: 'berry', name: 'Berry', mode: 'light', color: 'berry' },
+];
+
 const DEFAULT_SETTINGS: UiSettings = {
-  theme: 'ocean',
-  mode: 'dark',
+  themePreset: 'ocean-light',
   preferredRounds: 5,
   preferredGameMode: 'full-bible',
 };
 
 const UiSettingsContext = createContext<UiSettingsContextType | null>(null);
-
-export const themeOptions: Array<{ id: ThemeId; name: string; description: string }> = [
-  { id: 'ocean', name: 'Ocean', description: 'Cool marine slate and mist tones' },
-  { id: 'forest', name: 'Forest', description: 'Mossy greens with calm contrast' },
-  { id: 'clay', name: 'Clay', description: 'Warm clay neutrals and sand accents' },
-  { id: 'berry', name: 'Berry', description: 'Muted plum with soft pink contrast' },
-  { id: 'bw', name: 'Black & White', description: 'High-contrast monochrome palette' },
-];
 
 export function UiSettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UiSettings>(() => {
@@ -53,8 +61,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
 
       const parsed = JSON.parse(raw) as Partial<UiSettings>;
       return {
-        theme: parsed.theme ?? DEFAULT_SETTINGS.theme,
-        mode: parsed.mode ?? DEFAULT_SETTINGS.mode,
+        themePreset: parsed.themePreset ?? DEFAULT_SETTINGS.themePreset,
         preferredRounds: parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds,
         preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
       };
@@ -64,19 +71,17 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
   });
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', settings.theme);
-    document.documentElement.setAttribute('data-mode', 'dark');
+    const preset = themePresets.find(item => item.id === settings.themePreset) ?? themePresets[0];
+    document.documentElement.setAttribute('data-theme', preset.color);
+    document.documentElement.setAttribute('data-mode', preset.mode);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [settings]);
 
   const value = useMemo<UiSettingsContextType>(
     () => ({
       settings,
-      setTheme: (theme: ThemeId) => {
-        setSettings(prev => ({ ...prev, theme }));
-      },
-      setMode: (mode: ColorMode) => {
-        setSettings(prev => ({ ...prev, mode }));
+      setThemePreset: (themePreset: ThemePresetId) => {
+        setSettings(prev => ({ ...prev, themePreset }));
       },
       setPreferredRounds: (preferredRounds: 5 | 10) => {
         setSettings(prev => ({ ...prev, preferredRounds }));

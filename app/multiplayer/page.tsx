@@ -101,12 +101,10 @@ export default function MultiplayerPage() {
 
       <div className={`app-content ${tab === 'hot-seat' ? 'app-content-fixed' : 'app-content-scroll'}`}>
         <div className="page max-w-4xl">
-          <section className="surface-card p-3 sm:p-4 mb-3">
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
-              <button onClick={() => setTab('party')} className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Party</button>
-            </div>
-          </section>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <button onClick={() => setTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
+            <button onClick={() => setTab('party')} className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Party</button>
+          </div>
 
           {tab === 'hot-seat' && (
             <div className="hotseat-shell min-w-0">
@@ -128,13 +126,13 @@ export default function MultiplayerPage() {
               <div className="grid gap-4 min-w-0">
                 <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
 
-                <div className="hotseat-turn-style-row">
+                <section className="surface-card p-3 hotseat-turn-style-row">
                   <span className="text-sm font-semibold">Turn style</span>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setTurnStyle('alternate')} className={turnStyle === 'alternate' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>Alternate</button>
                     <button onClick={() => setTurnStyle('all-at-once')} className={turnStyle === 'all-at-once' ? 'btn-primary px-3 py-1.5' : 'btn-outline px-3 py-1.5'}>All at once</button>
                   </div>
-                </div>
+                </section>
 
                 <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
               </div>

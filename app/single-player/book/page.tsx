@@ -41,13 +41,15 @@ export default function BookModeSetupPage() {
 
           <section className="surface-card p-4 sm:p-5">
             <HorizontalWheel label="Rounds" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+          </section>
 
-            <label className="block text-sm font-semibold mb-2 mt-4">Book Selection</label>
+          <section className="surface-card p-4 sm:p-5">
+            <label className="block text-sm font-semibold mb-2">Book Selection</label>
             <select
               value={book}
               onChange={e => setBook(e.target.value)}
               disabled={surprise}
-              className="settings-input !w-full mb-3 disabled:opacity-40 text-lg py-4"
+              className="settings-input !w-full mb-3 disabled:opacity-40 text-xl py-5"
             >
               {bibleData.map(item => (
                 <option key={item.book} value={item.book}>{item.book}</option>
