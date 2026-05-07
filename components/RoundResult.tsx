@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Settings } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Settings, X } from 'lucide-react';
 import { RoundData } from '@/lib/gameContext';
 import { useSettingsModal } from './SettingsModalProvider';
+import { fetchChapterVersesByReference } from '@/lib/verseClient';
 
 interface Props {
   round: RoundData;
@@ -32,6 +33,12 @@ export default function RoundResult({
   const { verse, guess, score, scoreBreakdown } = round;
   const { feedback } = scoreBreakdown;
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showChapterModal, setShowChapterModal] = useState(false);
+  const [chapterVerses, setChapterVerses] = useState<Array<{ verse: number; text: string }>>([]);
+  const [chapterVersesKey, setChapterVersesKey] = useState('');
+  const [isChapterLoading, setIsChapterLoading] = useState(false);
+  const [chapterError, setChapterError] = useState<string | null>(null);
+  const chapterVerseRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const { openSettings } = useSettingsModal();
 
   const bookCorrect = feedback.book === 'correct';
@@ -42,6 +49,35 @@ export default function RoundResult({
 
   const runningTotal = rounds.reduce((sum, r) => sum + r.score, 0);
   const isHotSeat = Boolean(multiplayer?.enabled);
+  const chapterKey = `${verse.book}|${verse.chapter}`;
+
+  useEffect(() => {
+    if (!showChapterModal || chapterVerses.length === 0) return;
+    const timer = setTimeout(() => {
+      chapterVerseRefs.current[verse.verse]?.scrollIntoView({ block: 'center' });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [chapterVerses, showChapterModal, verse.verse]);
+
+  const openChapterModal = () => {
+    setShowChapterModal(true);
+
+    if (chapterVersesKey === chapterKey && chapterVerses.length > 0) return;
+
+    setIsChapterLoading(true);
+    setChapterError(null);
+    void fetchChapterVersesByReference(verse.book, verse.chapter)
+      .then(data => {
+        if (!data) {
+          setChapterError('Could not load this chapter.');
+          return;
+        }
+
+        setChapterVerses(data);
+        setChapterVersesKey(chapterKey);
+      })
+      .finally(() => setIsChapterLoading(false));
+  };
 
   const groupedRoundRows = useMemo(() => {
     if (!multiplayer?.enabled || multiplayer.players.length === 0) return null;
@@ -77,8 +113,14 @@ export default function RoundResult({
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-lg">
+          <button onClick={openChapterModal} className="surface-card p-4 sm:p-5 mb-4 text-left w-full">
+            <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Round Verse</p>
+            <p className="text-base sm:text-lg leading-relaxed italic mb-3">&ldquo;{verse.text}&rdquo;</p>
+            <p className="text-xs content-muted">Tap to open full chapter</p>
+          </button>
+
           <div className="surface-card p-4 sm:p-5 mb-4">
-            <p className="text-4xl sm:text-5xl font-extrabold mb-3">{verse.book} {verse.chapter}:{verse.verse}</p>
+            <p className="text-5xl sm:text-6xl font-extrabold mb-3">{verse.book} {verse.chapter}:{verse.verse}</p>
 
             <div className="result-progress-track mb-4" aria-label="Guess correctness progress">
               <div
@@ -89,8 +131,10 @@ export default function RoundResult({
               />
             </div>
 
-            <p className="text-xs uppercase tracking-[0.12em] content-muted mb-1">Your Guess</p>
-            <p className="text-base sm:text-lg font-semibold mb-4">{guess.book} {guess.chapter}:{guess.verse}</p>
+            <p className="text-xs uppercase tracking-[0.12em] content-muted mb-1">YOU GUESSED</p>
+            <p className="text-base sm:text-lg font-semibold mb-4">
+              {round.wasBlankGuess ? 'No guess (time expired)' : `${guess.book} ${guess.chapter}:${guess.verse}`}
+            </p>
           </div>
 
           <div className="surface-card p-4 sm:p-5 mb-4">
@@ -119,12 +163,9 @@ export default function RoundResult({
                 <span className="font-semibold">-{round.contextPenalty}</span>
               </div>
             )}
-            <div className="flex justify-between text-base py-2 border-t border-[var(--line)] mt-1 font-extrabold">
+            <div className="flex justify-between text-xl py-3 border-t border-[var(--line)] mt-1 font-extrabold">
               <span>Total</span>
               <span>{score}</span>
-            </div>
-            <div className="text-center mt-2">
-              <div className="text-6xl sm:text-7xl font-extrabold leading-none">{score}</div>
             </div>
           </div>
 
@@ -146,7 +187,7 @@ export default function RoundResult({
                 <span className="font-semibold">{item.score}</span>
               </div>
             ))}
-            <div className="flex justify-between text-lg py-2 mt-1 border-t border-[var(--line)] font-extrabold">
+            <div className="flex justify-between text-xl py-3 mt-1 border-t border-[var(--line)] font-extrabold">
               <span>Current Total</span>
               <span>{runningTotal}</span>
             </div>
@@ -169,6 +210,40 @@ export default function RoundResult({
             <p className="content-muted mb-5">Your current progress will be lost.</p>
             <button onClick={onHome} className="btn-primary block w-full py-3 mb-2">Yes, Exit</button>
             <button onClick={() => setShowExitConfirm(false)} className="btn-outline block w-full py-3">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {showChapterModal && (
+        <div className="pause-overlay" onClick={() => setShowChapterModal(false)}>
+          <div className="chapter-modal surface-card fade-up" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowChapterModal(false)} className="pause-close-btn" aria-label="Close chapter window">
+              <X size={18} />
+            </button>
+
+            <h2 className="headline-serif text-3xl mb-1">{verse.book} {verse.chapter}</h2>
+            <p className="content-muted text-sm mb-4">Verse {verse.verse} highlighted</p>
+
+            {isChapterLoading ? (
+              <p className="content-muted text-sm">Loading chapter...</p>
+            ) : chapterError ? (
+              <p className="text-[var(--danger)] text-sm">{chapterError}</p>
+            ) : (
+              <div className="chapter-modal-scroll">
+                {chapterVerses.map(item => (
+                  <div
+                    key={item.verse}
+                    ref={el => {
+                      chapterVerseRefs.current[item.verse] = el;
+                    }}
+                    className={`chapter-verse-row${item.verse === verse.verse ? ' chapter-verse-row-active' : ''}`}
+                  >
+                    <span className="chapter-verse-num">{item.verse}</span>
+                    <span className="chapter-verse-text">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

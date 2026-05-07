@@ -16,6 +16,7 @@ export interface RoundData {
     chapter: number;
     verse: number;
   };
+  wasBlankGuess?: boolean;
   playerName?: string;
   baseScore: number;
   contextPenalty: number;
@@ -36,6 +37,7 @@ export interface GameSession {
   mode: string;
   modeConfig: GameModeConfig;
   totalRounds: number;
+  timerDurationSeconds?: number;
   currentRound: number;
   rounds: RoundData[];
   selectedBook?: string;
@@ -56,6 +58,7 @@ interface GameContextType {
       baseScore: number;
       contextPenalty: number;
       contextVersesAdded: number;
+      wasBlankGuess?: boolean;
     },
     score: number,
     breakdown: ScoreBreakdown
@@ -86,6 +89,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       baseScore: number;
       contextPenalty: number;
       contextVersesAdded: number;
+      wasBlankGuess?: boolean;
     },
     score: number,
     breakdown: ScoreBreakdown
@@ -95,6 +99,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const newRound: RoundData = {
         verse,
         guess,
+        wasBlankGuess: options.wasBlankGuess,
         playerName: options.playerName,
         baseScore: options.baseScore,
         contextPenalty: options.contextPenalty,

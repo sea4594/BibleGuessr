@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { get } from '@vercel/blob';
+import { bibleData } from '@/lib/bibleData';
 
 type VerseTuple = [book: string, chapter: number, verse: number, text: string];
 
@@ -50,4 +51,29 @@ async function getVerseMap(): Promise<Map<string, string>> {
 export async function getVerseTextByReference(book: string, chapter: number, verse: number): Promise<string | null> {
   const verseMap = await getVerseMap();
   return verseMap.get(verseKey(book, chapter, verse)) ?? null;
+}
+
+export async function getChapterVersesByReference(
+  book: string,
+  chapter: number
+): Promise<Array<{ verse: number; text: string }> | null> {
+  const bookData = bibleData.find(item => item.book === book);
+  if (!bookData) return null;
+
+  const chapterData = bookData.chapters[chapter - 1];
+  if (!chapterData) return null;
+
+  const verseCount = parseInt(chapterData.verses, 10);
+  if (!Number.isInteger(verseCount) || verseCount < 1) return null;
+
+  const verseMap = await getVerseMap();
+  const verses: Array<{ verse: number; text: string }> = [];
+
+  for (let verse = 1; verse <= verseCount; verse += 1) {
+    const text = verseMap.get(verseKey(book, chapter, verse));
+    if (!text) continue;
+    verses.push({ verse, text });
+  }
+
+  return verses.length > 0 ? verses : null;
 }

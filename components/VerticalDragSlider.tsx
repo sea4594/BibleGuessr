@@ -69,7 +69,7 @@ export default function VerticalDragSlider({
   });
 
   // Popup top: position so popup bottom sits just above the calibrated touch point
-  const popupTopPx = Math.max(2, rawPx - POPUP_H - 10);
+  const popupTopPx = rawPx - POPUP_H - 10;
 
   return (
     <div className={`vslider-col${disabled ? ' opacity-40' : ''}`}>

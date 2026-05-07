@@ -1,8 +1,17 @@
+import {
+  DEFAULT_TIMER_MINUTES,
+  DEFAULT_TIMER_SECONDS,
+  clampTimerMinutes,
+  clampTimerSeconds,
+} from './timerOptions';
+
 export interface HotSeatSettings {
   players: number;
   names: string[];
   rounds: number;
   turnStyle: 'alternate' | 'all-at-once';
+  timerMinutes: number;
+  timerSeconds: number;
 }
 
 const STORAGE_KEY = 'bg-hotseat-settings-v1';
@@ -12,6 +21,8 @@ export const defaultHotSeatSettings: HotSeatSettings = {
   names: ['Player 1', 'Player 2'],
   rounds: 5,
   turnStyle: 'alternate',
+  timerMinutes: DEFAULT_TIMER_MINUTES,
+  timerSeconds: DEFAULT_TIMER_SECONDS,
 };
 
 export function readHotSeatSettings(): HotSeatSettings {
@@ -33,6 +44,8 @@ export function readHotSeatSettings(): HotSeatSettings {
       names,
       rounds: Math.min(10, Math.max(1, parsed.rounds ?? defaultHotSeatSettings.rounds)),
       turnStyle: parsed.turnStyle ?? defaultHotSeatSettings.turnStyle,
+      timerMinutes: clampTimerMinutes(parsed.timerMinutes ?? defaultHotSeatSettings.timerMinutes),
+      timerSeconds: clampTimerSeconds(parsed.timerSeconds ?? defaultHotSeatSettings.timerSeconds),
     };
   } catch {
     return defaultHotSeatSettings;

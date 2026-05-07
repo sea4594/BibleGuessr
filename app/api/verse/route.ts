@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getVerseTextByReference } from '@/lib/server/esvBlob';
+import { getChapterVersesByReference, getVerseTextByReference } from '@/lib/server/esvBlob';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-static';
@@ -10,13 +10,34 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const book = searchParams.get('book')?.trim();
   const chapter = Number(searchParams.get('chapter'));
-  const verse = Number(searchParams.get('verse'));
+  const verseParam = searchParams.get('verse');
+  const verse = verseParam === null ? null : Number(verseParam);
 
-  if (!book || !Number.isInteger(chapter) || chapter < 1 || !Number.isInteger(verse) || verse < 1) {
-    return NextResponse.json({ error: 'Invalid book/chapter/verse query parameters.' }, { status: 400 });
+  if (!book || !Number.isInteger(chapter) || chapter < 1) {
+    return NextResponse.json({ error: 'Invalid book/chapter query parameters.' }, { status: 400 });
+  }
+
+  if (verse !== null && (!Number.isInteger(verse) || verse < 1)) {
+    return NextResponse.json({ error: 'Invalid verse query parameter.' }, { status: 400 });
   }
 
   try {
+    if (verse === null) {
+      const verses = await getChapterVersesByReference(book, chapter);
+      if (!verses) {
+        return NextResponse.json({ error: 'Chapter not found.' }, { status: 404 });
+      }
+
+      return NextResponse.json(
+        { book, chapter, verses },
+        {
+          headers: {
+            'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+          },
+        }
+      );
+    }
+
     const text = await getVerseTextByReference(book, chapter, verse);
     if (!text) {
       return NextResponse.json({ error: 'Verse not found.' }, { status: 404 });

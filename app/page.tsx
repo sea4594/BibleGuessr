@@ -10,6 +10,7 @@ import MainBottomNav from "@/components/MainBottomNav";
 import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
 import { useSettingsModal } from "@/components/SettingsModalProvider";
+import { toTimerDurationSeconds } from "@/lib/timerOptions";
 
 interface VerseOfDay {
   book: string;
@@ -54,7 +55,12 @@ export default function HomePage() {
       ? (settings.preferredGameMode as GameModeId)
       : "full-bible";
     const modeConfig = gameModes[modeId];
-    startGame({ mode: modeId, modeConfig, totalRounds: settings.preferredRounds });
+    startGame({
+      mode: modeId,
+      modeConfig,
+      totalRounds: settings.preferredRounds,
+      timerDurationSeconds: toTimerDurationSeconds(1, 0),
+    });
     router.push(`/play/${modeId}/game`);
   };
 

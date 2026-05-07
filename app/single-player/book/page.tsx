@@ -4,9 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import AppTopBar from '@/components/AppTopBar';
 import HorizontalWheel from '@/components/HorizontalWheel';
+import TimerSetupControls from '@/components/TimerSetupControls';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
 import { gameModes } from '@/lib/gameModes';
+import { DEFAULT_TIMER_MINUTES, DEFAULT_TIMER_SECONDS, toTimerDurationSeconds } from '@/lib/timerOptions';
 
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -16,6 +18,8 @@ export default function BookModeSetupPage() {
   const [rounds, setRounds] = useState(5);
   const [book, setBook] = useState(bibleData[0].book);
   const [surprise, setSurprise] = useState(false);
+  const [timerMinutes, setTimerMinutes] = useState(DEFAULT_TIMER_MINUTES);
+  const [timerSeconds, setTimerSeconds] = useState(DEFAULT_TIMER_SECONDS);
 
   const handleStart = () => {
     const resolvedBook = surprise ? bibleData[Math.floor(Math.random() * bibleData.length)].book : book;
@@ -26,6 +30,7 @@ export default function BookModeSetupPage() {
       selectedBook: selected.book,
       randomizeBookOnReplay: surprise,
       totalRounds: rounds,
+      timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
       returnPath: '/single-player',
     });
     router.push('/play/book-selection/game');
@@ -42,6 +47,13 @@ export default function BookModeSetupPage() {
           <section className="surface-card p-4 sm:p-5">
             <HorizontalWheel label="Rounds" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
           </section>
+
+          <TimerSetupControls
+            minutes={timerMinutes}
+            seconds={timerSeconds}
+            onMinutesChange={setTimerMinutes}
+            onSecondsChange={setTimerSeconds}
+          />
 
           <section className="surface-card p-4 sm:p-5">
             <label className="block text-sm font-semibold mb-2">Book Selection</label>

@@ -3,25 +3,32 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import AppTopBar from '@/components/AppTopBar';
+import TimerSetupControls from '@/components/TimerSetupControls';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
 import { gameModes } from '@/lib/gameModes';
-import { readHotSeatSettings } from '@/lib/hotSeatSettings';
+import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
+import { toTimerDurationSeconds } from '@/lib/timerOptions';
 
 export default function HotSeatBookModePage() {
   const router = useRouter();
   const { startGame } = useGame();
   const [book, setBook] = useState(bibleData[0].book);
+  const initialSettings = readHotSeatSettings();
+  const [timerMinutes, setTimerMinutes] = useState(initialSettings.timerMinutes);
+  const [timerSeconds, setTimerSeconds] = useState(initialSettings.timerSeconds);
 
   const handleStart = () => {
     const settings = readHotSeatSettings();
     const players = settings.names.slice(0, settings.players).map((name, idx) => name || `Player ${idx + 1}`);
     const selected = bibleData.find(item => item.book === book) ?? bibleData[0];
+    writeHotSeatSettings({ ...settings, timerMinutes, timerSeconds });
 
     startGame({
       mode: 'book-selection',
       modeConfig: { ...gameModes['book-selection'], books: [selected] },
       totalRounds: settings.players * settings.rounds,
+      timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
       selectedBook: selected.book,
       returnPath: '/multiplayer/hot-seat/gamemode',
       multiplayer: {
@@ -53,6 +60,15 @@ export default function HotSeatBookModePage() {
                 <option key={item.book} value={item.book}>{item.book}</option>
               ))}
             </select>
+
+            <div className="mb-5">
+              <TimerSetupControls
+                minutes={timerMinutes}
+                seconds={timerSeconds}
+                onMinutesChange={setTimerMinutes}
+                onSecondsChange={setTimerSeconds}
+              />
+            </div>
 
             <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
           </section>

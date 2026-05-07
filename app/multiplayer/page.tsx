@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import HorizontalWheel from '@/components/HorizontalWheel';
+import TimerSetupControls from '@/components/TimerSetupControls';
 import { defaultHotSeatSettings, readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
 import { hostParty, joinParty, PartyRoom, subscribeToParty } from '@/lib/partyEngine';
 import { isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
+import { clampTimerMinutes, clampTimerSeconds } from '@/lib/timerOptions';
 
 const PLAYER_VALUES = [2, 3, 4, 5, 6, 7, 8];
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -23,6 +25,8 @@ export default function MultiplayerPage() {
   const [rounds, setRounds] = useState(initialHotSeat.rounds);
   const [turnStyle, setTurnStyle] = useState(initialHotSeat.turnStyle);
   const [names, setNames] = useState<string[]>(initialHotSeat.names);
+  const [timerMinutes, setTimerMinutes] = useState(initialHotSeat.timerMinutes);
+  const [timerSeconds, setTimerSeconds] = useState(initialHotSeat.timerSeconds);
 
   const [room, setRoom] = useState<PartyRoom | null>(null);
   const [joinOpen, setJoinOpen] = useState(false);
@@ -33,8 +37,15 @@ export default function MultiplayerPage() {
   const clientId = useMemo(() => readClientId(), []);
 
   useEffect(() => {
-    writeHotSeatSettings({ players, rounds, turnStyle, names });
-  }, [players, rounds, turnStyle, names]);
+    writeHotSeatSettings({
+      players,
+      rounds,
+      turnStyle,
+      names,
+      timerMinutes: clampTimerMinutes(timerMinutes),
+      timerSeconds: clampTimerSeconds(timerSeconds),
+    });
+  }, [players, rounds, turnStyle, names, timerMinutes, timerSeconds]);
 
   useEffect(() => {
     if (tab !== 'party' || !isFirebaseConfigured()) return;
@@ -116,6 +127,8 @@ export default function MultiplayerPage() {
                     setRounds(defaultHotSeatSettings.rounds);
                     setTurnStyle(defaultHotSeatSettings.turnStyle);
                     setNames(defaultHotSeatSettings.names);
+                    setTimerMinutes(defaultHotSeatSettings.timerMinutes);
+                    setTimerSeconds(defaultHotSeatSettings.timerSeconds);
                   }}
                   className="btn-outline px-3 py-1.5 text-sm"
                 >
@@ -135,6 +148,13 @@ export default function MultiplayerPage() {
                 </section>
 
                 <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
+
+                <TimerSetupControls
+                  minutes={timerMinutes}
+                  seconds={timerSeconds}
+                  onMinutesChange={setTimerMinutes}
+                  onSecondsChange={setTimerSeconds}
+                />
               </div>
 
               <section className="surface-card p-3 hotseat-names-window">

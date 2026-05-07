@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGame } from '@/lib/gameContext';
 import { GameModeId } from '@/lib/gameModes';
@@ -85,26 +85,17 @@ export default function GamePage() {
   const [isPaused, setIsPaused] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [verseError, setVerseError] = useState<string | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [previousVerses, setPreviousVerses] = useState<VerseInfo[]>([]);
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
   const [canStartRound, setCanStartRound] = useState(false);
+  const timeoutSubmittedRef = useRef(false);
   const { openSettings } = useSettingsModal();
 
   useEffect(() => {
     if (!session) router.replace('/');
   }, [session, router]);
-
-  useEffect(() => {
-    if (!session) return;
-    if (session.gameState !== 'summary') return;
-    if (session.multiplayer?.lobbyType !== 'hot-seat') return;
-
-    const target = session.returnPath ?? '/multiplayer/hot-seat/gamemode';
-    resetGame();
-    router.replace(target);
-  }, [session, resetGame, router]);
 
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
     const text = await fetchVerseTextByReference(reference.book, reference.chapter, reference.verse);
@@ -140,7 +131,8 @@ export default function GamePage() {
 
     if (session.multiplayer?.enabled && sharedVerseByRound[logicalRound]) {
       setCurrentVerse(sharedVerseByRound[logicalRound]);
-      setElapsedSeconds(0);
+      setRemainingSeconds(session.timerDurationSeconds ?? 0);
+      timeoutSubmittedRef.current = false;
       setIsLoadingVerse(false);
       return;
     }
@@ -151,7 +143,8 @@ export default function GamePage() {
       const data = await fetchVerseByReference({ book: book.book, chapter, verse });
       if (data) {
         setCurrentVerse(data);
-        setElapsedSeconds(0);
+        setRemainingSeconds(session.timerDurationSeconds ?? 0);
+        timeoutSubmittedRef.current = false;
         setIsLoadingVerse(false);
         if (session.multiplayer?.enabled) {
           setSharedVerseByRound(prev => ({ ...prev, [logicalRound]: data }));
@@ -167,6 +160,7 @@ export default function GamePage() {
 
   const isHotSeatGame = Boolean(session?.multiplayer?.enabled && session?.multiplayer?.lobbyType === 'hot-seat');
   const roundCanStart = !isHotSeatGame || canStartRound;
+  const timerDurationSeconds = session?.timerDurationSeconds ?? 0;
 
   useEffect(() => {
     if (session?.gameState === 'playing' && session.modeConfig && roundCanStart) {
@@ -177,22 +171,14 @@ export default function GamePage() {
     }
   }, [session?.currentRound, session?.gameState, session?.modeConfig, fetchVerse, roundCanStart]);
 
-  useEffect(() => {
-    if (!currentVerse || isLoadingVerse || isPaused) return;
-    const interval = setInterval(() => setElapsedSeconds(prev => prev + 1), 1000);
-    return () => clearInterval(interval);
-  }, [currentVerse, isLoadingVerse, isPaused]);
-
   const formatTime = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  if (!session) return null;
-
-  const getCurrentPlayerName = () => {
-    if (!session.multiplayer?.enabled || session.multiplayer.players.length === 0) return null;
+  const getCurrentPlayerName = useCallback(() => {
+    if (!session?.multiplayer?.enabled || session.multiplayer.players.length === 0) return null;
 
     const completedTurns = session.rounds.length;
     if (session.multiplayer.turnStyle === 'alternate') {
@@ -203,7 +189,69 @@ export default function GamePage() {
     const groupedIndex = Math.floor(completedTurns / session.multiplayer.roundsPerPlayer);
     const boundedIndex = Math.min(groupedIndex, session.multiplayer.players.length - 1);
     return session.multiplayer.players[boundedIndex];
-  };
+  }, [session]);
+
+  const handleTimerExpired = useCallback(() => {
+    if (!session || !currentVerse || timeoutSubmittedRef.current) return;
+
+    timeoutSubmittedRef.current = true;
+    submitGuess(
+      { book: '', chapter: 0, verse: 0 },
+      currentVerse,
+      {
+        playerName: getCurrentPlayerName() ?? undefined,
+        baseScore: 0,
+        contextPenalty: 0,
+        contextVersesAdded: 0,
+        wasBlankGuess: true,
+      },
+      0,
+      {
+        bookPoints: 0,
+        chapterPoints: 0,
+        versePoints: 0,
+        baseTotal: 0,
+        contextPenalty: 0,
+        contextVersesAdded: 0,
+        total: 0,
+        feedback: {
+          book: 'wrong',
+          chapter: 'wrong',
+          verse: 'wrong',
+          chaptersOff: 0,
+          versesOff: 0,
+        },
+      }
+    );
+  }, [currentVerse, getCurrentPlayerName, session, submitGuess]);
+
+  useEffect(() => {
+    if (!currentVerse || isLoadingVerse || isPaused || !roundCanStart || timerDurationSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setRemainingSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentVerse, isLoadingVerse, isPaused, roundCanStart, timerDurationSeconds]);
+
+  useEffect(() => {
+    if (!currentVerse || isLoadingVerse || isPaused || !roundCanStart || timerDurationSeconds <= 0) return;
+    if (remainingSeconds > 0 || timeoutSubmittedRef.current) return;
+
+    const timer = setTimeout(() => {
+      handleTimerExpired();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [currentVerse, handleTimerExpired, isLoadingVerse, isPaused, remainingSeconds, roundCanStart, timerDurationSeconds]);
+
+  if (!session) return null;
 
   const currentPlayerName = getCurrentPlayerName();
 
@@ -233,6 +281,7 @@ export default function GamePage() {
 
   const handleSubmitGuess = (guess: { book: string; chapter: number; verse: number }) => {
     if (!currentVerse) return;
+    timeoutSubmittedRef.current = true;
 
     const bookData = session.modeConfig.books.find(b => b.book === currentVerse.book) ?? session.modeConfig.books[0];
     const breakdown = calculateScore(
@@ -268,7 +317,8 @@ export default function GamePage() {
 
   const handleNextRound = () => {
     setCurrentVerse(null);
-    setElapsedSeconds(0);
+    setRemainingSeconds(timerDurationSeconds);
+    timeoutSubmittedRef.current = false;
     setPreviousVerses([]);
     setNextVerses([]);
     if (isHotSeatGame) setCanStartRound(false);
@@ -279,6 +329,16 @@ export default function GamePage() {
     const destination = session?.returnPath ?? '/';
     resetGame();
     router.push(destination);
+  };
+
+  const handleExitSummaryToHome = () => {
+    resetGame();
+    router.push('/');
+  };
+
+  const handleSelectGameMode = () => {
+    resetGame();
+    router.push('/multiplayer/hot-seat/gamemode');
   };
 
   const handlePlayAgain = () => {
@@ -293,6 +353,7 @@ export default function GamePage() {
         ? { ...session.modeConfig, books: [randomBook] }
         : session.modeConfig,
       totalRounds: session.totalRounds,
+      timerDurationSeconds: session.timerDurationSeconds,
       selectedBook: shouldRandomizeBook && randomBook ? randomBook.book : session.selectedBook,
       randomizeBookOnReplay: Boolean(session.randomizeBookOnReplay),
       returnPath: session.returnPath,
@@ -301,7 +362,14 @@ export default function GamePage() {
   };
 
   if (session.gameState === 'summary') {
-    return <GameSummary session={session} onPlayAgain={handlePlayAgain} onHome={handleExitToHome} />;
+    return (
+      <GameSummary
+        session={session}
+        onPlayAgain={handlePlayAgain}
+        onHome={isHotSeatGame ? handleExitSummaryToHome : handleExitToHome}
+        onSelectGameMode={isHotSeatGame ? handleSelectGameMode : undefined}
+      />
+    );
   }
 
   if (session.gameState === 'result') {
@@ -332,7 +400,7 @@ export default function GamePage() {
           {currentPlayerName && <span className="game-topbar-player"> · {currentPlayerName}</span>}
         </p>
         <div className="game-topbar-actions">
-          <p className="game-topbar-time">{formatTime(elapsedSeconds)}</p>
+          <p className="game-topbar-time">{formatTime(Math.max(0, remainingSeconds))}</p>
           <button onClick={() => setIsPaused(true)} className="game-topbar-pause" aria-label="Pause game">
             <Pause size={15} />
           </button>

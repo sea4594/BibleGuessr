@@ -3,10 +3,12 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import AppTopBar from '@/components/AppTopBar';
+import TimerSetupControls from '@/components/TimerSetupControls';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
 import { gameModes, sectionModeIds, GameModeId } from '@/lib/gameModes';
-import { readHotSeatSettings } from '@/lib/hotSeatSettings';
+import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
+import { toTimerDurationSeconds } from '@/lib/timerOptions';
 
 const surprisePool: Array<'full-bible' | 'book-selection' | GameModeId> = [
   'full-bible',
@@ -18,11 +20,15 @@ export default function HotSeatSurprisePage() {
   const router = useRouter();
   const { startGame } = useGame();
   const [resolved, setResolved] = useState<string | null>(null);
+  const initialSettings = readHotSeatSettings();
+  const [timerMinutes, setTimerMinutes] = useState(initialSettings.timerMinutes);
+  const [timerSeconds, setTimerSeconds] = useState(initialSettings.timerSeconds);
 
   const handleStart = () => {
     const settings = readHotSeatSettings();
     const players = settings.names.slice(0, settings.players).map((name, idx) => name || `Player ${idx + 1}`);
     const selected = surprisePool[Math.floor(Math.random() * surprisePool.length)];
+    writeHotSeatSettings({ ...settings, timerMinutes, timerSeconds });
     setResolved(selected);
 
     if (selected === 'book-selection') {
@@ -31,6 +37,7 @@ export default function HotSeatSurprisePage() {
         mode: selected,
         modeConfig: { ...gameModes[selected], books: [randomBook] },
         totalRounds: settings.players * settings.rounds,
+        timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
         selectedBook: randomBook.book,
         randomizeBookOnReplay: true,
         returnPath: '/multiplayer/hot-seat/gamemode',
@@ -50,6 +57,7 @@ export default function HotSeatSurprisePage() {
       mode: selected,
       modeConfig: gameModes[selected],
       totalRounds: settings.players * settings.rounds,
+      timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
       returnPath: '/multiplayer/hot-seat/gamemode',
       multiplayer: {
         enabled: true,
@@ -70,6 +78,14 @@ export default function HotSeatSurprisePage() {
           <section className="surface-card p-5">
             <h1 className="headline-serif text-3xl mb-2">Surprise Me</h1>
             <p className="content-muted mb-5">Randomly picks Whole Bible, Section, or Book mode.</p>
+            <div className="mb-5">
+              <TimerSetupControls
+                minutes={timerMinutes}
+                seconds={timerSeconds}
+                onMinutesChange={setTimerMinutes}
+                onSecondsChange={setTimerSeconds}
+              />
+            </div>
             {resolved && <p className="mb-4 text-sm">Picked mode: <strong>{gameModes[resolved as GameModeId]?.name ?? 'Book Selection'}</strong></p>}
             <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start Surprise Game</button>
           </section>
