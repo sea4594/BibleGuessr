@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import {
@@ -50,10 +50,10 @@ async function buildRandomPartyVerse(books: BookData[]): Promise<PartyVerse | nu
   return null;
 }
 
-export default function PartyGamePage() {
+export default function PartyGameClient() {
   const router = useRouter();
-  const params = useParams<{ code: string }>();
-  const code = (params.code ?? '').toUpperCase();
+  const searchParams = useSearchParams();
+  const code = (searchParams.get('code') ?? '').toUpperCase();
 
   const profile = useMemo(() => readLocalProfile(), []);
   const clientId = useMemo(() => readClientId(), []);

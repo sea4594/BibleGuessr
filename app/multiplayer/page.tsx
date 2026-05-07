@@ -161,7 +161,7 @@ export default function MultiplayerPage() {
   useEffect(() => {
     if (tab !== 'party' || !room?.code) return;
     if (!room.game || room.game.status === 'lobby') return;
-    router.push(`/multiplayer/party/game/${room.code}`);
+    router.push(`/multiplayer/party/game?code=${room.code}`);
   }, [room?.code, room?.game, router, tab]);
 
   useEffect(() => {
@@ -219,7 +219,7 @@ export default function MultiplayerPage() {
       return;
     }
 
-    router.push(`/multiplayer/party/game/${room.code}`);
+    router.push(`/multiplayer/party/game?code=${room.code}`);
   };
 
   return (
