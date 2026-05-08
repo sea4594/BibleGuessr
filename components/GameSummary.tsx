@@ -179,10 +179,12 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
             <p className="text-sm leading-relaxed mb-4 italic">&ldquo;{selectedRound.verse.text}&rdquo;</p>
 
             <div className="grid gap-2 text-sm">
-              <div className="flex items-center justify-between border-t border-[var(--line)] pt-2">
-                <span>Player</span>
-                <span className="font-semibold">{selectedRound.playerName ?? 'Single Player'}</span>
-              </div>
+              {session.multiplayer?.enabled && (
+                <div className="flex items-center justify-between border-t border-[var(--line)] pt-2">
+                  <span>Player</span>
+                  <span className="font-semibold">{selectedRound.playerName ?? 'Player'}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between border-t border-[var(--line)] pt-2">
                 <span className="font-semibold">YOU GUESSED:</span>
                 <span className="font-semibold whitespace-nowrap overflow-x-auto">

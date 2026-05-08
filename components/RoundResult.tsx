@@ -82,7 +82,7 @@ export default function RoundResult({
           </section>
 
           <div className="surface-card p-4 sm:p-5 mb-4">
-            <p className="text-center text-6xl sm:text-7xl font-extrabold mb-3">{verse.book} {verse.chapter}:{verse.verse}</p>
+            <p className="text-center text-7xl sm:text-8xl font-extrabold mb-3 leading-none">{verse.book} {verse.chapter}:{verse.verse}</p>
 
             <div className="result-progress-track mb-4" aria-label="Guess correctness progress">
               <div
@@ -135,7 +135,7 @@ export default function RoundResult({
                 <span className="font-semibold">-{round.contextPenalty}</span>
               </div>
             )}
-            <div className="flex justify-between text-2xl py-3 border-t border-[var(--line)] mt-1 font-black">
+            <div className="flex justify-between items-center text-3xl py-3 border-t border-[var(--line)] mt-1 font-extrabold">
               <span>Total</span>
               <span>{score}</span>
             </div>
@@ -159,7 +159,7 @@ export default function RoundResult({
                 <span className="font-semibold">{item.score}</span>
               </div>
             ))}
-            <div className="flex justify-between text-2xl py-3 mt-1 border-t border-[var(--line)] font-black">
+            <div className="flex justify-between items-center text-3xl py-3 mt-1 border-t border-[var(--line)] font-extrabold">
               <span>Current total</span>
               <span>{runningTotal}</span>
             </div>

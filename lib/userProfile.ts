@@ -27,6 +27,20 @@ function normalizeAvatar(raw: unknown, fallbackSeed: number): AvatarSpec {
   if (!raw || typeof raw !== 'object') return fallback;
   const incoming = raw as Partial<AvatarSpec>;
 
+  const legacy = raw as Record<string, unknown>;
+  const hasLegacyShape = typeof legacy.skin === 'string' || typeof legacy.hair === 'string';
+  if (hasLegacyShape) {
+    return {
+      ...fallback,
+      skinColor: typeof legacy.skin === 'string' ? legacy.skin : fallback.skinColor,
+      hairColor: typeof legacy.hair === 'string' ? legacy.hair : fallback.hairColor,
+      eyeType: typeof legacy.eyes === 'string' ? legacy.eyes : fallback.eyeType,
+      mouthType: typeof legacy.mouth === 'string' ? legacy.mouth : fallback.mouthType,
+      accessory: typeof legacy.accessory === 'string' ? legacy.accessory : fallback.accessory,
+      background: typeof legacy.bg === 'string' ? legacy.bg : fallback.background,
+    };
+  }
+
   return {
     ...fallback,
     ...Object.fromEntries(
@@ -87,10 +101,14 @@ export function readLocalProfile(): UserProfile {
     }
 
     const parsed = JSON.parse(raw) as Partial<UserProfile>;
+    const candidateAvatar =
+      parsed.avatar && typeof parsed.avatar === 'object'
+        ? parsed.avatar
+        : parsed;
 
     const sanitized: UserProfile = {
       name: typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name : stableGuest.name,
-      avatar: normalizeAvatar(parsed.avatar, hashStringSeed(clientId) % 997),
+      avatar: normalizeAvatar(candidateAvatar, hashStringSeed(clientId) % 997),
     };
 
     if (JSON.stringify(sanitized) !== raw) {

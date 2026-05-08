@@ -367,7 +367,7 @@ export default function MultiplayerPage() {
               <div className="party-header-row mb-4">
                 <h2 className="headline-serif text-3xl">Hosted Party</h2>
                 <div className="party-header-actions">
-                  <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Join by code</button>
+                  <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Enter code to join</button>
                 </div>
               </div>
               {!firebaseConfigured && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
@@ -489,7 +489,14 @@ export default function MultiplayerPage() {
 
       {joinOpen && (
         <div className="fixed inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={() => setJoinOpen(false)}>
-          <div className="surface-card w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+          <div className="surface-card w-full max-w-sm p-5 relative" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setJoinOpen(false)}
+              className="btn-ghost p-1.5 absolute right-3 top-3"
+              aria-label="Close join code dialog"
+            >
+              ✕
+            </button>
             <h3 className="headline-serif text-2xl mb-4">Enter 4-letter code</h3>
             <div className="grid grid-cols-4 gap-2 mb-5">
               {joinCode.map((value, idx) => (
@@ -502,9 +509,8 @@ export default function MultiplayerPage() {
                 }} className="settings-input !w-full text-center text-2xl font-bold" inputMode="text" />
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => setJoinOpen(false)} className="btn-outline py-2.5">Cancel</button>
-              <button onClick={() => void submitJoin()} className="btn-primary py-2.5">Join</button>
+            <div>
+              <button onClick={() => void submitJoin()} className="btn-primary w-full py-2.5">Join</button>
             </div>
           </div>
         </div>
