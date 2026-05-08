@@ -56,6 +56,38 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
       .map(([logicalRound, byPlayer]) => ({ logicalRound, byPlayer }));
   }, [session.multiplayer, session.rounds]);
 
+  const hotSeatGuessesByRound = useMemo(() => {
+    if (!isHotSeat || !session.multiplayer?.enabled || session.multiplayer.players.length === 0) return null;
+
+    const grouped = new Map<number, {
+      verse: GameSession['rounds'][number]['verse'];
+      byPlayer: Map<string, GameSession['rounds'][number]>;
+    }>();
+
+    session.rounds.forEach((round, idx) => {
+      const playerIndex = session.multiplayer!.turnStyle === 'alternate'
+        ? idx % session.multiplayer!.players.length
+        : Math.floor(idx / session.multiplayer!.roundsPerPlayer);
+      const logicalRound = session.multiplayer!.turnStyle === 'alternate'
+        ? Math.floor(idx / session.multiplayer!.players.length) + 1
+        : (idx % session.multiplayer!.roundsPerPlayer) + 1;
+      const playerName = round.playerName ?? session.multiplayer!.players[Math.min(playerIndex, session.multiplayer!.players.length - 1)];
+
+      if (!grouped.has(logicalRound)) {
+        grouped.set(logicalRound, {
+          verse: round.verse,
+          byPlayer: new Map<string, GameSession['rounds'][number]>(),
+        });
+      }
+
+      grouped.get(logicalRound)!.byPlayer.set(playerName, round);
+    });
+
+    return Array.from(grouped.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([logicalRound, value]) => ({ logicalRound, verse: value.verse, byPlayer: value.byPlayer }));
+  }, [isHotSeat, session.multiplayer, session.rounds]);
+
   const roundBreakdownRows = useMemo(() => {
     if (!isHotSeat || !session.multiplayer?.enabled || session.multiplayer.players.length === 0) {
       return session.rounds.map((round, idx) => ({
@@ -97,6 +129,29 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
   const selectedRoundRow = selectedRoundSourceIndex === null
     ? null
     : roundBreakdownRows.find(row => row.sourceIndex === selectedRoundSourceIndex) ?? null;
+  const selectedHotSeatRound = selectedRoundRow && hotSeatGuessesByRound
+    ? hotSeatGuessesByRound.find(entry => entry.logicalRound === selectedRoundRow.displayRound) ?? null
+    : null;
+
+  const renderColoredGuess = (round: GameSession['rounds'][number]) => {
+    if (round.wasBlankGuess) {
+      return <span style={{ color: '#ef4444' }}>No guess</span>;
+    }
+
+    const bookCorrect = round.scoreBreakdown.feedback.book === 'correct';
+    const chapterCorrect = bookCorrect && round.scoreBreakdown.feedback.chapter === 'correct';
+    const verseCorrect = chapterCorrect && round.scoreBreakdown.feedback.verse === 'correct';
+
+    return (
+      <>
+        <span style={{ color: bookCorrect ? '#22c55e' : '#ef4444' }}>{round.guess.book}</span>
+        <span>&nbsp;</span>
+        <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>{round.guess.chapter}</span>
+        <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>:</span>
+        <span style={{ color: verseCorrect ? '#22c55e' : '#ef4444' }}>{round.guess.verse}</span>
+      </>
+    );
+  };
 
   useEffect(() => {
     addGameRecord({
@@ -157,6 +212,33 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
                   </div>
                 ))}
 
+              </div>
+            </div>
+          )}
+
+          {hotSeatGuessesByRound && (
+            <div className="surface-card p-4 sm:p-5 mb-4 w-full">
+              <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Per Round Player Guesses</h3>
+              <div className="grid gap-3">
+                {hotSeatGuessesByRound.map(entry => (
+                  <div key={`hotseat-guesses-${entry.logicalRound}`} className="border border-[var(--line)] rounded-xl p-3">
+                    <p className="text-sm font-semibold mb-2">Round {entry.logicalRound}</p>
+                    <p className="text-xs content-muted mb-2">{entry.verse.book} {entry.verse.chapter}:{entry.verse.verse}</p>
+                    <div className="grid gap-2 text-sm">
+                      {session.multiplayer?.players.map(player => {
+                        const playerRound = entry.byPlayer.get(player);
+                        return (
+                          <div key={`guess-${entry.logicalRound}-${player}`} className="flex items-center justify-between gap-3 border-t border-[var(--line)] pt-2 first:border-0 first:pt-0">
+                            <span className="font-semibold">{player}</span>
+                            <span className="font-semibold whitespace-nowrap overflow-x-auto">
+                              {playerRound ? renderColoredGuess(playerRound) : <span style={{ color: '#ef4444' }}>No guess</span>}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -224,32 +306,25 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
                 </div>
               )}
               <div className="flex items-center justify-between border-t border-[var(--line)] pt-2">
-                <span className="font-semibold">YOU GUESSED:</span>
+                <span className="font-semibold">{isHotSeat ? 'GUESSES:' : 'YOU GUESSED:'}</span>
                 <span className="font-semibold whitespace-nowrap overflow-x-auto">
-                  {selectedRound.wasBlankGuess ? (
-                    <span style={{ color: '#ef4444' }}>No guess</span>
-                  ) : (
-                    (() => {
-                      const bookCorrect = selectedRound.scoreBreakdown.feedback.book === 'correct';
-                      const chapterCorrect = bookCorrect && selectedRound.scoreBreakdown.feedback.chapter === 'correct';
-                      const verseCorrect = chapterCorrect && selectedRound.scoreBreakdown.feedback.verse === 'correct';
-
-                      return (
-                        <>
-                          <span style={{ color: bookCorrect ? '#22c55e' : '#ef4444' }}>{selectedRound.guess.book}</span>
-                          <span>&nbsp;</span>
-                          <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>{selectedRound.guess.chapter}</span>
-                          <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>:</span>
-                          <span style={{ color: verseCorrect ? '#22c55e' : '#ef4444' }}>{selectedRound.guess.verse}</span>
-                        </>
-                      );
-                    })()
-                  )}
+                  {!isHotSeat && renderColoredGuess(selectedRound)}
                 </span>
               </div>
+              {isHotSeat && selectedHotSeatRound && session.multiplayer?.players.map(player => {
+                const playerRound = selectedHotSeatRound.byPlayer.get(player);
+                return (
+                  <div key={`selected-round-${selectedHotSeatRound.logicalRound}-${player}`} className="flex items-center justify-between border-t border-[var(--line)] pt-2">
+                    <span>{player}</span>
+                    <span className="font-semibold whitespace-nowrap overflow-x-auto">
+                      {playerRound ? renderColoredGuess(playerRound) : <span style={{ color: '#ef4444' }}>No guess</span>}
+                    </span>
+                  </div>
+                );
+              })}
               <div className="flex items-center justify-between border-t border-[var(--line)] pt-2">
                 <span>Score</span>
-                <span className="font-extrabold">{selectedRound.score}</span>
+                <span className="font-extrabold">{isHotSeat ? (selectedRoundRow?.score ?? selectedRound.score) : selectedRound.score}</span>
               </div>
             </div>
           </div>
