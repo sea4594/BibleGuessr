@@ -38,45 +38,50 @@ export default function BookModeSetupPage() {
 
   return (
     <main className="app-screen">
-      <AppTopBar title="Book Mode Setup" backHref="/single-player" />
+      <AppTopBar title="Book Setup" backHref="/single-player" />
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl setup-page">
-          <h1 className="headline-serif text-3xl sm:text-4xl setup-title">Book Mode</h1>
+          <h1 className="headline-serif text-3xl sm:text-4xl setup-title">Book</h1>
 
-          <section className="surface-card p-4 sm:p-5">
-            <HorizontalWheel label="Rounds" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
-          </section>
+          <section className="setup-panel">
+            <div className="setup-panel-section">
+              <HorizontalWheel label="Rounds" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+            </div>
 
-          <TimerSetupControls
-            minutes={timerMinutes}
-            seconds={timerSeconds}
-            onMinutesChange={setTimerMinutes}
-            onSecondsChange={setTimerSeconds}
-          />
-
-          <section className="surface-card p-4 sm:p-5">
-            <label className="block text-sm font-semibold mb-2">Book Selection</label>
-            <select
-              value={book}
-              onChange={e => setBook(e.target.value)}
-              disabled={surprise}
-              className="settings-input !w-full mb-3 disabled:opacity-40 text-xl py-5"
-            >
-              {bibleData.map(item => (
-                <option key={item.book} value={item.book}>{item.book}</option>
-              ))}
-            </select>
-
-            <label className="setting-row">
-              <span>Surprise me!</span>
-              <input
-                type="checkbox"
-                checked={surprise}
-                onChange={e => setSurprise(e.target.checked)}
-                aria-label="Surprise me"
+            <div className="setup-panel-section">
+              <TimerSetupControls
+                embedded
+                minutes={timerMinutes}
+                seconds={timerSeconds}
+                onMinutesChange={setTimerMinutes}
+                onSecondsChange={setTimerSeconds}
               />
-            </label>
+            </div>
+
+            <div className="setup-panel-section">
+              <label className="block text-sm font-semibold mb-2">Book Selection</label>
+              <select
+                value={book}
+                onChange={e => setBook(e.target.value)}
+                disabled={surprise}
+                className="settings-input !w-full mb-3 disabled:opacity-40 text-xl py-5"
+              >
+                {bibleData.map(item => (
+                  <option key={item.book} value={item.book}>{item.book}</option>
+                ))}
+              </select>
+
+              <label className="setting-row">
+                <span>Surprise me!</span>
+                <input
+                  type="checkbox"
+                  checked={surprise}
+                  onChange={e => setSurprise(e.target.checked)}
+                  aria-label="Surprise me"
+                />
+              </label>
+            </div>
           </section>
 
           <button onClick={handleStart} className="btn-primary setup-start-btn">Start</button>

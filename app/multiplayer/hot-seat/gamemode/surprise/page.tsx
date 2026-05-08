@@ -75,20 +75,27 @@ export default function HotSeatSurprisePage() {
       <AppTopBar title="Surprise Mode" backHref="/multiplayer/hot-seat/gamemode" />
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
-          <section className="surface-card p-5">
-            <h1 className="headline-serif text-3xl mb-2">Surprise Me</h1>
-            <p className="content-muted mb-5">Randomly picks Whole Bible, Section, or Book mode.</p>
-            <div className="mb-5">
+          <section className="setup-panel">
+            <div className="setup-panel-section">
+              <h1 className="headline-serif text-3xl mb-2">Surprise Me</h1>
+              <p className="content-muted">Randomly picks Whole Bible, Category, or Book.</p>
+            </div>
+            <div className="setup-panel-section">
               <TimerSetupControls
+                embedded
                 minutes={timerMinutes}
                 seconds={timerSeconds}
                 onMinutesChange={setTimerMinutes}
                 onSecondsChange={setTimerSeconds}
               />
             </div>
-            {resolved && <p className="mb-4 text-sm">Picked mode: <strong>{gameModes[resolved as GameModeId]?.name ?? 'Book Selection'}</strong></p>}
-            <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start Surprise Game</button>
+            {resolved && (
+              <div className="setup-panel-section">
+                <p className="text-sm">Picked mode: <strong>{gameModes[resolved as GameModeId]?.name ?? 'Book Selection'}</strong></p>
+              </div>
+            )}
           </section>
+          <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start Surprise Game</button>
         </div>
       </div>
     </main>

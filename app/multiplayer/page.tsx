@@ -262,36 +262,43 @@ export default function MultiplayerPage() {
 
           {tab === 'hot-seat' && (
             <div className="hotseat-shell min-w-0">
-              <div className="hotseat-rounds-turn-row">
-                <div className="min-w-0">
-                  <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+              <section className="setup-panel">
+                <div className="setup-panel-section">
+                  <div className="hotseat-rounds-turn-row">
+                    <div className="min-w-0">
+                      <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+                    </div>
+                    <div className="hotseat-turn-buttons">
+                      <button
+                        onClick={() => setTurnStyle('alternate')}
+                        className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                      >
+                        Alternate
+                      </button>
+                      <button
+                        onClick={() => setTurnStyle('all-at-once')}
+                        className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                      >
+                        All at once
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="hotseat-turn-buttons">
-                  <button
-                    onClick={() => setTurnStyle('alternate')}
-                    className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
-                  >
-                    Alternate
-                  </button>
-                  <button
-                    onClick={() => setTurnStyle('all-at-once')}
-                    className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
-                  >
-                    All at once
-                  </button>
+
+                <div className="setup-panel-section">
+                  <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
                 </div>
-              </div>
 
-              <div className="grid gap-4 min-w-0">
-                <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
-
-                <TimerSetupControls
-                  minutes={timerMinutes}
-                  seconds={timerSeconds}
-                  onMinutesChange={setTimerMinutes}
-                  onSecondsChange={setTimerSeconds}
-                />
-              </div>
+                <div className="setup-panel-section">
+                  <TimerSetupControls
+                    embedded
+                    minutes={timerMinutes}
+                    seconds={timerSeconds}
+                    onMinutesChange={setTimerMinutes}
+                    onSecondsChange={setTimerSeconds}
+                  />
+                </div>
+              </section>
 
               <section className="hotseat-names-window">
                 <p className="text-sm font-semibold mb-2">Player Names</p>

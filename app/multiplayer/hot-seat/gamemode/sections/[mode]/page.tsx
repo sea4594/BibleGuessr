@@ -21,10 +21,10 @@ export default function HotSeatSectionSetupPage() {
   if (!sectionModeIds.includes(modeId)) {
     return (
       <main className="app-screen">
-        <AppTopBar title="Section Setup" backHref="/multiplayer/hot-seat/gamemode/sections" />
+        <AppTopBar title="Category Setup" backHref="/multiplayer/hot-seat/gamemode/sections" />
         <div className="app-content app-content-scroll">
           <div className="page max-w-xl">
-            <section className="surface-card p-5">Invalid section mode.</section>
+            <section className="surface-card p-5">Invalid category.</section>
           </div>
         </div>
       </main>
@@ -61,18 +61,21 @@ export default function HotSeatSectionSetupPage() {
       <AppTopBar title={mode.name} backHref="/multiplayer/hot-seat/gamemode/sections" />
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
-          <section className="surface-card p-5">
-            <h1 className="headline-serif text-3xl mb-4">{mode.name}</h1>
-            <div className="mb-5">
+          <section className="setup-panel">
+            <div className="setup-panel-section">
+              <h1 className="headline-serif text-3xl">{mode.name}</h1>
+            </div>
+            <div className="setup-panel-section">
               <TimerSetupControls
+                embedded
                 minutes={timerMinutes}
                 seconds={timerSeconds}
                 onMinutesChange={setTimerMinutes}
                 onSecondsChange={setTimerSeconds}
               />
             </div>
-            <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
           </section>
+          <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
         </div>
       </div>
     </main>

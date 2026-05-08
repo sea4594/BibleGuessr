@@ -48,30 +48,33 @@ export default function HotSeatBookModePage() {
       <AppTopBar title="Book Setup" backHref="/multiplayer/hot-seat/gamemode" />
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
-          <section className="surface-card p-5">
-            <h1 className="headline-serif text-3xl mb-4">Book Mode</h1>
+          <section className="setup-panel">
+            <div className="setup-panel-section">
+              <h1 className="headline-serif text-3xl mb-4">Book</h1>
 
-            <select
-              value={book}
-              onChange={e => setBook(e.target.value)}
-              className="settings-input !w-full mb-5 text-lg py-4"
-            >
-              {bibleData.map(item => (
-                <option key={item.book} value={item.book}>{item.book}</option>
-              ))}
-            </select>
+              <select
+                value={book}
+                onChange={e => setBook(e.target.value)}
+                className="settings-input !w-full text-lg py-4"
+              >
+                {bibleData.map(item => (
+                  <option key={item.book} value={item.book}>{item.book}</option>
+                ))}
+              </select>
+            </div>
 
-            <div className="mb-5">
+            <div className="setup-panel-section">
               <TimerSetupControls
+                embedded
                 minutes={timerMinutes}
                 seconds={timerSeconds}
                 onMinutesChange={setTimerMinutes}
                 onSecondsChange={setTimerSeconds}
               />
             </div>
-
-            <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
           </section>
+
+          <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
         </div>
       </div>
     </main>

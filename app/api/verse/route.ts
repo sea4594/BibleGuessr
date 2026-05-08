@@ -4,7 +4,7 @@ import { getChapterVersesByReference, getVerseTextByReference } from '@/lib/serv
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-static';
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
         { book, chapter, verses },
         {
           headers: {
-            'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+            'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=300',
           },
         }
       );
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
       { book, chapter, verse, text },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=300',
         },
       }
     );

@@ -19,11 +19,11 @@ export default function SinglePlayerPage() {
             </Link>
 
             <Link href="/single-player/sections" className="surface-card mode-card">
-              <h2 className="headline-serif text-2xl mb-1">Section Mode</h2>
+              <h2 className="headline-serif text-2xl mb-1">Category</h2>
             </Link>
 
             <Link href="/single-player/book" className="surface-card mode-card">
-              <h2 className="headline-serif text-2xl mb-1">Book Mode</h2>
+              <h2 className="headline-serif text-2xl mb-1">Book</h2>
             </Link>
           </section>
         </div>

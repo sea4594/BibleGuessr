@@ -57,10 +57,9 @@ export default function ModePage() {
         <h1 className="headline-serif text-3xl sm:text-4xl setup-title">{modeConfig.name}</h1>
         <p className="content-muted mb-3">{modeConfig.description}</p>
 
-      <div className="surface-card fade-up p-5 w-full">
-
+      <section className="setup-panel fade-up w-full">
         {modeConfig.isSingleBook && (
-          <div className="mb-6">
+          <div className="setup-panel-section">
             <label className="block text-sm font-semibold mb-2">Book</label>
             <select
               value={selectedBook}
@@ -74,17 +73,20 @@ export default function ModePage() {
           </div>
         )}
 
-        <div className="mb-6">
+        <div className="setup-panel-section">
           <HorizontalWheel label="Rounds" values={[...ROUND_VALUES]} selected={rounds} onChange={setRounds} />
         </div>
 
-        <TimerSetupControls
-          minutes={timerMinutes}
-          seconds={timerSeconds}
-          onMinutesChange={setTimerMinutes}
-          onSecondsChange={setTimerSeconds}
-        />
-      </div>
+        <div className="setup-panel-section">
+          <TimerSetupControls
+            embedded
+            minutes={timerMinutes}
+            seconds={timerSeconds}
+            onMinutesChange={setTimerMinutes}
+            onSecondsChange={setTimerSeconds}
+          />
+        </div>
+      </section>
 
       <button
         onClick={handleStart}

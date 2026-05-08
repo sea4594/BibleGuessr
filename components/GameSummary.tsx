@@ -184,11 +184,27 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
                 <span className="font-semibold">{selectedRound.playerName ?? 'Single Player'}</span>
               </div>
               <div className="flex items-center justify-between border-t border-[var(--line)] pt-2">
-                <span>You guessed</span>
-                <span className="font-semibold">
-                  {selectedRound.wasBlankGuess
-                    ? 'No guess'
-                    : `${selectedRound.guess.book} ${selectedRound.guess.chapter}:${selectedRound.guess.verse}`}
+                <span className="font-semibold">YOU GUESSED:</span>
+                <span className="font-semibold whitespace-nowrap overflow-x-auto">
+                  {selectedRound.wasBlankGuess ? (
+                    <span style={{ color: '#ef4444' }}>No guess</span>
+                  ) : (
+                    (() => {
+                      const bookCorrect = selectedRound.scoreBreakdown.feedback.book === 'correct';
+                      const chapterCorrect = bookCorrect && selectedRound.scoreBreakdown.feedback.chapter === 'correct';
+                      const verseCorrect = chapterCorrect && selectedRound.scoreBreakdown.feedback.verse === 'correct';
+
+                      return (
+                        <>
+                          <span style={{ color: bookCorrect ? '#22c55e' : '#ef4444' }}>{selectedRound.guess.book}</span>
+                          <span>&nbsp;</span>
+                          <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>{selectedRound.guess.chapter}</span>
+                          <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>:</span>
+                          <span style={{ color: verseCorrect ? '#22c55e' : '#ef4444' }}>{selectedRound.guess.verse}</span>
+                        </>
+                      );
+                    })()
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-[var(--line)] pt-2">

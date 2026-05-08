@@ -1,21 +1,22 @@
+import { TIMER_MINUTE_OPTIONS, TIMER_SECOND_OPTIONS } from '@/lib/timerOptions';
+
 interface Props {
   minutes: number;
   seconds: number;
   onMinutesChange: (value: number) => void;
   onSecondsChange: (value: number) => void;
+  embedded?: boolean;
 }
-
-const minuteOptions = [1, 2, 3];
-const secondOptions = Array.from({ length: 61 }, (_, idx) => idx);
 
 export default function TimerSetupControls({
   minutes,
   seconds,
   onMinutesChange,
   onSecondsChange,
+  embedded = false,
 }: Props) {
-  return (
-    <section className="surface-card p-2.5 sm:p-3">
+  const controls = (
+    <>
       <div className="timer-inline-row">
         <p className="text-sm font-semibold">Timer</p>
         <div className="timer-inline-controls">
@@ -25,7 +26,7 @@ export default function TimerSetupControls({
             onChange={e => onMinutesChange(Number(e.target.value))}
               className="settings-input timer-inline-select"
           >
-            {minuteOptions.map(value => (
+            {TIMER_MINUTE_OPTIONS.map(value => (
               <option key={value} value={value}>{value}</option>
             ))}
           </select>
@@ -38,7 +39,7 @@ export default function TimerSetupControls({
             onChange={e => onSecondsChange(Number(e.target.value))}
               className="settings-input timer-inline-select"
           >
-            {secondOptions.map(value => (
+            {TIMER_SECOND_OPTIONS.map(value => (
               <option key={value} value={value}>{value}</option>
             ))}
           </select>
@@ -46,6 +47,12 @@ export default function TimerSetupControls({
           </label>
         </div>
       </div>
-    </section>
+      </>
   );
+
+  if (embedded) {
+    return controls;
+  }
+
+  return <section className="surface-card p-2.5 sm:p-3">{controls}</section>;
 }

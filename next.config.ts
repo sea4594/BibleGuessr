@@ -27,6 +27,7 @@ const firebasePublicEnv = {
 
 const nextConfig: NextConfig = {
   trailingSlash: true,
+  deploymentId: resolvedCommitSha,
   env: {
     NEXT_PUBLIC_IS_GITHUB_PAGES: isGitHubPagesBuild ? "true" : "false",
     NEXT_PUBLIC_COMMIT_SHA: resolvedCommitSha,

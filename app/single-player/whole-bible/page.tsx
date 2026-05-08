@@ -37,16 +37,21 @@ export default function WholeBibleSetupPage() {
         <div className="page max-w-xl setup-page">
           <h1 className="headline-serif text-3xl sm:text-4xl setup-title">Whole Bible Mode</h1>
 
-          <section className="surface-card p-4 sm:p-5">
-            <HorizontalWheel label="Rounds" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
-          </section>
+          <section className="setup-panel">
+            <div className="setup-panel-section">
+              <HorizontalWheel label="Rounds" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+            </div>
 
-          <TimerSetupControls
-            minutes={timerMinutes}
-            seconds={timerSeconds}
-            onMinutesChange={setTimerMinutes}
-            onSecondsChange={setTimerSeconds}
-          />
+            <div className="setup-panel-section">
+              <TimerSetupControls
+                embedded
+                minutes={timerMinutes}
+                seconds={timerSeconds}
+                onMinutesChange={setTimerMinutes}
+                onSecondsChange={setTimerSeconds}
+              />
+            </div>
+          </section>
 
           <button onClick={handleStart} className="btn-primary setup-start-btn">
             Start

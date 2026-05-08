@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUiSettings } from "@/lib/uiSettingsContext";
 import { useGame } from "@/lib/gameContext";
@@ -9,8 +9,8 @@ import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
 import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
-import { useSettingsModal } from "@/components/SettingsModalProvider";
 import { toTimerDurationSeconds } from "@/lib/timerOptions";
+import HorizontalWheel from "@/components/HorizontalWheel";
 
 interface VerseOfDay {
   book: string;
@@ -32,12 +32,19 @@ function getDailyVerseRef(): { book: string; chapter: number; verse: number } {
 }
 
 export default function HomePage() {
-  const { settings } = useUiSettings();
+  const { settings, setPreferredGameMode, setPreferredRounds } = useUiSettings();
   const { startGame } = useGame();
-  const { openSettings } = useSettingsModal();
   const router = useRouter();
   const [verseOfDay, setVerseOfDay] = useState<VerseOfDay | null>(null);
   const [loadingVerse, setLoadingVerse] = useState(true);
+
+  const modeOptions = useMemo(
+    () =>
+      Object.entries(gameModes)
+        .filter(([, mode]) => !mode.isSingleBook)
+        .map(([id, mode]) => ({ id, name: mode.name })),
+    []
+  );
 
   useEffect(() => {
     const ref = getDailyVerseRef();
@@ -68,7 +75,7 @@ export default function HomePage() {
     <main className="app-screen fade-up">
       <AppTopBar title="BibleGuessr" />
       <div className="app-content app-content-scroll">
-        <div className="page max-w-xl">
+        <div className="page max-w-xl setup-page">
           <section className="surface-card p-5">
             <p className="eyebrow mb-2">(random) VERSE OF THE DAY</p>
             {loadingVerse ? (
@@ -85,19 +92,43 @@ export default function HomePage() {
             )}
           </section>
 
-          <button
-            onClick={handleQuickPlay}
-            className="btn-primary w-full py-5 text-xl font-bold inline-flex items-center justify-center gap-3"
-          >
-            <Zap size={24} /> Quick Play
-          </button>
-          <p className="content-muted text-xs text-center -mt-1">
-            {settings.preferredRounds} rounds &middot; {settings.preferredGameMode.replace(/-/g, " ")}
-            {" - "}
-            <span className="underline cursor-pointer" onClick={openSettings}>
-              change in settings
-            </span>
-          </p>
+          <section className="surface-card p-5">
+            <p className="eyebrow mb-2">Quick Play Defaults</p>
+
+            <label className="block text-sm font-semibold mb-2">Default Mode</label>
+            <select
+              value={settings.preferredGameMode}
+              onChange={e => setPreferredGameMode(e.target.value)}
+              className="settings-input !w-full mb-4"
+            >
+              {modeOptions.map(option => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+
+            <div>
+              <HorizontalWheel
+                label="Default Rounds"
+                values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                selected={settings.preferredRounds}
+                onChange={value => setPreferredRounds(value)}
+              />
+            </div>
+          </section>
+
+          <div className="mt-auto">
+            <button
+              onClick={handleQuickPlay}
+              className="btn-primary w-full py-5 text-xl font-bold inline-flex items-center justify-center gap-3"
+            >
+              <Zap size={24} /> Quick Play
+            </button>
+            <p className="content-muted text-xs text-center -mt-1">
+              {settings.preferredRounds} rounds &middot; {settings.preferredGameMode.replace(/-/g, " ")}
+            </p>
+          </div>
         </div>
       </div>
       <MainBottomNav />
