@@ -14,21 +14,24 @@ import {
   hostParty,
   joinParty,
   leaveParty,
+  type PartyLobbySettings,
   PartyRoom,
   PartyVerse,
   startPartyGame,
   subscribeToParty,
+  updatePartyLobbySettings,
   upsertPartyMember,
 } from '@/lib/partyEngine';
 import { isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
-import { clampTimerMinutes, clampTimerSeconds, toTimerDurationSeconds } from '@/lib/timerOptions';
+import { clampTimerMinutes, clampTimerSeconds } from '@/lib/timerOptions';
 import { useAccountSync } from '@/lib/accountSync';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 
 const PLAYER_VALUES = [2, 3, 4, 5, 6, 7, 8];
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const PARTY_TIMER_VALUES = Array.from({ length: 18 }, (_, idx) => (idx + 1) * 5);
 
 function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
   const book = books[Math.floor(Math.random() * books.length)];
@@ -60,6 +63,7 @@ export default function MultiplayerPage() {
   const router = useRouter();
   const [tab, setTab] = useState<'hot-seat' | 'party'>('hot-seat');
   const initialHotSeat = useMemo(() => readHotSeatSettings(), []);
+  const firebaseConfigured = isFirebaseConfigured();
 
   const [players, setPlayers] = useState(initialHotSeat.players);
   const [rounds, setRounds] = useState(initialHotSeat.rounds);
@@ -69,6 +73,7 @@ export default function MultiplayerPage() {
   const [timerSeconds, setTimerSeconds] = useState(initialHotSeat.timerSeconds);
 
   const [room, setRoom] = useState<PartyRoom | null>(null);
+  const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState(['', '', '', '']);
   const joinRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -76,10 +81,6 @@ export default function MultiplayerPage() {
   const { appStateNonce, user } = useAccountSync();
   const [profile, setProfile] = useState(() => readLocalProfile());
   const clientId = useMemo(() => readClientId(), []);
-  const [partyMode, setPartyMode] = useState<GameModeId>('full-bible');
-  const [partyRounds, setPartyRounds] = useState(initialHotSeat.rounds);
-  const [partyTimerMinutes, setPartyTimerMinutes] = useState(initialHotSeat.timerMinutes);
-  const [partyTimerSeconds, setPartyTimerSeconds] = useState(initialHotSeat.timerSeconds);
   const [partyStartError, setPartyStartError] = useState('');
   const [partyStartPending, setPartyStartPending] = useState(false);
 
@@ -95,6 +96,14 @@ export default function MultiplayerPage() {
         .filter(mode => !mode.isSingleBook)
         .map(mode => ({ id: mode.id, name: mode.name })),
     []
+  );
+
+  const isHost = Boolean(room?.hostId === clientId);
+  const lobbySettings = room?.lobbySettings;
+  const lobbyComplete = Boolean(
+    lobbySettings?.modeId &&
+    lobbySettings?.roundsPerPlayer &&
+    lobbySettings?.timerDurationSeconds
   );
 
   useEffect(() => {
@@ -116,16 +125,26 @@ export default function MultiplayerPage() {
   }, [players, rounds, turnStyle, names, timerMinutes, timerSeconds]);
 
   useEffect(() => {
-    if (tab !== 'party' || !isFirebaseConfigured()) return;
+    if (tab !== 'party' || !firebaseConfigured) return;
     let unsubscribe: () => void = () => {};
     let cancelled = false;
+
+    const subscribeToRoom = (code: string) => {
+      unsubscribe = subscribeToParty(code, next => {
+        if (cancelled) return;
+        setRoom(next);
+        if (!next) {
+          setActiveRoomCode(null);
+        }
+      });
+    };
+
     const run = async () => {
-      if (room?.code) {
-        unsubscribe = subscribeToParty(room.code, next => {
-          if (!cancelled) setRoom(next);
-        });
+      if (activeRoomCode) {
+        subscribeToRoom(activeRoomCode);
         return;
       }
+
       const created = await hostParty({
         id: clientId,
         name: displayName,
@@ -133,31 +152,40 @@ export default function MultiplayerPage() {
         isHost: true,
         joinedAt: Date.now(),
       });
+
       if (!cancelled && created) {
+        setActiveRoomCode(created.code);
         setRoom(created);
-        unsubscribe = subscribeToParty(created.code, next => {
-          if (!cancelled) setRoom(next);
-        });
+        subscribeToRoom(created.code);
       }
     };
+
     void run();
+
     return () => {
       cancelled = true;
       unsubscribe();
     };
-  }, [tab, clientId, displayName, profile.avatar, room?.code]);
+  }, [tab, activeRoomCode, clientId, displayName, firebaseConfigured, profile.avatar]);
 
   useEffect(() => {
-    if (tab !== 'party' || !isFirebaseConfigured() || !room?.code) return;
+    if (tab !== 'party' || !firebaseConfigured || !activeRoomCode) return;
 
-    void upsertPartyMember(room.code, {
-      id: clientId,
-      name: displayName,
-      avatar: profile.avatar,
-      isHost: room.hostId === clientId,
-      joinedAt: Date.now(),
-    });
-  }, [clientId, displayName, profile.avatar, room?.code, room?.hostId, tab]);
+    const syncMember = () => {
+      void upsertPartyMember(activeRoomCode, {
+        id: clientId,
+        name: displayName,
+        avatar: profile.avatar,
+        isHost: room?.hostId === clientId,
+        joinedAt: Date.now(),
+      });
+    };
+
+    syncMember();
+    const heartbeat = window.setInterval(syncMember, 60_000);
+
+    return () => window.clearInterval(heartbeat);
+  }, [activeRoomCode, clientId, displayName, firebaseConfigured, profile.avatar, room?.hostId, tab]);
 
   useEffect(() => {
     if (tab !== 'party' || !room?.code) return;
@@ -183,47 +211,42 @@ export default function MultiplayerPage() {
 
   const submitJoin = async () => {
     const code = joinCode.join('').toUpperCase();
-    if (code.length !== 4 || !isFirebaseConfigured()) return;
+    if (code.length !== 4 || !firebaseConfigured) return;
 
-    if (room?.code && room.code !== code) {
-      await leaveParty(room.code, clientId);
+    if (activeRoomCode && activeRoomCode !== code) {
+      await leaveParty(activeRoomCode, clientId);
     }
 
     const ok = await joinParty(code, { id: clientId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: Date.now() });
     if (ok) {
+      setPartyStartError('');
       setJoinOpen(false);
       setJoinCode(['', '', '', '']);
-      subscribeToParty(code, next => setRoom(next));
+      setActiveRoomCode(code);
     }
   };
 
-  const hostNewPartyCode = async () => {
-    if (!isFirebaseConfigured()) return;
+  const applyLobbySettings = async (updates: Partial<PartyLobbySettings>) => {
+    if (!room || !isHost) return;
 
-    if (room?.code) {
-      await leaveParty(room.code, clientId);
+    const ok = await updatePartyLobbySettings(room.code, clientId, updates);
+    if (!ok) {
+      setPartyStartError('Could not update party settings. Please retry.');
+      return;
     }
 
-    const created = await hostParty({
-      id: clientId,
-      name: displayName,
-      avatar: profile.avatar,
-      isHost: true,
-      joinedAt: Date.now(),
-    });
-
-    if (created) {
-      setRoom(created);
-      subscribeToParty(created.code, next => setRoom(next));
-    }
+    setPartyStartError('');
   };
 
   const startParty = async () => {
-    if (!room || room.hostId !== clientId) return;
+    if (!room || !isHost || !lobbySettings?.modeId || !lobbySettings.roundsPerPlayer || !lobbySettings.timerDurationSeconds) {
+      return;
+    }
+
     setPartyStartError('');
     setPartyStartPending(true);
 
-    const modeConfig = gameModes[partyMode];
+    const modeConfig = gameModes[lobbySettings.modeId];
     const firstVerse = await buildRandomPartyVerse(modeConfig.books);
 
     if (!firstVerse) {
@@ -233,9 +256,9 @@ export default function MultiplayerPage() {
     }
 
     const ok = await startPartyGame(room.code, clientId, {
-      modeId: partyMode,
-      roundsPerPlayer: partyRounds,
-      timerDurationSeconds: toTimerDurationSeconds(partyTimerMinutes, partyTimerSeconds),
+      modeId: lobbySettings.modeId,
+      roundsPerPlayer: lobbySettings.roundsPerPlayer,
+      timerDurationSeconds: lobbySettings.timerDurationSeconds,
       firstVerse,
     });
 
@@ -253,7 +276,7 @@ export default function MultiplayerPage() {
     <main className="app-screen">
       <AppTopBar title="Multiplayer" />
 
-      <div className={`app-content ${tab === 'hot-seat' ? 'app-content-fixed' : 'app-content-scroll'}`}>
+      <div className="app-content app-content-scroll">
         <div className="page max-w-4xl">
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button onClick={() => setTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
@@ -262,43 +285,35 @@ export default function MultiplayerPage() {
 
           {tab === 'hot-seat' && (
             <div className="hotseat-shell min-w-0">
-              <section className="setup-panel">
-                <div className="setup-panel-section">
-                  <div className="hotseat-rounds-turn-row">
-                    <div className="min-w-0">
-                      <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
-                    </div>
-                    <div className="hotseat-turn-buttons">
-                      <button
-                        onClick={() => setTurnStyle('alternate')}
-                        className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
-                      >
-                        Alternate
-                      </button>
-                      <button
-                        onClick={() => setTurnStyle('all-at-once')}
-                        className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
-                      >
-                        All at once
-                      </button>
-                    </div>
-                  </div>
+              <div className="hotseat-rounds-turn-row">
+                <div className="min-w-0">
+                  <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
                 </div>
+                <div className="hotseat-turn-buttons">
+                  <button
+                    onClick={() => setTurnStyle('alternate')}
+                    className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                  >
+                    Alternate
+                  </button>
+                  <button
+                    onClick={() => setTurnStyle('all-at-once')}
+                    className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                  >
+                    All at once
+                  </button>
+                </div>
+              </div>
 
-                <div className="setup-panel-section">
-                  <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
-                </div>
+              <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
 
-                <div className="setup-panel-section">
-                  <TimerSetupControls
-                    embedded
-                    minutes={timerMinutes}
-                    seconds={timerSeconds}
-                    onMinutesChange={setTimerMinutes}
-                    onSecondsChange={setTimerSeconds}
-                  />
-                </div>
-              </section>
+              <TimerSetupControls
+                embedded
+                minutes={timerMinutes}
+                seconds={timerSeconds}
+                onMinutesChange={setTimerMinutes}
+                onSecondsChange={setTimerSeconds}
+              />
 
               <section className="hotseat-names-window">
                 <p className="text-sm font-semibold mb-2">Player Names</p>
@@ -319,12 +334,17 @@ export default function MultiplayerPage() {
                 <h2 className="headline-serif text-3xl">Hosted Party</h2>
                 <div className="party-header-actions">
                   <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Join by code</button>
-                  <button onClick={() => void hostNewPartyCode()} className="btn-outline px-3 py-2 text-sm">New code</button>
                 </div>
               </div>
-              {!isFirebaseConfigured() && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
-              {isFirebaseConfigured() && room && (
+              {!firebaseConfigured && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
+              {firebaseConfigured && !room && <div className="surface-card-soft p-4 text-sm">Preparing your party code…</div>}
+              {firebaseConfigured && room && (
                 <>
+                  <div className="text-center mb-4">
+                    <p className="content-muted text-sm">Party Code</p>
+                    <p className="headline-serif text-5xl tracking-[0.2em] mt-1">{room.code}</p>
+                  </div>
+
                   <div className="party-members-block mb-4">
                     <p className="font-semibold mb-2">Party Members</p>
                     <div className="grid gap-2">
@@ -347,56 +367,76 @@ export default function MultiplayerPage() {
                     </div>
                   </div>
 
-                  {room.hostId === clientId ? (
-                    <div className="party-host-controls mb-4">
-                      <p className="eyebrow mb-2">Host Controls</p>
+                  <div className="party-host-controls mb-4">
+                    <p className="eyebrow mb-2">Party Settings</p>
 
-                      <label className="text-sm font-semibold block mb-1">Game Mode</label>
-                      <select
-                        value={partyMode}
-                        onChange={e => setPartyMode(e.target.value as GameModeId)}
-                        className="settings-input !w-full mb-3"
-                      >
-                        {partyModeOptions.map(option => (
-                          <option key={option.id} value={option.id}>{option.name}</option>
-                        ))}
-                      </select>
+                    <label className="text-sm font-semibold block mb-1">Game Mode</label>
+                    <select
+                      value={lobbySettings?.modeId ?? ''}
+                      onChange={e => {
+                        const value = e.target.value;
+                        void applyLobbySettings({ modeId: value ? (value as GameModeId) : null });
+                      }}
+                      className="settings-input !w-full mb-3"
+                      disabled={!isHost}
+                    >
+                      <option value="">Select mode</option>
+                      {partyModeOptions.map(option => (
+                        <option key={option.id} value={option.id}>{option.name}</option>
+                      ))}
+                    </select>
 
-                      <div className="mb-3">
-                        <HorizontalWheel
-                          label="Rounds"
-                          values={ROUND_VALUES}
-                          selected={partyRounds}
-                          onChange={setPartyRounds}
-                        />
-                      </div>
+                    <label className="text-sm font-semibold block mb-1">Rounds</label>
+                    <select
+                      value={lobbySettings?.roundsPerPlayer ?? ''}
+                      onChange={e => {
+                        const value = e.target.value;
+                        void applyLobbySettings({ roundsPerPlayer: value ? Number(value) : null });
+                      }}
+                      className="settings-input !w-full mb-3"
+                      disabled={!isHost}
+                    >
+                      <option value="">Select rounds</option>
+                      {ROUND_VALUES.map(value => (
+                        <option key={value} value={value}>{value}</option>
+                      ))}
+                    </select>
 
-                      <TimerSetupControls
-                        minutes={partyTimerMinutes}
-                        seconds={partyTimerSeconds}
-                        onMinutesChange={setPartyTimerMinutes}
-                        onSecondsChange={setPartyTimerSeconds}
-                      />
+                    <label className="text-sm font-semibold block mb-1">Timer (seconds)</label>
+                    <select
+                      value={lobbySettings?.timerDurationSeconds ?? ''}
+                      onChange={e => {
+                        const value = e.target.value;
+                        void applyLobbySettings({ timerDurationSeconds: value ? Number(value) : null });
+                      }}
+                      className="settings-input !w-full"
+                      disabled={!isHost}
+                    >
+                      <option value="">Select timer</option>
+                      {PARTY_TIMER_VALUES.map(value => (
+                        <option key={value} value={value}>{value}</option>
+                      ))}
+                    </select>
 
-                      {partyStartError && <p className="text-xs text-[var(--danger)] mt-2">{partyStartError}</p>}
+                    {!isHost && (
+                      <p className="text-xs content-muted mt-3">Only the host can edit these settings.</p>
+                    )}
+                  </div>
 
-                      <button
-                        onClick={() => void startParty()}
-                        className="btn-primary w-full py-2.5 mt-3"
-                        disabled={partyStartPending}
-                      >
-                        {partyStartPending ? 'Starting...' : 'Start Party Game'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="party-host-controls mb-4">
-                      <p className="text-sm content-muted">Waiting for host to choose mode and start the party game.</p>
-                    </div>
-                  )}
+                  {partyStartError && <p className="text-xs text-[var(--danger)] mb-3">{partyStartError}</p>}
 
                   <div className="text-center">
-                    <p className="content-muted text-sm">Party Code</p>
-                    <p className="headline-serif text-5xl tracking-[0.2em] mt-1">{room.code}</p>
+                    <button
+                      onClick={() => void startParty()}
+                      className="btn-primary w-full py-2.5"
+                      disabled={!isHost || !lobbyComplete || partyStartPending}
+                    >
+                      {isHost
+                        ? partyStartPending
+                          ? 'Starting...'
+                          : 'Start Party Game'
+                        : 'Waiting for host to start'}
+                    </button>
                   </div>
                 </>
               )}

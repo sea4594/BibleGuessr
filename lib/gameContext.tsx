@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { GameModeConfig } from './gameModes';
 import { ScoreBreakdown } from './scoring';
 
@@ -68,9 +68,32 @@ interface GameContextType {
 }
 
 const GameContext = createContext<GameContextType | null>(null);
+const SESSION_STORAGE_KEY = 'bg-active-game-session-v1';
+
+function readInitialSession(): GameSession | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as GameSession;
+  } catch {
+    return null;
+  }
+}
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<GameSession | null>(null);
+  const [session, setSession] = useState<GameSession | null>(() => readInitialSession());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!session) {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      return;
+    }
+
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  }, [session]);
 
   const startGame = (config: Omit<GameSession, 'rounds' | 'currentRound' | 'gameState'>) => {
     setSession({

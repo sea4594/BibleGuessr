@@ -19,6 +19,7 @@ export interface UiSettings {
   themePreset: ThemePresetId;
   preferredRounds: number;
   preferredGameMode: string;
+  quickPlayTimerSeconds: number;
 }
 
 interface UiSettingsContextType {
@@ -26,6 +27,7 @@ interface UiSettingsContextType {
   setThemePreset: (themePreset: ThemePresetId) => void;
   setPreferredRounds: (rounds: number) => void;
   setPreferredGameMode: (mode: string) => void;
+  setQuickPlayTimerSeconds: (seconds: number) => void;
 }
 
 const STORAGE_KEY = 'bg-ui-settings-v1';
@@ -44,7 +46,13 @@ const DEFAULT_SETTINGS: UiSettings = {
   themePreset: 'ocean-light',
   preferredRounds: 5,
   preferredGameMode: 'full-bible',
+  quickPlayTimerSeconds: 60,
 };
+
+function clampQuickPlayTimerSeconds(value: number) {
+  const normalized = Number.isFinite(value) ? Math.round(value / 5) * 5 : DEFAULT_SETTINGS.quickPlayTimerSeconds;
+  return Math.min(90, Math.max(5, normalized));
+}
 
 const UiSettingsContext = createContext<UiSettingsContextType | null>(null);
 
@@ -64,6 +72,9 @@ function readInitialSettings(): UiSettings {
       themePreset: parsed.themePreset ?? DEFAULT_SETTINGS.themePreset,
       preferredRounds: Math.min(10, Math.max(1, parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds)),
       preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
+      quickPlayTimerSeconds: clampQuickPlayTimerSeconds(
+        parsed.quickPlayTimerSeconds ?? DEFAULT_SETTINGS.quickPlayTimerSeconds
+      ),
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -100,6 +111,12 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       },
       setPreferredGameMode: (preferredGameMode: string) => {
         setSettings(prev => ({ ...prev, preferredGameMode }));
+      },
+      setQuickPlayTimerSeconds: (quickPlayTimerSeconds: number) => {
+        setSettings(prev => ({
+          ...prev,
+          quickPlayTimerSeconds: clampQuickPlayTimerSeconds(quickPlayTimerSeconds),
+        }));
       },
     }),
     [settings]

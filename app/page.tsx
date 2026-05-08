@@ -9,7 +9,7 @@ import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
 import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
-import { toTimerDurationSeconds } from "@/lib/timerOptions";
+import { QUICK_PLAY_TIMER_SECOND_OPTIONS } from "@/lib/timerOptions";
 import HorizontalWheel from "@/components/HorizontalWheel";
 
 interface VerseOfDay {
@@ -32,7 +32,7 @@ function getDailyVerseRef(): { book: string; chapter: number; verse: number } {
 }
 
 export default function HomePage() {
-  const { settings, setPreferredGameMode, setPreferredRounds } = useUiSettings();
+  const { settings, setPreferredGameMode, setPreferredRounds, setQuickPlayTimerSeconds } = useUiSettings();
   const { startGame } = useGame();
   const router = useRouter();
   const [verseOfDay, setVerseOfDay] = useState<VerseOfDay | null>(null);
@@ -66,7 +66,7 @@ export default function HomePage() {
       mode: modeId,
       modeConfig,
       totalRounds: settings.preferredRounds,
-      timerDurationSeconds: toTimerDurationSeconds(1, 0),
+      timerDurationSeconds: settings.quickPlayTimerSeconds,
     });
     router.push(`/play/${modeId}/game`);
   };
@@ -92,42 +92,56 @@ export default function HomePage() {
             )}
           </section>
 
-          <section className="surface-card p-5">
-            <p className="eyebrow mb-2">Quick Play Defaults</p>
+          <div className="mt-auto grid gap-3">
+            <section className="surface-card p-5">
+              <p className="eyebrow mb-2">QUICK PLAY</p>
 
-            <label className="block text-sm font-semibold mb-2">Default Mode</label>
-            <select
-              value={settings.preferredGameMode}
-              onChange={e => setPreferredGameMode(e.target.value)}
-              className="settings-input !w-full mb-4"
-            >
-              {modeOptions.map(option => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
+              <select
+                value={settings.preferredGameMode}
+                onChange={e => setPreferredGameMode(e.target.value)}
+                className="settings-input !w-full mb-4"
+              >
+                {modeOptions.map(option => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
 
-            <div>
-              <HorizontalWheel
-                label="Default Rounds"
-                values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
-                selected={settings.preferredRounds}
-                onChange={value => setPreferredRounds(value)}
-              />
-            </div>
-          </section>
+              <div className="mb-4">
+                <HorizontalWheel
+                  label="Rounds"
+                  values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                  selected={settings.preferredRounds}
+                  onChange={value => setPreferredRounds(value)}
+                />
+              </div>
 
-          <div className="mt-auto">
+              <div className="timer-inline-row">
+                <p className="text-sm font-semibold">Timer</p>
+                <div className="timer-inline-controls">
+                  <label className="timer-inline-label">
+                    <select
+                      value={settings.quickPlayTimerSeconds}
+                      onChange={e => setQuickPlayTimerSeconds(Number(e.target.value))}
+                      className="settings-input timer-inline-select"
+                    >
+                      {QUICK_PLAY_TIMER_SECOND_OPTIONS.map(value => (
+                        <option key={value} value={value}>{value}</option>
+                      ))}
+                    </select>
+                    <span>Seconds</span>
+                  </label>
+                </div>
+              </div>
+            </section>
+
             <button
               onClick={handleQuickPlay}
               className="btn-primary w-full py-5 text-xl font-bold inline-flex items-center justify-center gap-3"
             >
-              <Zap size={24} /> Quick Play
+              <Zap size={24} /> Start
             </button>
-            <p className="content-muted text-xs text-center -mt-1">
-              {settings.preferredRounds} rounds &middot; {settings.preferredGameMode.replace(/-/g, " ")}
-            </p>
           </div>
         </div>
       </div>

@@ -125,12 +125,6 @@ export default function ProfilePage() {
     return () => clearTimeout(timer);
   }, [appStateNonce]);
 
-  const handleSave = async () => {
-    writeLocalProfile(profile);
-    setStatusMessage(user ? 'Saved locally and queued for sync.' : 'Saved on this device as guest profile.');
-    setTimeout(() => setStatusMessage(''), 3000);
-  };
-
   const handleSignIn = async () => {
     await login();
     setStatusMessage('Opening Google login...');
@@ -204,7 +198,6 @@ export default function ProfilePage() {
             )}
 
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => void handleSave()} className="btn-primary px-4 py-2">Save Profile</button>
               {firebaseEnabled && !user && (
                 <button
                   onClick={() => void handleSignIn()}

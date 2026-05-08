@@ -4,11 +4,10 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
-  setDoc,
 } from 'firebase/firestore';
 import { getFirebaseDb } from './firebaseClient';
 import type { AvatarSpec } from './avatarSystem';
-import type { GameModeId } from './gameModes';
+import { gameModes, type GameModeId } from './gameModes';
 
 export interface PartyMember {
   id: string;
@@ -24,7 +23,15 @@ export interface PartyRoom {
   members: PartyMember[];
   createdAt: number;
   updatedAt: number;
+  expiresAt: number;
+  lobbySettings: PartyLobbySettings;
   game?: PartyGameState;
+}
+
+export interface PartyLobbySettings {
+  modeId: GameModeId | null;
+  roundsPerPlayer: number | null;
+  timerDurationSeconds: number | null;
 }
 
 export interface PartyVerse {
@@ -68,6 +75,9 @@ export interface PartyGameState {
 }
 
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const PARTY_CODE_TTL_MS = 1000 * 60 * 60 * 6;
+const PARTY_TIMER_MIN_SECONDS = 5;
+const PARTY_TIMER_MAX_SECONDS = 90;
 
 function generateCode() {
   let code = '';
@@ -83,6 +93,83 @@ function partyDoc(code: string) {
   return doc(db, 'parties', code);
 }
 
+function expiresAtFromNow(now: number) {
+  return now + PARTY_CODE_TTL_MS;
+}
+
+function isRoomExpired(data: unknown) {
+  const room = data as { expiresAt?: unknown };
+  const expiresAt = typeof room?.expiresAt === 'number' ? room.expiresAt : 0;
+  return expiresAt <= Date.now();
+}
+
+function isSelectablePartyMode(modeId: string): modeId is GameModeId {
+  if (!(modeId in gameModes)) return false;
+  return !gameModes[modeId as GameModeId].isSingleBook;
+}
+
+function clampRoundsPerPlayer(value: number | null): number | null {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  return Math.max(1, Math.min(10, Math.round(value)));
+}
+
+function clampPartyTimerDurationSeconds(value: number | null): number | null {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  const rounded = Math.round(value / 5) * 5;
+  return Math.max(PARTY_TIMER_MIN_SECONDS, Math.min(PARTY_TIMER_MAX_SECONDS, rounded));
+}
+
+function makeDefaultLobbySettings(): PartyLobbySettings {
+  return {
+    modeId: null,
+    roundsPerPlayer: null,
+    timerDurationSeconds: null,
+  };
+}
+
+function normalizeLobbySettings(raw: unknown): PartyLobbySettings {
+  if (!raw || typeof raw !== 'object') return makeDefaultLobbySettings();
+  const value = raw as {
+    modeId?: unknown;
+    roundsPerPlayer?: unknown;
+    timerDurationSeconds?: unknown;
+  };
+
+  return {
+    modeId: typeof value.modeId === 'string' && isSelectablePartyMode(value.modeId) ? value.modeId : null,
+    roundsPerPlayer: clampRoundsPerPlayer(
+      typeof value.roundsPerPlayer === 'number' ? value.roundsPerPlayer : null
+    ),
+    timerDurationSeconds: clampPartyTimerDurationSeconds(
+      typeof value.timerDurationSeconds === 'number' ? value.timerDurationSeconds : null
+    ),
+  };
+}
+
+function mergeLobbySettings(current: PartyLobbySettings, incoming: Partial<PartyLobbySettings>) {
+  const nextMode = incoming.modeId === undefined
+    ? current.modeId
+    : incoming.modeId === null
+      ? null
+      : isSelectablePartyMode(incoming.modeId)
+        ? incoming.modeId
+        : current.modeId;
+
+  const nextRounds = incoming.roundsPerPlayer === undefined
+    ? current.roundsPerPlayer
+    : clampRoundsPerPlayer(incoming.roundsPerPlayer);
+
+  const nextTimer = incoming.timerDurationSeconds === undefined
+    ? current.timerDurationSeconds
+    : clampPartyTimerDurationSeconds(incoming.timerDurationSeconds);
+
+  return {
+    modeId: nextMode,
+    roundsPerPlayer: nextRounds,
+    timerDurationSeconds: nextTimer,
+  } satisfies PartyLobbySettings;
+}
+
 export async function createUniquePartyCode(): Promise<string | null> {
   const db = getFirebaseDb();
   if (!db) return null;
@@ -91,7 +178,7 @@ export async function createUniquePartyCode(): Promise<string | null> {
     const code = generateCode();
     const ref = doc(db, 'parties', code);
     const existing = await getDoc(ref);
-    if (!existing.exists()) {
+    if (!existing.exists() || isRoomExpired(existing.data())) {
       return code;
     }
   }
@@ -103,25 +190,44 @@ export async function hostParty(host: PartyMember): Promise<PartyRoom | null> {
   const db = getFirebaseDb();
   if (!db) return null;
 
-  const code = await createUniquePartyCode();
-  if (!code) return null;
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const code = generateCode();
+    const ref = doc(db, 'parties', code);
+    const now = Date.now();
+    const room: PartyRoom = {
+      code,
+      hostId: host.id,
+      members: [{ ...host, isHost: true, joinedAt: now }],
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: expiresAtFromNow(now),
+      lobbySettings: makeDefaultLobbySettings(),
+    };
 
-  const now = Date.now();
-  const room: PartyRoom = {
-    code,
-    hostId: host.id,
-    members: [{ ...host, isHost: true, joinedAt: now }],
-    createdAt: now,
-    updatedAt: now,
-  };
+    try {
+      await runTransaction(db, async tx => {
+        const snapshot = await tx.get(ref);
+        if (snapshot.exists() && !isRoomExpired(snapshot.data())) {
+          throw new Error('party-code-in-use');
+        }
 
-  await setDoc(doc(db, 'parties', code), {
-    ...room,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+        tx.set(ref, {
+          ...room,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      });
 
-  return room;
+      return room;
+    } catch (error) {
+      if (error instanceof Error && error.message === 'party-code-in-use') {
+        continue;
+      }
+      return null;
+    }
+  }
+
+  return null;
 }
 
 export async function joinParty(code: string, member: PartyMember): Promise<boolean> {
@@ -136,13 +242,20 @@ export async function joinParty(code: string, member: PartyMember): Promise<bool
       if (!snapshot.exists()) {
         throw new Error('Party not found');
       }
+
+      if (isRoomExpired(snapshot.data())) {
+        throw new Error('Party expired');
+      }
+
       const data = snapshot.data() as PartyRoom;
       const members = data.members ?? [];
       const deduped = members.filter(m => m.id !== member.id);
+      const now = Date.now();
       deduped.push({ ...member, isHost: false, joinedAt: Date.now() });
       tx.update(ref, {
         members: deduped,
         updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(now),
       });
     });
 
@@ -162,10 +275,12 @@ export async function upsertPartyMember(code: string, member: PartyMember): Prom
     await runTransaction(db, async tx => {
       const snapshot = await tx.get(ref);
       if (!snapshot.exists()) throw new Error('Party not found');
+      if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
 
       const data = snapshot.data() as PartyRoom;
       const members = data.members ?? [];
       const existing = members.find(m => m.id === member.id);
+      const now = Date.now();
 
       if (!existing) {
         members.push({ ...member, isHost: false, joinedAt: Date.now() });
@@ -180,6 +295,7 @@ export async function upsertPartyMember(code: string, member: PartyMember): Prom
       tx.update(ref, {
         members,
         updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(now),
       });
     });
 
@@ -206,18 +322,20 @@ export async function startPartyGame(code: string, hostId: string, config: Start
     await runTransaction(db, async tx => {
       const snapshot = await tx.get(ref);
       if (!snapshot.exists()) throw new Error('Party not found');
+      if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
 
       const room = snapshot.data() as PartyRoom;
       if (room.hostId !== hostId) throw new Error('Only host can start');
 
       const members = room.members ?? [];
       const safeRounds = Math.max(1, Math.min(10, config.roundsPerPlayer));
+      const safeTimer = clampPartyTimerDurationSeconds(config.timerDurationSeconds) ?? PARTY_TIMER_MIN_SECONDS;
       const gameState: PartyGameState = {
         status: 'in-round',
         modeId: config.modeId,
         roundsPerPlayer: safeRounds,
         totalRounds: safeRounds,
-        timerDurationSeconds: Math.max(0, config.timerDurationSeconds),
+        timerDurationSeconds: safeTimer,
         currentRound: 1,
         roundStartedAt: now,
         roundVerse: config.firstVerse,
@@ -231,7 +349,13 @@ export async function startPartyGame(code: string, hostId: string, config: Start
 
       tx.update(ref, {
         game: gameState,
+        lobbySettings: {
+          modeId: config.modeId,
+          roundsPerPlayer: safeRounds,
+          timerDurationSeconds: safeTimer,
+        },
         updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(now),
       });
     });
 
@@ -255,6 +379,7 @@ export async function submitPartyRound(
     await runTransaction(db, async tx => {
       const snapshot = await tx.get(ref);
       if (!snapshot.exists()) throw new Error('Party not found');
+      if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
 
       const room = snapshot.data() as PartyRoom;
       const game = room.game;
@@ -298,6 +423,7 @@ export async function submitPartyRound(
           updatedAt: Date.now(),
         },
         updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(Date.now()),
       });
     });
 
@@ -321,6 +447,7 @@ export async function hostAdvancePartyRound(
     await runTransaction(db, async tx => {
       const snapshot = await tx.get(ref);
       if (!snapshot.exists()) throw new Error('Party not found');
+      if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
 
       const room = snapshot.data() as PartyRoom;
       const game = room.game;
@@ -329,31 +456,70 @@ export async function hostAdvancePartyRound(
       if (game.status !== 'round-complete') throw new Error('Round not complete');
 
       if (game.currentRound >= game.totalRounds) {
+        const now = Date.now();
         tx.update(ref, {
           game: {
             ...game,
             status: 'finished',
-            updatedAt: Date.now(),
+            updatedAt: now,
           },
           updatedAt: serverTimestamp(),
+          expiresAt: expiresAtFromNow(now),
         });
         return;
       }
 
       if (!nextVerse) throw new Error('Next verse required');
 
+      const now = Date.now();
       tx.update(ref, {
         game: {
           ...game,
           status: 'in-round',
           currentRound: game.currentRound + 1,
-          roundStartedAt: Date.now(),
+          roundStartedAt: now,
           roundVerse: nextVerse,
           submissions: {},
           roundScores: {},
-          updatedAt: Date.now(),
+          updatedAt: now,
         },
         updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(now),
+      });
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function updatePartyLobbySettings(
+  code: string,
+  hostId: string,
+  incoming: Partial<PartyLobbySettings>
+): Promise<boolean> {
+  const db = getFirebaseDb();
+  if (!db) return false;
+
+  const ref = doc(db, 'parties', code);
+
+  try {
+    await runTransaction(db, async tx => {
+      const snapshot = await tx.get(ref);
+      if (!snapshot.exists()) throw new Error('Party not found');
+      if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
+
+      const room = snapshot.data() as PartyRoom;
+      if (room.hostId !== hostId) throw new Error('Only host can edit settings');
+
+      const nextLobbySettings = mergeLobbySettings(normalizeLobbySettings(room.lobbySettings), incoming);
+      const now = Date.now();
+
+      tx.update(ref, {
+        lobbySettings: nextLobbySettings,
+        updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(now),
       });
     });
 
@@ -375,7 +541,17 @@ export function subscribeToParty(code: string, onUpdate: (room: PartyRoom | null
       onUpdate(null);
       return;
     }
-    onUpdate(snapshot.data() as PartyRoom);
+
+    const data = snapshot.data() as PartyRoom;
+    if (isRoomExpired(data)) {
+      onUpdate(null);
+      return;
+    }
+
+    onUpdate({
+      ...data,
+      lobbySettings: normalizeLobbySettings(data.lobbySettings),
+    });
   });
 }
 
@@ -388,9 +564,18 @@ export async function leaveParty(code: string, memberId: string) {
   await runTransaction(db, async tx => {
     const snapshot = await tx.get(ref);
     if (!snapshot.exists()) return;
+    if (isRoomExpired(snapshot.data())) {
+      tx.delete(ref);
+      return;
+    }
 
     const room = snapshot.data() as PartyRoom;
     const filtered = (room.members ?? []).filter(m => m.id !== memberId);
+    if (filtered.length === 0) {
+      tx.delete(ref);
+      return;
+    }
+
     const nextHostId = room.hostId === memberId ? (filtered[0]?.id ?? '') : room.hostId;
     const normalizedMembers = filtered.map(member => ({
       ...member,
@@ -431,6 +616,7 @@ export async function leaveParty(code: string, memberId: string) {
       members: normalizedMembers,
       game: nextGame,
       updatedAt: serverTimestamp(),
+      expiresAt: expiresAtFromNow(Date.now()),
     });
   });
 }
