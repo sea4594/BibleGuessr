@@ -75,8 +75,8 @@ export default function HomePage() {
     <main className="app-screen fade-up">
       <AppTopBar title="BibleGuessr" />
       <div className="app-content app-content-scroll">
-        <div className="page max-w-xl setup-page">
-          <section className="surface-card p-5">
+        <div className="page max-w-xl setup-page min-w-0">
+          <section className="surface-card p-5 min-w-0">
             <p className="eyebrow mb-2">(random) VERSE OF THE DAY</p>
             {loadingVerse ? (
               <p className="content-muted text-sm animate-pulse">Loading verse...</p>
@@ -93,7 +93,7 @@ export default function HomePage() {
           </section>
 
           <div className="mt-auto grid gap-3">
-            <section className="surface-card p-5">
+            <section className="surface-card p-5 min-w-0">
               <p className="eyebrow mb-2">QUICK PLAY</p>
 
               <select
@@ -108,7 +108,7 @@ export default function HomePage() {
                 ))}
               </select>
 
-              <div className="mb-4">
+              <div className="mb-4 min-w-0">
                 <HorizontalWheel
                   label="Rounds"
                   values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}

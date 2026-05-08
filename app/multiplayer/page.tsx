@@ -277,7 +277,7 @@ export default function MultiplayerPage() {
       <AppTopBar title="Multiplayer" />
 
       <div className="app-content app-content-scroll">
-        <div className="page max-w-4xl">
+        <div className="page max-w-4xl min-w-0">
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button onClick={() => setTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
             <button onClick={() => setTab('party')} className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Party</button>
@@ -305,7 +305,9 @@ export default function MultiplayerPage() {
                 </div>
               </div>
 
-              <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
+              <div className="min-w-0">
+                <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
+              </div>
 
               <TimerSetupControls
                 embedded

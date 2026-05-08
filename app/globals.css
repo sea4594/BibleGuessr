@@ -260,12 +260,19 @@ body {
 
 .page {
   width: min(860px, 100%);
+  min-width: 0;
   max-width: 100%;
   margin: 0 auto;
   padding: clamp(12px, 2.2vw, 20px);
   display: grid;
   gap: 12px;
   overflow-x: hidden;
+}
+
+.page > *,
+.setup-page > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .surface-card {
@@ -1104,9 +1111,12 @@ input[type='range']::-moz-range-thumb {
 /* ====== Setup page layout ====== */
 .setup-page {
   min-height: 100%;
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-x: hidden;
   padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
 }
 .setup-title {
@@ -1156,19 +1166,23 @@ input[type='range']::-moz-range-thumb {
 }
 .h-wheel-viewport {
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   position: relative;
   border: 1px solid var(--line-strong);
   border-radius: 12px;
   background: var(--panel-soft);
+  overflow: hidden;
 }
 .h-wheel-track {
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 0;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   border-radius: 12px;
@@ -1329,15 +1343,24 @@ input[type='range']::-moz-range-thumb {
 }
 
 .hotseat-shell {
+  width: 100%;
   height: auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: visible;
   max-width: 100%;
   min-width: 0;
   padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+}
+
+.hotseat-shell .h-wheel-wrap,
+.hotseat-shell .h-wheel-viewport,
+.hotseat-shell .h-wheel-track {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .hotseat-rounds-turn-row {
@@ -1381,7 +1404,8 @@ input[type='range']::-moz-range-thumb {
 .hotseat-names-window {
   flex: 1;
   min-height: 0;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: visible;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -1426,15 +1450,16 @@ input[type='range']::-moz-range-thumb {
 .timer-inline-label {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   font-size: 0.84rem;
   font-weight: 700;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .timer-inline-select {
-  width: 66px;
-  min-width: 66px;
+  width: clamp(56px, 18vw, 66px);
+  min-width: 56px;
   min-height: 40px;
   padding: 6px 8px;
   font-size: 1rem;
