@@ -9,6 +9,7 @@ import {
   hostReturnPartyToLobby,
   leaveParty,
   PartyRoom,
+  PartySubmission,
   PartyVerse,
   submitPartyRound,
   subscribeToParty,
@@ -21,6 +22,12 @@ import { calculateScore } from '@/lib/scoring';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 
 const PARTY_CODE_STORAGE_KEY = 'bg-party-room-code-v1';
+
+type PartyGuess = {
+  book: string;
+  chapter: number;
+  verse: number;
+};
 
 function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
   const book = books[Math.floor(Math.random() * books.length)];
@@ -166,7 +173,19 @@ export default function PartyGameClient() {
     return () => window.clearInterval(interval);
   }, [game, game?.currentRound, game?.roundStartedAt, game?.status, game?.timerDurationSeconds]);
 
-  const submitRoundScore = useCallback(async (score: number, baseScore: number, wasBlankGuess = false) => {
+  const submitRoundScore = useCallback(async (
+    score: number,
+    baseScore: number,
+    wasBlankGuess = false,
+    guess?: PartyGuess,
+    feedback?: {
+      book: 'correct' | 'close' | 'wrong';
+      chapter: 'correct' | 'close' | 'wrong';
+      verse: 'correct' | 'close' | 'wrong';
+      chaptersOff: number;
+      versesOff: number;
+    }
+  ) => {
     if (!code || !myMember) return;
 
     const ok = await submitPartyRound(code, partyMemberId, {
@@ -174,6 +193,8 @@ export default function PartyGameClient() {
       score,
       baseScore,
       wasBlankGuess,
+      guess,
+      feedback,
     });
 
     if (!ok) {
@@ -208,7 +229,7 @@ export default function PartyGameClient() {
       modeConfig.scoringType
     );
 
-    await submitRoundScore(breakdown.total, breakdown.total, false);
+    await submitRoundScore(breakdown.total, breakdown.total, false, guess, breakdown.feedback);
   };
 
   const handleHostAdvance = async () => {
@@ -268,6 +289,62 @@ export default function PartyGameClient() {
     router.push(`/multiplayer?tab=party&code=${room.code}`);
   }, [room, router]);
 
+  const submittedCount = Object.keys(game?.submissions ?? {}).length;
+  const totalPlayers = room?.members.length ?? 0;
+  const roundRows = useMemo(() => {
+    if (!room || !game) return [];
+
+    return room.members
+      .map(member => {
+        const submission = game.submissions[member.id];
+        return {
+          member,
+          submission,
+          roundScore: game.roundScores[member.id] ?? submission?.score ?? 0,
+          totalScore: game.scores[member.id] ?? 0,
+        };
+      })
+      .sort((a, b) => {
+        if (b.roundScore !== a.roundScore) return b.roundScore - a.roundScore;
+        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+        return a.member.name.localeCompare(b.member.name);
+      });
+  }, [game, room]);
+
+  const totalRows = useMemo(() => {
+    if (!room || !game) return [];
+
+    return room.members
+      .map(member => ({
+        member,
+        totalScore: game.scores[member.id] ?? 0,
+      }))
+      .sort((a, b) => {
+        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+        return a.member.name.localeCompare(b.member.name);
+      });
+  }, [game, room]);
+
+  const renderSubmissionGuess = (submission: PartySubmission) => {
+    if (submission.wasBlankGuess || !submission.guess || !submission.feedback) {
+      return <span style={{ color: '#ef4444' }}>No guess (time expired)</span>;
+    }
+
+    const bookCorrect = submission.feedback.book === 'correct';
+    const chapterCorrect = bookCorrect && submission.feedback.chapter === 'correct';
+    const verseCorrect = chapterCorrect && submission.feedback.verse === 'correct';
+
+    return (
+      <>
+        <span style={{ color: bookCorrect ? '#22c55e' : '#ef4444' }}>{submission.guess.book}</span>
+        <span>&nbsp;</span>
+        <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>{submission.guess.chapter}</span>
+        <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>:</span>
+        <span style={{ color: verseCorrect ? '#22c55e' : '#ef4444' }}>{submission.guess.verse}</span>
+      </>
+    );
+  };
+
   if (!code) {
     return (
       <main className="app-screen">
@@ -312,9 +389,6 @@ export default function PartyGameClient() {
       </main>
     );
   }
-
-  const submittedCount = Object.keys(game.submissions ?? {}).length;
-  const totalPlayers = room.members.length;
 
   return (
     <main className="app-screen game-shell">
@@ -390,15 +464,46 @@ export default function PartyGameClient() {
           {game.status === 'round-complete' && (
             <section className="surface-card p-5 party-round-summary">
               <h2 className="headline-serif text-3xl mb-2">Round {game.currentRound} Complete</h2>
-              <p className="content-muted mb-4">Round scores update live as each player submits.</p>
+              <section className="surface-card p-4 sm:p-5 mb-4 text-left w-full">
+                <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Round Verse</p>
+                <p className="text-base sm:text-lg leading-relaxed italic">&ldquo;{verse?.text}&rdquo;</p>
+              </section>
 
-              <div className="grid gap-2 mb-4">
-                {room.members.map(member => (
-                  <div key={member.id} className="party-score-row">
-                    <span>{member.name}</span>
-                    <span className="font-semibold">Round {game.roundScores[member.id] ?? 0} · Total {game.scores[member.id] ?? 0}</span>
-                  </div>
-                ))}
+              <section className="surface-card p-4 sm:p-5 mb-4 w-full">
+                <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Correct Reference</p>
+                <p className="text-center text-[2.4rem] sm:text-[3.3rem] lg:text-[3.8rem] font-black leading-[0.98]">
+                  {verse?.book} {verse?.chapter}:{verse?.verse}
+                </p>
+              </section>
+
+              <div className="surface-card p-4 sm:p-5 mb-4 w-full">
+                <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Round Scores</h3>
+                <div className="grid gap-2">
+                  {roundRows.map(({ member, submission, roundScore }) => (
+                    <div key={member.id} className="party-round-table-row">
+                      <div className="party-round-table-meta">
+                        <p className="text-sm font-semibold">{member.name}</p>
+                        <p className="text-sm whitespace-nowrap overflow-x-auto">
+                          <span className="content-muted">Guess:&nbsp;</span>
+                          {submission ? renderSubmissionGuess(submission) : <span style={{ color: '#ef4444' }}>No guess</span>}
+                        </p>
+                      </div>
+                      <p className="party-round-table-score">{roundScore}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="surface-card p-4 sm:p-5 mb-4 w-full">
+                <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Total Scores</h3>
+                <div className="grid gap-2">
+                  {totalRows.map(({ member, totalScore }) => (
+                    <div key={`total-${member.id}`} className="party-score-row">
+                      <span>{member.name}</span>
+                      <span className="font-semibold">{totalScore}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {isHost ? (

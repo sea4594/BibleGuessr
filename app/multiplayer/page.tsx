@@ -12,6 +12,7 @@ import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings
 import { BookData } from '@/lib/bibleData';
 import { gameModes, GameModeId } from '@/lib/gameModes';
 import {
+  endPartyLobby,
   hostParty,
   joinParty,
   leaveParty,
@@ -117,6 +118,7 @@ export default function MultiplayerPage() {
   const [partyStartPending, setPartyStartPending] = useState(false);
   const [partyLobbyError, setPartyLobbyError] = useState('');
   const [partyLobbyPending, setPartyLobbyPending] = useState(false);
+  const [partyActionPending, setPartyActionPending] = useState(false);
   const suppressLobbyLeaveRef = useRef(false);
 
   const displayName = useMemo(() => {
@@ -366,6 +368,36 @@ export default function MultiplayerPage() {
     setActiveRoomCode(null);
   };
 
+  const handleLeaveLobby = async () => {
+    if (!activeRoomCode || !room || isHost || partyActionPending) return;
+
+    setPartyActionPending(true);
+    await leaveParty(activeRoomCode, partyMemberId);
+    setRoom(null);
+    setActiveRoomCode(null);
+    setPartyLobbyError('');
+    setPartyStartError('');
+    setPartyActionPending(false);
+  };
+
+  const handleEndLobby = async () => {
+    if (!activeRoomCode || !room || !isHost || partyActionPending) return;
+
+    setPartyActionPending(true);
+    const ok = await endPartyLobby(activeRoomCode, partyMemberId);
+    if (!ok) {
+      setPartyLobbyError('Unable to end the lobby. Please try again.');
+      setPartyActionPending(false);
+      return;
+    }
+
+    setRoom(null);
+    setActiveRoomCode(null);
+    setPartyLobbyError('');
+    setPartyStartError('');
+    setPartyActionPending(false);
+  };
+
   const switchTab = async (next: 'hot-seat' | 'party') => {
     if (tab === 'party' && next !== 'party' && activeRoomCode && room?.game?.status === 'lobby') {
       await leaveParty(activeRoomCode, partyMemberId);
@@ -520,7 +552,27 @@ export default function MultiplayerPage() {
               <div className="party-header-row mb-4">
                 <h2 className="headline-serif text-3xl">Hosted Party</h2>
                 <div className="party-header-actions">
-                  <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Enter code to join</button>
+                  {room && isCurrentMember ? (
+                    isHost ? (
+                      <button
+                        onClick={() => void handleEndLobby()}
+                        disabled={partyActionPending}
+                        className="btn-outline px-3 py-2 text-sm"
+                      >
+                        {partyActionPending ? 'Ending...' : 'End Lobby'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => void handleLeaveLobby()}
+                        disabled={partyActionPending}
+                        className="btn-outline px-3 py-2 text-sm"
+                      >
+                        {partyActionPending ? 'Leaving...' : 'Leave Lobby'}
+                      </button>
+                    )
+                  ) : (
+                    <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Enter code to join</button>
+                  )}
                 </div>
               </div>
               {!firebaseConfigured && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}

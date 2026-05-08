@@ -51,6 +51,18 @@ export interface PartySubmission {
   baseScore: number;
   submittedAt: number;
   wasBlankGuess?: boolean;
+  guess?: {
+    book: string;
+    chapter: number;
+    verse: number;
+  };
+  feedback?: {
+    book: 'correct' | 'close' | 'wrong';
+    chapter: 'correct' | 'close' | 'wrong';
+    verse: 'correct' | 'close' | 'wrong';
+    chaptersOff: number;
+    versesOff: number;
+  };
 }
 
 export interface StartPartyGameConfig {
@@ -479,6 +491,8 @@ export async function submitPartyRound(
           score: submission.score,
           baseScore: submission.baseScore,
           wasBlankGuess: submission.wasBlankGuess,
+          guess: submission.guess,
+          feedback: submission.feedback,
           submittedAt: Date.now(),
         },
       };
@@ -600,6 +614,32 @@ export async function hostReturnPartyToLobby(code: string, hostId: string): Prom
         updatedAt: serverTimestamp(),
         expiresAt: expiresAtFromNow(now),
       });
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function endPartyLobby(code: string, hostId: string): Promise<boolean> {
+  const db = getFirebaseDb();
+  if (!db) return false;
+  await ensureFirebaseSession();
+
+  const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(hostId);
+
+  try {
+    await runTransaction(db, async tx => {
+      const snapshot = await tx.get(ref);
+      if (!snapshot.exists()) throw new Error('Party not found');
+      if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
+
+      const room = snapshot.data() as PartyRoom;
+      if (room.hostId !== actorId) throw new Error('Only host can end lobby');
+
+      tx.delete(ref);
     });
 
     return true;

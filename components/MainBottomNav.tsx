@@ -16,9 +16,9 @@ function isActive(pathname: string, href: string) {
     return pathname === '/';
   }
   if (href === '/profile') {
-    return pathname === '/profile' || pathname === '/settings';
+    return pathname === '/profile' || pathname.startsWith('/profile/') || pathname === '/settings' || pathname.startsWith('/settings/');
   }
-  return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function MainBottomNav() {

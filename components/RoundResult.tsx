@@ -145,11 +145,13 @@ export default function RoundResult({
             <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Round Scores</h3>
             {groupedRoundRows ? groupedRoundRows.map(({ logicalRound, byPlayer }) => (
               <div key={logicalRound} className="border-t border-[var(--line)] first:border-0 py-2">
-                <div className="text-sm font-semibold mb-1">Round {logicalRound}</div>
-                {multiplayer?.players.map(player => (
-                  <div key={`${logicalRound}-${player}`} className="flex justify-between text-sm py-1">
+                <div className="text-xs uppercase tracking-[0.14em] content-muted mb-1">Round {logicalRound}</div>
+                {multiplayer?.players
+                  .filter(player => byPlayer.has(player))
+                  .map(player => (
+                  <div key={`${logicalRound}-${player}`} className="flex justify-between text-sm py-1 pl-4">
                     <span>{player}</span>
-                    <span className="font-semibold">{byPlayer.get(player) ?? 0}</span>
+                    <span className="font-semibold">{byPlayer.get(player)}</span>
                   </div>
                 ))}
               </div>

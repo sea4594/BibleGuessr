@@ -213,6 +213,7 @@ main,
   border: 1px solid var(--line);
   background: color-mix(in oklab, var(--panel-soft) 92%, transparent);
   overflow: hidden;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
 }
 
 .main-nav-icon {
@@ -230,8 +231,15 @@ main,
 
 .main-nav-item.active {
   color: var(--text-main);
-  border-color: color-mix(in oklab, var(--accent) 72%, var(--line));
-  background: color-mix(in oklab, var(--accent) 22%, var(--panel));
+  border-color: color-mix(in oklab, var(--accent) 86%, var(--line));
+  background: color-mix(in oklab, var(--accent) 34%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 88%, transparent), 0 4px 10px color-mix(in oklab, #000 18%, transparent);
+  transform: translateY(-1px);
+}
+
+.main-nav-item.active .main-nav-label,
+.main-nav-item.active .main-nav-icon {
+  color: var(--text-main);
 }
 
 .topbar {
@@ -1626,6 +1634,27 @@ input[type='range']::-moz-range-thumb {
   border-radius: 10px;
   padding: 10px 12px;
   background: color-mix(in oklab, var(--panel) 92%, transparent);
+}
+
+.party-round-table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: color-mix(in oklab, var(--panel) 92%, transparent);
+}
+
+.party-round-table-meta {
+  min-width: 0;
+}
+
+.party-round-table-score {
+  font-size: 1.25rem;
+  line-height: 1;
+  font-weight: 800;
 }
 
 @media (max-width: 960px) {
