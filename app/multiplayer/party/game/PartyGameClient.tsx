@@ -433,7 +433,6 @@ export default function PartyGameClient() {
                 {!mySubmission ? (
                   <>
                     <GuessInterface modeConfig={modeConfig} onSubmit={guess => void handleSubmitGuess(guess)} />
-                    <p className="content-muted text-xs mt-2">All players answer this round simultaneously.</p>
                   </>
                 ) : (
                   <section className="surface-card p-5 party-wait-card">
@@ -459,14 +458,13 @@ export default function PartyGameClient() {
 
           {game.status === 'round-complete' && (
             <section className="surface-card p-5 party-round-summary">
-              <h2 className="headline-serif text-3xl mb-2">Round {game.currentRound} Complete</h2>
+              <h2 className="headline-serif text-3xl mb-2">Round {game.currentRound}</h2>
               <section className="surface-card p-4 sm:p-5 mb-4 text-left w-full">
                 <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Round Verse</p>
                 <p className="text-base sm:text-lg leading-relaxed italic">&ldquo;{verse?.text}&rdquo;</p>
               </section>
 
               <section className="surface-card p-4 sm:p-5 mb-4 w-full">
-                <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Correct Reference</p>
                 <p className="text-center text-[2rem] sm:text-[2.7rem] lg:text-[3rem] font-black leading-[0.98]">
                   {verse?.book} {verse?.chapter}:{verse?.verse}
                 </p>
