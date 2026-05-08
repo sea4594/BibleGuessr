@@ -179,6 +179,16 @@ export default function MultiplayerPage() {
         return;
       }
 
+      const hasSession = await ensureFirebaseSession();
+      const authUid = getFirebaseAuth()?.currentUser?.uid;
+      if ((!hasSession && !authUid) && !user) {
+        if (!cancelled) {
+          setPartyLobbyPending(false);
+          setPartyLobbyError('Party hosting requires Firebase Authentication. Enable Anonymous sign-in in Firebase Auth (or log in with Google), then retry.');
+        }
+        return;
+      }
+
       const created = await hostParty({
         id: partyMemberId,
         name: displayName,
@@ -193,7 +203,12 @@ export default function MultiplayerPage() {
         setPartyLobbyError('');
         subscribeToRoom(created.code);
       } else if (!cancelled) {
-        setPartyLobbyError('Unable to create a party code right now. Tap retry.');
+        const hasAuthUser = Boolean(getFirebaseAuth()?.currentUser);
+        setPartyLobbyError(
+          hasAuthUser
+            ? 'Unable to create a party code. Firestore rules likely blocked write access to the parties collection.'
+            : 'Unable to create a party code. Firebase Authentication is required (enable Anonymous auth or sign in).'
+        );
       }
 
       if (!cancelled) setPartyLobbyPending(false);
@@ -208,7 +223,7 @@ export default function MultiplayerPage() {
         window.clearTimeout(retryTimer);
       }
     };
-  }, [tab, activeRoomCode, displayName, firebaseConfigured, partyMemberId, profile.avatar]);
+  }, [tab, activeRoomCode, displayName, firebaseConfigured, partyMemberId, profile.avatar, user]);
 
   useEffect(() => {
     if (tab !== 'party' || !firebaseConfigured || !activeRoomCode) return;
@@ -254,6 +269,13 @@ export default function MultiplayerPage() {
   const submitJoin = async () => {
     const code = joinCode.join('').toUpperCase();
     if (code.length !== 4 || !firebaseConfigured) return;
+
+    const hasSession = await ensureFirebaseSession();
+    const authUid = getFirebaseAuth()?.currentUser?.uid;
+    if ((!hasSession && !authUid) && !user) {
+      setPartyLobbyError('Joining a party requires Firebase Authentication. Enable Anonymous sign-in in Firebase Auth (or log in with Google).');
+      return;
+    }
 
     if (activeRoomCode && activeRoomCode !== code) {
       await leaveParty(activeRoomCode, partyMemberId);

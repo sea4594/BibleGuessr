@@ -90,11 +90,15 @@ export default function GamePage() {
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
   const [canStartRound, setCanStartRound] = useState(false);
+  const suppressEmptySessionRedirectRef = useRef(false);
   const timeoutSubmittedRef = useRef(false);
   const { openSettings } = useSettingsModal();
 
   useEffect(() => {
-    if (!session) router.replace('/');
+    if (!session) {
+      if (suppressEmptySessionRedirectRef.current) return;
+      router.replace('/');
+    }
   }, [session, router]);
 
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
@@ -337,8 +341,9 @@ export default function GamePage() {
   };
 
   const handleSelectGameMode = () => {
-    resetGame();
+    suppressEmptySessionRedirectRef.current = true;
     router.push('/multiplayer/hot-seat/gamemode');
+    resetGame();
   };
 
   const handlePlayAgain = () => {
@@ -435,7 +440,7 @@ export default function GamePage() {
             <div className="pause-overlay" onClick={e => e.stopPropagation()}>
               <div className="pause-card fade-up turn-gate-card">
                 <h2 className="headline-serif text-3xl mb-2">Pass device</h2>
-                <p className="content-muted mb-6">Start when ready for the next turn.</p>
+                <p className="content-muted mb-6">Pass the device to the next player.</p>
                 <button onClick={() => setCanStartRound(true)} className="btn-primary block w-full py-4 text-lg">
                   I&apos;m {currentPlayerName ?? 'Player'}
                 </button>

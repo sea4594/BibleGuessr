@@ -13,10 +13,11 @@ interface Props {
 }
 
 export default function GameSummary({ session, onPlayAgain, onHome, onSelectGameMode }: Props) {
-  const [selectedRoundIndex, setSelectedRoundIndex] = useState<number | null>(null);
+  const [selectedRoundSourceIndex, setSelectedRoundSourceIndex] = useState<number | null>(null);
   const totalScore = session.rounds.reduce((sum, r) => sum + r.score, 0);
   const maxPossible = session.totalRounds * 100;
   const accuracy = Math.round((totalScore / Math.max(maxPossible, 1)) * 100);
+  const isHotSeat = Boolean(session.multiplayer?.enabled && session.multiplayer?.lobbyType === 'hot-seat');
 
   const playerTotals = useMemo(() => {
     if (!session.multiplayer?.enabled) return [] as Array<{ player: string; score: number }>;
@@ -55,7 +56,47 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
       .map(([logicalRound, byPlayer]) => ({ logicalRound, byPlayer }));
   }, [session.multiplayer, session.rounds]);
 
-  const selectedRound = selectedRoundIndex === null ? null : session.rounds[selectedRoundIndex] ?? null;
+  const roundBreakdownRows = useMemo(() => {
+    if (!isHotSeat || !session.multiplayer?.enabled || session.multiplayer.players.length === 0) {
+      return session.rounds.map((round, idx) => ({
+        key: `round-${idx + 1}`,
+        displayRound: idx + 1,
+        sourceIndex: idx,
+        round,
+        score: round.score,
+      }));
+    }
+
+    const grouped = new Map<number, { sourceIndex: number; round: GameSession['rounds'][number]; score: number }>();
+
+    session.rounds.forEach((round, idx) => {
+      const logicalRound = session.multiplayer!.turnStyle === 'alternate'
+        ? Math.floor(idx / session.multiplayer!.players.length) + 1
+        : (idx % session.multiplayer!.roundsPerPlayer) + 1;
+
+      const existing = grouped.get(logicalRound);
+      if (!existing) {
+        grouped.set(logicalRound, { sourceIndex: idx, round, score: round.score });
+      } else {
+        existing.score += round.score;
+      }
+    });
+
+    return Array.from(grouped.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([displayRound, value]) => ({
+        key: `logical-round-${displayRound}`,
+        displayRound,
+        sourceIndex: value.sourceIndex,
+        round: value.round,
+        score: value.score,
+      }));
+  }, [isHotSeat, session.multiplayer, session.rounds]);
+
+  const selectedRound = selectedRoundSourceIndex === null ? null : session.rounds[selectedRoundSourceIndex] ?? null;
+  const selectedRoundRow = selectedRoundSourceIndex === null
+    ? null
+    : roundBreakdownRows.find(row => row.sourceIndex === selectedRoundSourceIndex) ?? null;
 
   useEffect(() => {
     addGameRecord({
@@ -82,15 +123,15 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
 
           <div className="surface-card p-4 sm:p-5 mb-4 w-full">
             <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Round Breakdown</h3>
-            {session.rounds.map((round, idx) => (
+            {roundBreakdownRows.map(row => (
               <button
-                key={idx}
-                onClick={() => setSelectedRoundIndex(idx)}
+                key={row.key}
+                onClick={() => setSelectedRoundSourceIndex(row.sourceIndex)}
                 className="summary-row border-t border-[var(--line)] first:border-0 w-full text-left hover:opacity-85 transition-opacity"
               >
-                <span className="summary-round">Round {idx + 1}</span>
-                <span className="summary-ref">{round.verse.book} {round.verse.chapter}:{round.verse.verse}</span>
-                <span className="summary-score">{round.score}</span>
+                <span className="summary-round">Round {row.displayRound}</span>
+                <span className="summary-ref">{row.round.verse.book} {row.round.verse.chapter}:{row.round.verse.verse}</span>
+                <span className="summary-score">{row.score}</span>
               </button>
             ))}
           </div>
@@ -116,29 +157,27 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
                   </div>
                 ))}
 
-                <div className="grid border-t border-[var(--line)] pt-2" style={{ gridTemplateColumns: `5.6rem repeat(${session.multiplayer?.players.length ?? 0}, minmax(0, 1fr))` }}>
-                  <div className="text-base font-extrabold">Total</div>
-                  {session.multiplayer?.players.map(player => (
-                    <div key={`total-${player}`} className="text-right text-base font-extrabold">{playerTotals.find(entry => entry.player === player)?.score ?? 0}</div>
-                  ))}
-                </div>
               </div>
             </div>
           )}
 
-          <div className="surface-card text-center mb-4 p-6 w-full">
-            <div className="text-[2.2rem] sm:text-[3.1rem] lg:text-[3.5rem] font-black leading-tight">
-              Total Score: {totalScore}
+          {!isHotSeat && (
+            <div className="surface-card text-center mb-4 p-6 w-full">
+              <div className="text-[2.2rem] sm:text-[3.1rem] lg:text-[3.5rem] font-black leading-tight">
+                Total Score: {totalScore}
+              </div>
             </div>
-          </div>
+          )}
 
           {playerTotals.length > 0 && (
             <div className="surface-card p-4 sm:p-5 mb-4 w-full">
-              <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Leaderboard</h3>
+              <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">
+                {isHotSeat ? 'FINAL SCORES' : 'Leaderboard'}
+              </h3>
               {playerTotals.map((entry, idx) => (
-                <div key={entry.player} className="flex items-center justify-between py-2.5 border-t border-[var(--line)] first:border-0">
-                  <span className="text-sm">{idx + 1}. {entry.player}</span>
-                  <span className="font-bold">{entry.score}</span>
+                <div key={entry.player} className="flex items-center justify-between py-3 border-t border-[var(--line)] first:border-0">
+                  <span className={isHotSeat ? 'text-base font-semibold' : 'text-sm'}>{idx + 1}. {entry.player}</span>
+                  <span className={isHotSeat ? 'text-xl font-black' : 'font-bold'}>{entry.score}</span>
                 </div>
               ))}
             </div>
@@ -167,13 +206,13 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
       </div>
 
       {selectedRound && (
-        <div className="pause-overlay" onClick={() => setSelectedRoundIndex(null)}>
+        <div className="pause-overlay" onClick={() => setSelectedRoundSourceIndex(null)}>
           <div className="pause-card fade-up text-left max-w-xl" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedRoundIndex(null)} className="pause-close-btn" aria-label="Close round details">
+            <button onClick={() => setSelectedRoundSourceIndex(null)} className="pause-close-btn" aria-label="Close round details">
               <X size={18} />
             </button>
 
-            <h2 className="headline-serif text-3xl mb-2">Round {selectedRoundIndex! + 1}</h2>
+            <h2 className="headline-serif text-3xl mb-2">Round {selectedRoundRow?.displayRound ?? 1}</h2>
             <p className="content-muted mb-3">{selectedRound.verse.book} {selectedRound.verse.chapter}:{selectedRound.verse.verse}</p>
             <p className="text-sm leading-relaxed mb-4 italic">&ldquo;{selectedRound.verse.text}&rdquo;</p>
 

@@ -17,7 +17,7 @@ export default function SectionModeListPage() {
             <p className="content-muted">Selecting one opens its setup page.</p>
           </section>
 
-          <section className="mode-grid">
+          <section className="menu-grid">
             {sectionModeIds.map(modeId => (
               <Link key={modeId} href={`/single-player/sections/${modeId}`} className="surface-card mode-card">
                 <p className="eyebrow">Category</p>
