@@ -271,9 +271,9 @@ export default function PartyGameClient() {
   };
 
   const handleExitParty = async () => {
-    if (!room || isHost) return;
+    if (!room) return;
 
-    const shouldLeave = window.confirm('Are you sure you want to leave the party?');
+    const shouldLeave = window.confirm('Are you sure you want to leave the lobby?');
     if (!shouldLeave) return;
 
     await leaveParty(room.code, partyMemberId);
@@ -394,11 +394,7 @@ export default function PartyGameClient() {
     <main className="app-screen game-shell">
       <header className="game-topbar">
         <div className="game-topbar-exit">
-          {!isHost ? (
-            <button onClick={() => void handleExitParty()} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
-          ) : (
-            <span className="topbar-placeholder" aria-hidden="true" />
-          )}
+          <button onClick={() => void handleExitParty()} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
         </div>
         <p className="game-topbar-round">
           {modeConfig.name} · Round {game.currentRound}/{game.totalRounds}
@@ -471,7 +467,7 @@ export default function PartyGameClient() {
 
               <section className="surface-card p-4 sm:p-5 mb-4 w-full">
                 <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Correct Reference</p>
-                <p className="text-center text-[2.4rem] sm:text-[3.3rem] lg:text-[3.8rem] font-black leading-[0.98]">
+                <p className="text-center text-[2rem] sm:text-[2.7rem] lg:text-[3rem] font-black leading-[0.98]">
                   {verse?.book} {verse?.chapter}:{verse?.verse}
                 </p>
               </section>

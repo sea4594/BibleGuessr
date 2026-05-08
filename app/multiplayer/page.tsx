@@ -548,12 +548,11 @@ export default function MultiplayerPage() {
           )}
 
           {tab === 'party' && (
-            <section className="surface-card p-5">
+            <section className="surface-card p-4">
               <div className="party-header-row mb-4">
-                <h2 className="headline-serif text-3xl">Hosted Party</h2>
                 <div className="party-header-actions">
                   {room && isCurrentMember ? (
-                    isHost ? (
+                    isHost && room.members.length > 1 ? (
                       <button
                         onClick={() => void handleEndLobby()}
                         disabled={partyActionPending}
@@ -561,7 +560,7 @@ export default function MultiplayerPage() {
                       >
                         {partyActionPending ? 'Ending...' : 'End Lobby'}
                       </button>
-                    ) : (
+                    ) : !isHost ? (
                       <button
                         onClick={() => void handleLeaveLobby()}
                         disabled={partyActionPending}
@@ -569,6 +568,8 @@ export default function MultiplayerPage() {
                       >
                         {partyActionPending ? 'Leaving...' : 'Leave Lobby'}
                       </button>
+                    ) : (
+                      <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Enter code to join</button>
                     )
                   ) : (
                     <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Enter code to join</button>
@@ -587,12 +588,12 @@ export default function MultiplayerPage() {
               )}
               {firebaseConfigured && room && (
                 <>
-                  <div className="text-center mb-4">
+                  <div className="text-center mb-3">
                     <p className="content-muted text-sm">Party Code</p>
-                    <p className="headline-serif text-5xl tracking-[0.2em] mt-1">{room.code}</p>
+                    <p className="headline-serif text-4xl tracking-[0.18em] mt-1">{room.code}</p>
                   </div>
 
-                  <div className="party-members-block mb-4">
+                  <div className="party-members-block mb-3">
                     <p className="font-semibold mb-2">Party Members</p>
                     <div className="grid gap-2">
                       {room.members.map(member => (
@@ -614,11 +615,11 @@ export default function MultiplayerPage() {
                     </div>
                   </div>
 
-                  <div className="party-host-controls mb-4">
+                  <div className="party-host-controls mb-3">
                     <p className="eyebrow mb-2">Party Settings</p>
 
                     <label className="text-sm font-semibold block mb-1">Game Mode</label>
-                    <div className="party-gamemode-row mb-3">
+                    <div className={`party-gamemode-row mb-3 ${lobbySettings?.modeId === 'book-selection' ? 'has-book' : ''}`}>
                       <select
                         value={lobbySettings?.modeId ?? ''}
                         onChange={e => {

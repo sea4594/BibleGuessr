@@ -1594,6 +1594,23 @@ input[type='range']::-moz-range-thumb {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  width: 100%;
+}
+
+.party-gamemode-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.party-gamemode-row.has-book {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.party-gamemode-select,
+.party-book-select {
+  width: 100% !important;
 }
 
 .party-members-block {
