@@ -83,6 +83,8 @@ export default function MultiplayerPage() {
   const clientId = useMemo(() => readClientId(), []);
   const [partyStartError, setPartyStartError] = useState('');
   const [partyStartPending, setPartyStartPending] = useState(false);
+  const [partyLobbyError, setPartyLobbyError] = useState('');
+  const [partyLobbyPending, setPartyLobbyPending] = useState(false);
 
   const displayName = useMemo(() => {
     const accountName = user?.displayName?.trim();
@@ -128,6 +130,7 @@ export default function MultiplayerPage() {
     if (tab !== 'party' || !firebaseConfigured) return;
     let unsubscribe: () => void = () => {};
     let cancelled = false;
+    let retryTimer: number | null = null;
 
     const subscribeToRoom = (code: string) => {
       unsubscribe = subscribeToParty(code, next => {
@@ -135,13 +138,25 @@ export default function MultiplayerPage() {
         setRoom(next);
         if (!next) {
           setActiveRoomCode(null);
+          setPartyLobbyError('Party lobby unavailable. Recreating your code...');
+          if (!retryTimer) {
+            retryTimer = window.setTimeout(() => {
+              retryTimer = null;
+              setActiveRoomCode(null);
+            }, 500);
+          }
+          return;
         }
+
+        setPartyLobbyError('');
       });
     };
 
     const run = async () => {
+      setPartyLobbyPending(true);
       if (activeRoomCode) {
         subscribeToRoom(activeRoomCode);
+        setPartyLobbyPending(false);
         return;
       }
 
@@ -156,8 +171,13 @@ export default function MultiplayerPage() {
       if (!cancelled && created) {
         setActiveRoomCode(created.code);
         setRoom(created);
+        setPartyLobbyError('');
         subscribeToRoom(created.code);
+      } else if (!cancelled) {
+        setPartyLobbyError('Unable to create a party code right now. Tap retry.');
       }
+
+      if (!cancelled) setPartyLobbyPending(false);
     };
 
     void run();
@@ -165,6 +185,9 @@ export default function MultiplayerPage() {
     return () => {
       cancelled = true;
       unsubscribe();
+      if (retryTimer) {
+        window.clearTimeout(retryTimer);
+      }
     };
   }, [tab, activeRoomCode, clientId, displayName, firebaseConfigured, profile.avatar]);
 
@@ -219,11 +242,20 @@ export default function MultiplayerPage() {
 
     const ok = await joinParty(code, { id: clientId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: Date.now() });
     if (ok) {
+      setPartyLobbyError('');
       setPartyStartError('');
       setJoinOpen(false);
       setJoinCode(['', '', '', '']);
       setActiveRoomCode(code);
+    } else {
+      setPartyLobbyError('Could not join that party code. Check the code and try again.');
     }
+  };
+
+  const retryPartyCode = () => {
+    setPartyLobbyError('');
+    setRoom(null);
+    setActiveRoomCode(null);
   };
 
   const applyLobbySettings = async (updates: Partial<PartyLobbySettings>) => {
@@ -339,7 +371,15 @@ export default function MultiplayerPage() {
                 </div>
               </div>
               {!firebaseConfigured && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
-              {firebaseConfigured && !room && <div className="surface-card-soft p-4 text-sm">Preparing your party code…</div>}
+              {firebaseConfigured && !room && (
+                <div className="surface-card-soft p-4 text-sm">
+                  <p>{partyLobbyPending ? 'Preparing your party code…' : 'Creating your party lobby...'}</p>
+                  {partyLobbyError && <p className="text-[var(--danger)] mt-2">{partyLobbyError}</p>}
+                  {!partyLobbyPending && (
+                    <button onClick={retryPartyCode} className="btn-outline px-3 py-1.5 text-sm mt-3">Retry</button>
+                  )}
+                </div>
+              )}
               {firebaseConfigured && room && (
                 <>
                   <div className="text-center mb-4">

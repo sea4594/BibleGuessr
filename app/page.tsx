@@ -74,8 +74,8 @@ export default function HomePage() {
   return (
     <main className="app-screen fade-up">
       <AppTopBar title="BibleGuessr" />
-      <div className="app-content app-content-scroll">
-        <div className="page max-w-xl setup-page min-w-0">
+      <div className="app-content app-content-fixed">
+        <div className="page max-w-xl setup-page home-page min-w-0">
           <section className="surface-card p-5 min-w-0">
             <p className="eyebrow mb-2">(random) VERSE OF THE DAY</p>
             {loadingVerse ? (
@@ -92,7 +92,7 @@ export default function HomePage() {
             )}
           </section>
 
-          <div className="mt-auto grid gap-3">
+          <div className="home-quickplay-stack grid gap-3">
             <section className="surface-card p-5 min-w-0">
               <p className="eyebrow mb-2">QUICK PLAY</p>
 

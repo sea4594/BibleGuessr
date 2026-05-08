@@ -1156,6 +1156,13 @@ input[type='range']::-moz-range-thumb {
   overflow-x: hidden;
   padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
 }
+.home-page {
+  justify-content: flex-start;
+}
+.home-quickplay-stack {
+  margin-top: auto;
+  margin-bottom: 2px;
+}
 .setup-title {
   margin-top: 2px;
   margin-bottom: 4px;
@@ -1300,23 +1307,24 @@ input[type='range']::-moz-range-thumb {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .verse-display-wrap {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 .verse-scroll-area {
-  flex: 0 1 auto;
+  flex: 1;
   min-height: 0;
-  max-height: min(58dvh, 520px);
   overflow: hidden;
 }
 
 .verse-scroll-area > .surface-card {
-  max-height: min(58dvh, 520px);
+  height: 100%;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }

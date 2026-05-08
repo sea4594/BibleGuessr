@@ -6,6 +6,7 @@ import {
   GoogleAuthProvider,
   onAuthStateChanged,
   setPersistence,
+  signInAnonymously,
   signInWithPopup,
   signInWithRedirect,
   signOut,
@@ -47,6 +48,7 @@ export const firebaseEnabled = Boolean(
 );
 
 let persistenceReadyPromise: Promise<void> | null = null;
+let anonymousSignInPromise: Promise<boolean> | null = null;
 
 export function isFirebaseConfigured() {
   return firebaseEnabled;
@@ -78,6 +80,22 @@ export function getFirebaseDb() {
 
 export function getGoogleProvider() {
   return provider;
+}
+
+export async function ensureFirebaseSession(): Promise<boolean> {
+  if (!firebaseEnabled || !auth) return false;
+  if (auth.currentUser) return true;
+
+  if (!anonymousSignInPromise) {
+    anonymousSignInPromise = signInAnonymously(auth)
+      .then(() => true)
+      .catch(() => false)
+      .finally(() => {
+        anonymousSignInPromise = null;
+      });
+  }
+
+  return anonymousSignInPromise;
 }
 
 export const app: FirebaseApp | null = getFirebaseApp();

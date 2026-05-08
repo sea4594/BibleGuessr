@@ -5,7 +5,7 @@ import {
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
-import { getFirebaseDb } from './firebaseClient';
+import { ensureFirebaseSession, getFirebaseDb } from './firebaseClient';
 import type { AvatarSpec } from './avatarSystem';
 import { gameModes, type GameModeId } from './gameModes';
 
@@ -173,6 +173,8 @@ function mergeLobbySettings(current: PartyLobbySettings, incoming: Partial<Party
 export async function createUniquePartyCode(): Promise<string | null> {
   const db = getFirebaseDb();
   if (!db) return null;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return null;
 
   for (let attempt = 0; attempt < 30; attempt++) {
     const code = generateCode();
@@ -189,6 +191,8 @@ export async function createUniquePartyCode(): Promise<string | null> {
 export async function hostParty(host: PartyMember): Promise<PartyRoom | null> {
   const db = getFirebaseDb();
   if (!db) return null;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return null;
 
   for (let attempt = 0; attempt < 30; attempt++) {
     const code = generateCode();
@@ -233,6 +237,8 @@ export async function hostParty(host: PartyMember): Promise<PartyRoom | null> {
 export async function joinParty(code: string, member: PartyMember): Promise<boolean> {
   const db = getFirebaseDb();
   if (!db) return false;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return false;
 
   const ref = doc(db, 'parties', code);
 
@@ -268,6 +274,8 @@ export async function joinParty(code: string, member: PartyMember): Promise<bool
 export async function upsertPartyMember(code: string, member: PartyMember): Promise<boolean> {
   const db = getFirebaseDb();
   if (!db) return false;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return false;
 
   const ref = doc(db, 'parties', code);
 
@@ -314,6 +322,8 @@ function initialScoresByMember(members: PartyMember[]) {
 export async function startPartyGame(code: string, hostId: string, config: StartPartyGameConfig): Promise<boolean> {
   const db = getFirebaseDb();
   if (!db) return false;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return false;
 
   const ref = doc(db, 'parties', code);
   const now = Date.now();
@@ -372,6 +382,8 @@ export async function submitPartyRound(
 ): Promise<boolean> {
   const db = getFirebaseDb();
   if (!db) return false;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return false;
 
   const ref = doc(db, 'parties', code);
 
@@ -440,6 +452,8 @@ export async function hostAdvancePartyRound(
 ): Promise<boolean> {
   const db = getFirebaseDb();
   if (!db) return false;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return false;
 
   const ref = doc(db, 'parties', code);
 
@@ -501,6 +515,8 @@ export async function updatePartyLobbySettings(
 ): Promise<boolean> {
   const db = getFirebaseDb();
   if (!db) return false;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return false;
 
   const ref = doc(db, 'parties', code);
 
@@ -536,28 +552,36 @@ export function subscribeToParty(code: string, onUpdate: (room: PartyRoom | null
     return () => undefined;
   }
 
-  return onSnapshot(ref, snapshot => {
-    if (!snapshot.exists()) {
-      onUpdate(null);
-      return;
-    }
+  return onSnapshot(
+    ref,
+    snapshot => {
+      if (!snapshot.exists()) {
+        onUpdate(null);
+        return;
+      }
 
-    const data = snapshot.data() as PartyRoom;
-    if (isRoomExpired(data)) {
-      onUpdate(null);
-      return;
-    }
+      const data = snapshot.data() as PartyRoom;
+      if (isRoomExpired(data)) {
+        onUpdate(null);
+        return;
+      }
 
-    onUpdate({
-      ...data,
-      lobbySettings: normalizeLobbySettings(data.lobbySettings),
-    });
-  });
+      onUpdate({
+        ...data,
+        lobbySettings: normalizeLobbySettings(data.lobbySettings),
+      });
+    },
+    () => {
+      onUpdate(null);
+    }
+  );
 }
 
 export async function leaveParty(code: string, memberId: string) {
   const db = getFirebaseDb();
   if (!db) return;
+  const sessionReady = await ensureFirebaseSession();
+  if (!sessionReady) return;
 
   const ref = doc(db, 'parties', code);
 
