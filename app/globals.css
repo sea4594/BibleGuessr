@@ -433,6 +433,7 @@ input:not([type='range']) {
 .mode-card,
 .menu-card {
   padding: 14px;
+  cursor: pointer;
 }
 
 .mode-grid > .mode-card {
@@ -455,6 +456,12 @@ input:not([type='range']) {
   display: block;
   color: inherit;
   text-decoration: none;
+}
+
+.mode-card-selected {
+  border-color: color-mix(in oklab, var(--accent) 78%, var(--line));
+  background: color-mix(in oklab, var(--accent) 18%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 52%, transparent), var(--shadow);
 }
 
 .theme-option {

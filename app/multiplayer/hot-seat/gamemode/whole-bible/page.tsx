@@ -1,41 +1,33 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import AppTopBar from '@/components/AppTopBar';
-import HorizontalWheel from '@/components/HorizontalWheel';
-import TimerSetupControls from '@/components/TimerSetupControls';
 import { useGame } from '@/lib/gameContext';
 import { gameModes } from '@/lib/gameModes';
-import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
+import { readHotSeatSettings } from '@/lib/hotSeatSettings';
 import { toTimerDurationSeconds } from '@/lib/timerOptions';
 
 const MODE = gameModes['full-bible'];
-const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export default function HotSeatWholeBiblePage() {
   const router = useRouter();
   const { startGame } = useGame();
-  const [rounds, setRounds] = useState(1);
-  const initialSettings = readHotSeatSettings();
-  const [timerMinutes, setTimerMinutes] = useState(initialSettings.timerMinutes);
-  const [timerSeconds, setTimerSeconds] = useState(initialSettings.timerSeconds);
 
   const handleStart = () => {
     const settings = readHotSeatSettings();
     const players = settings.names.slice(0, settings.players).map((name, idx) => name || `Player ${idx + 1}`);
-    writeHotSeatSettings({ ...settings, timerMinutes, timerSeconds });
+
     startGame({
       mode: 'full-bible',
       modeConfig: MODE,
-      totalRounds: settings.players * rounds,
-      timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
+      totalRounds: settings.players * settings.rounds,
+      timerDurationSeconds: toTimerDurationSeconds(settings.timerMinutes, settings.timerSeconds),
       returnPath: '/multiplayer/hot-seat/gamemode',
       multiplayer: {
         enabled: true,
         lobbyType: 'hot-seat',
         players,
-        roundsPerPlayer: rounds,
+        roundsPerPlayer: settings.rounds,
         turnStyle: settings.turnStyle,
       },
     });
@@ -51,17 +43,9 @@ export default function HotSeatWholeBiblePage() {
 
           <section className="setup-panel">
             <div className="setup-panel-section">
-              <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
-            </div>
-
-            <div className="setup-panel-section">
-              <TimerSetupControls
-                embedded
-                minutes={timerMinutes}
-                seconds={timerSeconds}
-                onMinutesChange={setTimerMinutes}
-                onSecondsChange={setTimerSeconds}
-              />
+              <p className="content-muted">
+                Start with your saved Hot Seat setup values for players, rounds per player, and timer.
+              </p>
             </div>
           </section>
 

@@ -11,11 +11,6 @@ export default function HotSeatSectionsPage() {
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-4xl">
-          <section className="surface-card p-5">
-            <h1 className="headline-serif text-3xl mb-2">Category</h1>
-            <p className="content-muted">Pick a category and start with Hot Seat settings.</p>
-          </section>
-
           <section className="mode-grid">
             {sectionModeIds.map(modeId => (
               <Link
