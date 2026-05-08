@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import HorizontalWheel from '@/components/HorizontalWheel';
@@ -413,6 +414,38 @@ export default function MultiplayerPage() {
     router.push(`/multiplayer/party/game?code=${room.code}`);
   };
 
+  const joinModal = joinOpen && typeof window !== 'undefined'
+    ? createPortal(
+      <div className="party-join-modal-backdrop" onClick={() => setJoinOpen(false)}>
+        <div className="party-join-modal-card" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => setJoinOpen(false)}
+            className="party-join-modal-close"
+            aria-label="Close join code dialog"
+          >
+            x
+          </button>
+          <h3 className="headline-serif text-2xl mb-4">Enter 4-letter code</h3>
+          <div className="grid grid-cols-4 gap-2 mb-5">
+            {joinCode.map((value, idx) => (
+              <input key={idx} ref={el => { joinRefs.current[idx] = el; }} value={value} maxLength={1} onChange={e => {
+                const char = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '');
+                const next = joinCode.slice();
+                next[idx] = char;
+                setJoinCode(next);
+                if (char && idx < 3) joinRefs.current[idx + 1]?.focus();
+              }} className="settings-input !w-full text-center text-2xl font-bold" inputMode="text" />
+            ))}
+          </div>
+          <div>
+            <button onClick={() => void submitJoin()} className="btn-primary w-full py-2.5">Join</button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+    : null;
+
   return (
     <main className="app-screen">
       <AppTopBar title="Multiplayer" />
@@ -616,34 +649,7 @@ export default function MultiplayerPage() {
         </div>
       </div>
 
-      {joinOpen && (
-        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center z-50 px-4" onClick={() => setJoinOpen(false)}>
-          <div className="surface-card w-full max-w-sm p-5 relative" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => setJoinOpen(false)}
-              className="btn-ghost p-1.5 absolute right-3 top-3"
-              aria-label="Close join code dialog"
-            >
-              ✕
-            </button>
-            <h3 className="headline-serif text-2xl mb-4">Enter 4-letter code</h3>
-            <div className="grid grid-cols-4 gap-2 mb-5">
-              {joinCode.map((value, idx) => (
-                <input key={idx} ref={el => { joinRefs.current[idx] = el; }} value={value} maxLength={1} onChange={e => {
-                  const char = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '');
-                  const next = joinCode.slice();
-                  next[idx] = char;
-                  setJoinCode(next);
-                  if (char && idx < 3) joinRefs.current[idx + 1]?.focus();
-                }} className="settings-input !w-full text-center text-2xl font-bold" inputMode="text" />
-              ))}
-            </div>
-            <div>
-              <button onClick={() => void submitJoin()} className="btn-primary w-full py-2.5">Join</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {joinModal}
       <MainBottomNav />
     </main>
   );
