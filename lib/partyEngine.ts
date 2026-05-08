@@ -31,6 +31,7 @@ export interface PartyRoom {
 
 export interface PartyLobbySettings {
   modeId: GameModeId | null;
+  selectedBook: string | null;
   roundsPerPlayer: number | null;
   timerDurationSeconds: number | null;
 }
@@ -55,12 +56,14 @@ export interface StartPartyGameConfig {
   modeId: GameModeId;
   roundsPerPlayer: number;
   timerDurationSeconds: number;
+  selectedBook?: string;
   firstVerse: PartyVerse;
 }
 
 export interface PartyGameState {
   status: 'lobby' | 'in-round' | 'round-complete' | 'finished';
   modeId: GameModeId;
+  selectedBook?: string;
   roundsPerPlayer: number;
   totalRounds: number;
   timerDurationSeconds: number;
@@ -142,8 +145,7 @@ function isRoomExpired(data: unknown) {
 }
 
 function isSelectablePartyMode(modeId: string): modeId is GameModeId {
-  if (!(modeId in gameModes)) return false;
-  return !gameModes[modeId as GameModeId].isSingleBook;
+  return modeId in gameModes;
 }
 
 function clampRoundsPerPlayer(value: number | null): number | null {
@@ -160,6 +162,7 @@ function clampPartyTimerDurationSeconds(value: number | null): number | null {
 function makeDefaultLobbySettings(): PartyLobbySettings {
   return {
     modeId: null,
+    selectedBook: null,
     roundsPerPlayer: null,
     timerDurationSeconds: null,
   };
@@ -169,12 +172,14 @@ function normalizeLobbySettings(raw: unknown): PartyLobbySettings {
   if (!raw || typeof raw !== 'object') return makeDefaultLobbySettings();
   const value = raw as {
     modeId?: unknown;
+    selectedBook?: unknown;
     roundsPerPlayer?: unknown;
     timerDurationSeconds?: unknown;
   };
 
   return {
     modeId: typeof value.modeId === 'string' && isSelectablePartyMode(value.modeId) ? value.modeId : null,
+    selectedBook: typeof value.selectedBook === 'string' && value.selectedBook.trim() ? value.selectedBook : null,
     roundsPerPlayer: clampRoundsPerPlayer(
       typeof value.roundsPerPlayer === 'number' ? value.roundsPerPlayer : null
     ),
@@ -193,6 +198,12 @@ function mergeLobbySettings(current: PartyLobbySettings, incoming: Partial<Party
         ? incoming.modeId
         : current.modeId;
 
+  const nextSelectedBook = incoming.selectedBook === undefined
+    ? current.selectedBook
+    : incoming.selectedBook && incoming.selectedBook.trim()
+      ? incoming.selectedBook
+      : null;
+
   const nextRounds = incoming.roundsPerPlayer === undefined
     ? current.roundsPerPlayer
     : clampRoundsPerPlayer(incoming.roundsPerPlayer);
@@ -203,6 +214,7 @@ function mergeLobbySettings(current: PartyLobbySettings, incoming: Partial<Party
 
   return {
     modeId: nextMode,
+    selectedBook: nextMode === 'book-selection' ? nextSelectedBook : null,
     roundsPerPlayer: nextRounds,
     timerDurationSeconds: nextTimer,
   } satisfies PartyLobbySettings;
@@ -397,6 +409,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
       const gameState: PartyGameState = {
         status: 'in-round',
         modeId: config.modeId,
+        ...(config.selectedBook ? { selectedBook: config.selectedBook } : {}),
         roundsPerPlayer: safeRounds,
         totalRounds: safeRounds,
         timerDurationSeconds: safeTimer,
@@ -415,6 +428,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
         game: gameState,
         lobbySettings: {
           modeId: config.modeId,
+          selectedBook: config.modeId === 'book-selection' ? (config.selectedBook ?? null) : null,
           roundsPerPlayer: safeRounds,
           timerDurationSeconds: safeTimer,
         },

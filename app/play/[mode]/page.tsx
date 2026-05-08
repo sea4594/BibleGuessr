@@ -8,7 +8,7 @@ import { useUiSettings } from '@/lib/uiSettingsContext';
 import AppTopBar from '@/components/AppTopBar';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
-import { DEFAULT_TIMER_MINUTES, DEFAULT_TIMER_SECONDS, toTimerDurationSeconds } from '@/lib/timerOptions';
+import { DEFAULT_TIMER_SECONDS, toTimerDurationSeconds } from '@/lib/timerOptions';
 
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
@@ -21,7 +21,6 @@ export default function ModePage() {
   const modeConfig = gameModes[modeId];
   const [rounds, setRounds] = useState<number>(settings.preferredRounds);
   const [selectedBook, setSelectedBook] = useState(bibleData[0].book);
-  const [timerMinutes, setTimerMinutes] = useState(DEFAULT_TIMER_MINUTES);
   const [timerSeconds, setTimerSeconds] = useState(DEFAULT_TIMER_SECONDS);
 
 
@@ -42,7 +41,7 @@ export default function ModePage() {
       mode: modeId,
       modeConfig: bookForMode,
       totalRounds: rounds,
-      timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
+      timerDurationSeconds: toTimerDurationSeconds(timerSeconds),
       selectedBook: modeConfig.isSingleBook ? selectedBook : undefined,
     });
     router.push(`/play/${modeId}/game`);
@@ -80,9 +79,7 @@ export default function ModePage() {
         <div className="setup-panel-section">
           <TimerSetupControls
             embedded
-            minutes={timerMinutes}
             seconds={timerSeconds}
-            onMinutesChange={setTimerMinutes}
             onSecondsChange={setTimerSeconds}
           />
         </div>

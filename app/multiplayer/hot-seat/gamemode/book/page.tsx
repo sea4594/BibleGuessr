@@ -23,7 +23,7 @@ export default function HotSeatBookModePage() {
       mode: 'book-selection',
       modeConfig: { ...gameModes['book-selection'], books: [selected] },
       totalRounds: settings.players * settings.rounds,
-      timerDurationSeconds: toTimerDurationSeconds(settings.timerMinutes, settings.timerSeconds),
+      timerDurationSeconds: toTimerDurationSeconds(settings.timerSeconds),
       selectedBook: selected.book,
       returnPath: '/multiplayer/hot-seat/gamemode',
       multiplayer: {

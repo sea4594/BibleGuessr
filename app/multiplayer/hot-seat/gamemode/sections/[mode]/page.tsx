@@ -36,7 +36,7 @@ export default function HotSeatSectionSetupPage() {
       mode: modeId,
       modeConfig: mode,
       totalRounds: settings.players * settings.rounds,
-      timerDurationSeconds: toTimerDurationSeconds(settings.timerMinutes, settings.timerSeconds),
+      timerDurationSeconds: toTimerDurationSeconds(settings.timerSeconds),
       returnPath: '/multiplayer/hot-seat/gamemode',
       multiplayer: {
         enabled: true,

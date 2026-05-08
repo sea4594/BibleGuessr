@@ -53,7 +53,7 @@ export default function HotSeatGamemodePage() {
       mode: 'full-bible',
       modeConfig: gameModes['full-bible'],
       totalRounds: settings.players * settings.rounds,
-      timerDurationSeconds: toTimerDurationSeconds(settings.timerMinutes, settings.timerSeconds),
+      timerDurationSeconds: toTimerDurationSeconds(settings.timerSeconds),
       returnPath: '/multiplayer/hot-seat/gamemode',
       multiplayer: {
         enabled: true,

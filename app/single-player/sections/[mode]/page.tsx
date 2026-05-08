@@ -7,7 +7,7 @@ import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
 import { useGame } from '@/lib/gameContext';
 import { gameModes, GameModeId, sectionModeIds } from '@/lib/gameModes';
-import { DEFAULT_TIMER_MINUTES, DEFAULT_TIMER_SECONDS, toTimerDurationSeconds } from '@/lib/timerOptions';
+import { DEFAULT_TIMER_SECONDS, toTimerDurationSeconds } from '@/lib/timerOptions';
 
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -16,7 +16,6 @@ export default function SectionSetupPage() {
   const router = useRouter();
   const { startGame } = useGame();
   const [rounds, setRounds] = useState(5);
-  const [timerMinutes, setTimerMinutes] = useState(DEFAULT_TIMER_MINUTES);
   const [timerSeconds, setTimerSeconds] = useState(DEFAULT_TIMER_SECONDS);
   const modeId = params.mode as GameModeId;
 
@@ -40,7 +39,7 @@ export default function SectionSetupPage() {
       mode: modeId,
       modeConfig: mode,
       totalRounds: rounds,
-      timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
+      timerDurationSeconds: toTimerDurationSeconds(timerSeconds),
       returnPath: '/single-player/sections',
     });
     router.push(`/play/${modeId}/game`);
@@ -62,9 +61,7 @@ export default function SectionSetupPage() {
             <div className="setup-panel-section">
               <TimerSetupControls
                 embedded
-                minutes={timerMinutes}
                 seconds={timerSeconds}
-                onMinutesChange={setTimerMinutes}
                 onSecondsChange={setTimerSeconds}
               />
             </div>

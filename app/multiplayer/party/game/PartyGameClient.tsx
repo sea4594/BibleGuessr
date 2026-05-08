@@ -14,7 +14,7 @@ import {
 import { ensureFirebaseSession, getFirebaseAuth } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { gameModes } from '@/lib/gameModes';
-import { BookData } from '@/lib/bibleData';
+import { bibleData, BookData } from '@/lib/bibleData';
 import { calculateScore } from '@/lib/scoring';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 
@@ -67,6 +67,7 @@ export default function PartyGameClient() {
   const [isAdvancing, setIsAdvancing] = useState(false);
 
   const timeoutSubmittedRoundRef = useRef<number | null>(null);
+  const localRoundSeenRef = useRef<{ round: number; seenAt: number } | null>(null);
 
   useEffect(() => {
     if (!code) return;
@@ -104,11 +105,38 @@ export default function PartyGameClient() {
 
   const modeConfig = useMemo(() => {
     if (!game) return null;
-    return gameModes[game.modeId] ?? null;
+    const baseMode = gameModes[game.modeId] ?? null;
+    if (!baseMode) return null;
+
+    if (game.modeId === 'book-selection' && game.selectedBook) {
+      const selectedBookData = bibleData.find(book => book.book === game.selectedBook);
+      if (selectedBookData) {
+        return {
+          ...baseMode,
+          books: [selectedBookData],
+        };
+      }
+    }
+
+    return baseMode;
   }, [game]);
 
   const verse = game?.roundVerse ?? null;
   const mySubmission = game?.submissions?.[partyMemberId] ?? null;
+
+  useEffect(() => {
+    if (!game || game.status !== 'in-round') {
+      localRoundSeenRef.current = null;
+      return;
+    }
+
+    if (!localRoundSeenRef.current || localRoundSeenRef.current.round !== game.currentRound) {
+      localRoundSeenRef.current = {
+        round: game.currentRound,
+        seenAt: Date.now(),
+      };
+    }
+  }, [game, game?.currentRound, game?.status]);
 
   useEffect(() => {
     if (!game || game.status !== 'in-round') {
@@ -118,7 +146,13 @@ export default function PartyGameClient() {
 
     const tick = () => {
       const elapsed = Math.floor((Date.now() - game.roundStartedAt) / 1000);
-      const next = Math.max(0, game.timerDurationSeconds - elapsed);
+      const localSeenAt = localRoundSeenRef.current?.round === game.currentRound
+        ? localRoundSeenRef.current.seenAt
+        : Date.now();
+      const localElapsed = Math.floor((Date.now() - localSeenAt) / 1000);
+      const sharedRemaining = game.timerDurationSeconds - elapsed;
+      const localRemaining = game.timerDurationSeconds - localElapsed;
+      const next = Math.max(0, Math.max(sharedRemaining, localRemaining));
       setRemainingSeconds(next);
     };
 
@@ -146,7 +180,12 @@ export default function PartyGameClient() {
     if (!game || !verse || !modeConfig) return;
     if (game.status !== 'in-round') return;
     if (mySubmission) return;
-    if (remainingSeconds > 0) return;
+    const secondsLeftNow = Math.max(0, game.timerDurationSeconds - Math.floor((Date.now() - game.roundStartedAt) / 1000));
+    const localSeenAt = localRoundSeenRef.current?.round === game.currentRound
+      ? localRoundSeenRef.current.seenAt
+      : Date.now();
+    const locallyExpired = (Date.now() - localSeenAt) >= game.timerDurationSeconds * 1000;
+    if (secondsLeftNow > 0 || !locallyExpired) return;
     if (timeoutSubmittedRoundRef.current === game.currentRound) return;
 
     timeoutSubmittedRoundRef.current = game.currentRound;
@@ -228,7 +267,7 @@ export default function PartyGameClient() {
             <section className="surface-card p-5">
               <p className="font-semibold mb-2">No active party game.</p>
               <p className="content-muted text-sm mb-4">Have the host start a game from the Party tab in Multiplayer.</p>
-              <button onClick={() => router.push('/multiplayer')} className="btn-primary px-4 py-2">Go to Multiplayer</button>
+              <button onClick={() => router.push(code ? `/multiplayer?tab=party&code=${code}` : '/multiplayer?tab=party')} className="btn-primary px-4 py-2">Go to Multiplayer</button>
             </section>
           </div>
         </div>
@@ -243,7 +282,7 @@ export default function PartyGameClient() {
     <main className="app-screen game-shell">
       <header className="game-topbar">
         <div className="game-topbar-exit">
-          <button onClick={() => router.push('/multiplayer')} className="btn-outline px-3 py-1.5 text-sm">Back</button>
+          <button onClick={() => router.push(`/multiplayer?tab=party&code=${room.code}`)} className="btn-outline px-3 py-1.5 text-sm">Back</button>
         </div>
         <p className="game-topbar-round">
           {modeConfig.name} · Round {game.currentRound}/{game.totalRounds}
@@ -355,7 +394,7 @@ export default function PartyGameClient() {
                   ))}
               </div>
 
-              <button onClick={() => router.push('/multiplayer')} className="btn-primary w-full py-3 text-lg">
+              <button onClick={() => router.push(`/multiplayer?tab=party&code=${room.code}`)} className="btn-primary w-full py-3 text-lg">
                 Back to Party Lobby
               </button>
             </section>

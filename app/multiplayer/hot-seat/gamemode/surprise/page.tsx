@@ -21,14 +21,13 @@ export default function HotSeatSurprisePage() {
   const { startGame } = useGame();
   const [resolved, setResolved] = useState<string | null>(null);
   const initialSettings = readHotSeatSettings();
-  const [timerMinutes, setTimerMinutes] = useState(initialSettings.timerMinutes);
   const [timerSeconds, setTimerSeconds] = useState(initialSettings.timerSeconds);
 
   const handleStart = () => {
     const settings = readHotSeatSettings();
     const players = settings.names.slice(0, settings.players).map((name, idx) => name || `Player ${idx + 1}`);
     const selected = surprisePool[Math.floor(Math.random() * surprisePool.length)];
-    writeHotSeatSettings({ ...settings, timerMinutes, timerSeconds });
+    writeHotSeatSettings({ ...settings, timerSeconds });
     setResolved(selected);
 
     if (selected === 'book-selection') {
@@ -37,7 +36,7 @@ export default function HotSeatSurprisePage() {
         mode: selected,
         modeConfig: { ...gameModes[selected], books: [randomBook] },
         totalRounds: settings.players * settings.rounds,
-        timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
+        timerDurationSeconds: toTimerDurationSeconds(timerSeconds),
         selectedBook: randomBook.book,
         randomizeBookOnReplay: true,
         returnPath: '/multiplayer/hot-seat/gamemode',
@@ -57,7 +56,7 @@ export default function HotSeatSurprisePage() {
       mode: selected,
       modeConfig: gameModes[selected],
       totalRounds: settings.players * settings.rounds,
-      timerDurationSeconds: toTimerDurationSeconds(timerMinutes, timerSeconds),
+      timerDurationSeconds: toTimerDurationSeconds(timerSeconds),
       returnPath: '/multiplayer/hot-seat/gamemode',
       multiplayer: {
         enabled: true,
@@ -83,9 +82,7 @@ export default function HotSeatSurprisePage() {
             <div className="setup-panel-section">
               <TimerSetupControls
                 embedded
-                minutes={timerMinutes}
                 seconds={timerSeconds}
-                onMinutesChange={setTimerMinutes}
                 onSecondsChange={setTimerSeconds}
               />
             </div>

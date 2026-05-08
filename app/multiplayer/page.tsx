@@ -25,13 +25,40 @@ import {
 import { ensureFirebaseSession, getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
-import { clampTimerMinutes, clampTimerSeconds } from '@/lib/timerOptions';
+import { PARTY_TIMER_SECOND_OPTIONS, clampTimerSeconds } from '@/lib/timerOptions';
 import { useAccountSync } from '@/lib/accountSync';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
+import { bibleData } from '@/lib/bibleData';
 
 const PLAYER_VALUES = [2, 3, 4, 5, 6, 7, 8];
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-const PARTY_TIMER_VALUES = Array.from({ length: 18 }, (_, idx) => (idx + 1) * 5);
+const PARTY_TIMER_VALUES = PARTY_TIMER_SECOND_OPTIONS;
+const MULTIPLAYER_TAB_STORAGE_KEY = 'bg-multiplayer-tab-v1';
+const PARTY_CODE_STORAGE_KEY = 'bg-party-room-code-v1';
+
+function readInitialMultiplayerTab() {
+  if (typeof window === 'undefined') return 'hot-seat' as const;
+  const stored = localStorage.getItem(MULTIPLAYER_TAB_STORAGE_KEY);
+  return stored === 'party' ? 'party' : 'hot-seat';
+}
+
+function readInitialPartyCode() {
+  if (typeof window === 'undefined') return null;
+  const stored = (localStorage.getItem(PARTY_CODE_STORAGE_KEY) ?? '').toUpperCase().trim();
+  return /^[A-Z]{4}$/.test(stored) ? stored : null;
+}
+
+function readInitialTabParam() {
+  if (typeof window === 'undefined') return null;
+  const requested = new URLSearchParams(window.location.search).get('tab');
+  return requested === 'party' || requested === 'hot-seat' ? requested : null;
+}
+
+function readInitialCodeParam() {
+  if (typeof window === 'undefined') return null;
+  const requested = (new URLSearchParams(window.location.search).get('code') ?? '').toUpperCase().trim();
+  return /^[A-Z]{4}$/.test(requested) ? requested : null;
+}
 
 function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
   const book = books[Math.floor(Math.random() * books.length)];
@@ -61,7 +88,11 @@ async function buildRandomPartyVerse(books: BookData[]): Promise<PartyVerse | nu
 
 export default function MultiplayerPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<'hot-seat' | 'party'>('hot-seat');
+  const [tab, setTab] = useState<'hot-seat' | 'party'>(() => {
+    const requestedTab = readInitialTabParam();
+    if (requestedTab === 'party' || requestedTab === 'hot-seat') return requestedTab;
+    return readInitialMultiplayerTab();
+  });
   const initialHotSeat = useMemo(() => readHotSeatSettings(), []);
   const firebaseConfigured = isFirebaseConfigured();
 
@@ -69,11 +100,10 @@ export default function MultiplayerPage() {
   const [rounds, setRounds] = useState(initialHotSeat.rounds);
   const [turnStyle, setTurnStyle] = useState(initialHotSeat.turnStyle);
   const [names, setNames] = useState<string[]>(initialHotSeat.names);
-  const [timerMinutes, setTimerMinutes] = useState(initialHotSeat.timerMinutes);
   const [timerSeconds, setTimerSeconds] = useState(initialHotSeat.timerSeconds);
 
   const [room, setRoom] = useState<PartyRoom | null>(null);
-  const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
+  const [activeRoomCode, setActiveRoomCode] = useState<string | null>(() => readInitialCodeParam() ?? readInitialPartyCode());
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState(['', '', '', '']);
   const joinRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -86,6 +116,7 @@ export default function MultiplayerPage() {
   const [partyStartPending, setPartyStartPending] = useState(false);
   const [partyLobbyError, setPartyLobbyError] = useState('');
   const [partyLobbyPending, setPartyLobbyPending] = useState(false);
+  const suppressLobbyLeaveRef = useRef(false);
 
   const displayName = useMemo(() => {
     const accountName = user?.displayName?.trim();
@@ -106,8 +137,23 @@ export default function MultiplayerPage() {
   const lobbyComplete = Boolean(
     lobbySettings?.modeId &&
     lobbySettings?.roundsPerPlayer &&
-    lobbySettings?.timerDurationSeconds
+    lobbySettings?.timerDurationSeconds &&
+    (lobbySettings.modeId !== 'book-selection' || lobbySettings.selectedBook)
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(MULTIPLAYER_TAB_STORAGE_KEY, tab);
+  }, [tab]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (activeRoomCode) {
+      localStorage.setItem(PARTY_CODE_STORAGE_KEY, activeRoomCode);
+      return;
+    }
+    localStorage.removeItem(PARTY_CODE_STORAGE_KEY);
+  }, [activeRoomCode]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -140,10 +186,9 @@ export default function MultiplayerPage() {
       rounds,
       turnStyle,
       names,
-      timerMinutes: clampTimerMinutes(timerMinutes),
       timerSeconds: clampTimerSeconds(timerSeconds),
     });
-  }, [players, rounds, turnStyle, names, timerMinutes, timerSeconds]);
+  }, [players, rounds, turnStyle, names, timerSeconds]);
 
   useEffect(() => {
     if (tab !== 'party' || !firebaseConfigured) return;
@@ -245,6 +290,14 @@ export default function MultiplayerPage() {
   }, [activeRoomCode, displayName, firebaseConfigured, partyMemberId, profile.avatar, room?.hostId, tab]);
 
   useEffect(() => {
+    return () => {
+      if (tab === 'party' && activeRoomCode && room?.game?.status === 'lobby' && !suppressLobbyLeaveRef.current) {
+        void leaveParty(activeRoomCode, partyMemberId);
+      }
+    };
+  }, [activeRoomCode, partyMemberId, room?.game?.status, tab]);
+
+  useEffect(() => {
     if (tab !== 'party' || !room?.code) return;
     if (!room.game || room.game.status === 'lobby') return;
     router.push(`/multiplayer/party/game?code=${room.code}`);
@@ -299,6 +352,15 @@ export default function MultiplayerPage() {
     setActiveRoomCode(null);
   };
 
+  const switchTab = async (next: 'hot-seat' | 'party') => {
+    if (tab === 'party' && next !== 'party' && activeRoomCode && room?.game?.status === 'lobby') {
+      await leaveParty(activeRoomCode, partyMemberId);
+      setActiveRoomCode(null);
+      setRoom(null);
+    }
+    setTab(next);
+  };
+
   const applyLobbySettings = async (updates: Partial<PartyLobbySettings>) => {
     if (!room || !isHost) return;
 
@@ -320,7 +382,11 @@ export default function MultiplayerPage() {
     setPartyStartPending(true);
 
     const modeConfig = gameModes[lobbySettings.modeId];
-    const firstVerse = await buildRandomPartyVerse(modeConfig.books);
+    const selectedBookData = lobbySettings.modeId === 'book-selection'
+      ? bibleData.find(book => book.book === lobbySettings.selectedBook)
+      : null;
+    const playableBooks = selectedBookData ? [selectedBookData] : modeConfig.books;
+    const firstVerse = await buildRandomPartyVerse(playableBooks);
 
     if (!firstVerse) {
       setPartyStartPending(false);
@@ -332,6 +398,7 @@ export default function MultiplayerPage() {
       modeId: lobbySettings.modeId,
       roundsPerPlayer: lobbySettings.roundsPerPlayer,
       timerDurationSeconds: lobbySettings.timerDurationSeconds,
+      selectedBook: selectedBookData?.book,
       firstVerse,
     });
 
@@ -342,6 +409,7 @@ export default function MultiplayerPage() {
       return;
     }
 
+    suppressLobbyLeaveRef.current = true;
     router.push(`/multiplayer/party/game?code=${room.code}`);
   };
 
@@ -352,8 +420,8 @@ export default function MultiplayerPage() {
       <div className="app-content app-content-scroll">
         <div className="page max-w-4xl min-w-0">
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <button onClick={() => setTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
-            <button onClick={() => setTab('party')} className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Party</button>
+            <button onClick={() => void switchTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
+            <button onClick={() => void switchTab('party')} className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Party</button>
           </div>
 
           {tab === 'hot-seat' && (
@@ -384,9 +452,7 @@ export default function MultiplayerPage() {
 
               <TimerSetupControls
                 embedded
-                minutes={timerMinutes}
                 seconds={timerSeconds}
-                onMinutesChange={setTimerMinutes}
                 onSecondsChange={setTimerSeconds}
               />
 
@@ -454,20 +520,42 @@ export default function MultiplayerPage() {
                     <p className="eyebrow mb-2">Party Settings</p>
 
                     <label className="text-sm font-semibold block mb-1">Game Mode</label>
-                    <select
-                      value={lobbySettings?.modeId ?? ''}
-                      onChange={e => {
-                        const value = e.target.value;
-                        void applyLobbySettings({ modeId: value ? (value as GameModeId) : null });
-                      }}
-                      className="settings-input !w-full mb-3"
-                      disabled={!isHost}
-                    >
-                      <option value="">Select mode</option>
-                      {partyModeOptions.map(option => (
-                        <option key={option.id} value={option.id}>{option.name}</option>
-                      ))}
-                    </select>
+                    <div className="party-gamemode-row mb-3">
+                      <select
+                        value={lobbySettings?.modeId ?? ''}
+                        onChange={e => {
+                          const value = e.target.value;
+                          void applyLobbySettings({
+                            modeId: value ? (value as GameModeId) : null,
+                            selectedBook: value === 'book-selection' ? (lobbySettings?.selectedBook ?? bibleData[0].book) : null,
+                          });
+                        }}
+                        className="settings-input party-gamemode-select"
+                        disabled={!isHost}
+                      >
+                        <option value="">Select mode</option>
+                        {partyModeOptions.map(option => (
+                          <option key={option.id} value={option.id}>{option.name}</option>
+                        ))}
+                        <option value="book-selection">Book</option>
+                      </select>
+
+                      {lobbySettings?.modeId === 'book-selection' && (
+                        <select
+                          value={lobbySettings.selectedBook || bibleData[0].book}
+                          onChange={e => {
+                            const value = e.target.value;
+                            void applyLobbySettings({ selectedBook: value });
+                          }}
+                          className="settings-input party-book-select"
+                          disabled={!isHost}
+                        >
+                          {bibleData.map(book => (
+                            <option key={book.book} value={book.book}>{book.book}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
 
                     <label className="text-sm font-semibold block mb-1">Rounds</label>
                     <select
