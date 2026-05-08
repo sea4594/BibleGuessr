@@ -404,7 +404,7 @@ export default function PartyGameClient() {
         </div>
       </header>
 
-      <div className="app-content app-content-fixed game-content">
+      <div className={`app-content ${game.status === 'in-round' ? 'app-content-fixed' : 'app-content-scroll'} game-content`}>
         <div className="page !max-w-6xl w-full">
           {error && (
             <section className="surface-card p-3">

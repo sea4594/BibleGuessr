@@ -1046,7 +1046,7 @@ input[type='range']::-moz-range-thumb {
 .game-content {
   padding-bottom: env(safe-area-inset-bottom) !important;
 }
-.game-content .page {
+.game-content.app-content-fixed .page {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1054,7 +1054,7 @@ input[type='range']::-moz-range-thumb {
   gap: 6px;
   max-width: 100%;
 }
-.game-content .play-layout {
+.game-content.app-content-fixed .play-layout {
   flex: 1;
   min-height: 0;
   display: grid;
@@ -1062,29 +1062,29 @@ input[type='range']::-moz-range-thumb {
   gap: 6px;
   overflow: visible;
 }
-.game-content .play-verse {
+.game-content.app-content-fixed .play-verse {
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.game-content .play-guess {
+.game-content.app-content-fixed .play-guess {
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: visible;
 }
-.game-content .guess-interface {
+.game-content.app-content-fixed .guess-interface {
   flex: 1;
 }
-.game-content .sliders-row {
+.game-content.app-content-fixed .sliders-row {
   flex: 1;
   min-height: 0;
   overflow: visible;
 }
 @media (max-width: 640px) {
-  .game-content .play-layout {
+  .game-content.app-content-fixed .play-layout {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) minmax(0, 1.3fr);
     gap: 0;
