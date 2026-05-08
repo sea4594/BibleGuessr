@@ -30,6 +30,7 @@ function normalizeAvatar(raw: unknown, fallbackSeed: number): AvatarSpec {
   const legacy = raw as Record<string, unknown>;
   const hasLegacyShape = typeof legacy.skin === 'string' || typeof legacy.hair === 'string';
   if (hasLegacyShape) {
+    const background = typeof legacy.bg === 'string' ? legacy.bg : undefined;
     return {
       ...fallback,
       skinColor: typeof legacy.skin === 'string' ? legacy.skin : fallback.skinColor,
@@ -37,7 +38,7 @@ function normalizeAvatar(raw: unknown, fallbackSeed: number): AvatarSpec {
       eyeType: typeof legacy.eyes === 'string' ? legacy.eyes : fallback.eyeType,
       mouthType: typeof legacy.mouth === 'string' ? legacy.mouth : fallback.mouthType,
       accessory: typeof legacy.accessory === 'string' ? legacy.accessory : fallback.accessory,
-      background: typeof legacy.bg === 'string' ? legacy.bg : fallback.background,
+      ...(background ? { background } : {}),
     };
   }
 

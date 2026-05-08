@@ -17,7 +17,6 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
   const totalScore = session.rounds.reduce((sum, r) => sum + r.score, 0);
   const maxPossible = session.totalRounds * 100;
   const accuracy = Math.round((totalScore / Math.max(maxPossible, 1)) * 100);
-  const avgRoundScore = Math.round(totalScore / Math.max(session.rounds.length, 1));
 
   const playerTotals = useMemo(() => {
     if (!session.multiplayer?.enabled) return [] as Array<{ player: string; score: number }>;
@@ -128,9 +127,9 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
           )}
 
           <div className="surface-card text-center mb-4 p-6 w-full">
-            <div className="text-7xl font-bold">{totalScore}</div>
-            <div className="content-muted mt-1">Total Score</div>
-            <div className="text-sm mt-1 content-muted">{avgRoundScore} average per round</div>
+            <div className="text-[2.2rem] sm:text-[3.1rem] lg:text-[3.5rem] font-black leading-tight">
+              Total Score: {totalScore}
+            </div>
           </div>
 
           {playerTotals.length > 0 && (

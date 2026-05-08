@@ -79,6 +79,37 @@ const PARTY_CODE_TTL_MS = 1000 * 60 * 60 * 6;
 const PARTY_TIMER_MIN_SECONDS = 5;
 const PARTY_TIMER_MAX_SECONDS = 90;
 
+function sanitizeAvatarForStorage(avatar: AvatarSpec): AvatarSpec {
+  const sanitized: AvatarSpec = {
+    skinColor: avatar.skinColor,
+    hairStyle: avatar.hairStyle,
+    hairColor: avatar.hairColor,
+    eyeType: avatar.eyeType,
+    eyeColor: avatar.eyeColor,
+    mouthType: avatar.mouthType,
+    shirtStyle: avatar.shirtStyle,
+    shirtColor: avatar.shirtColor,
+    pantsColor: avatar.pantsColor,
+    shoeColor: avatar.shoeColor,
+    accessory: avatar.accessory,
+  };
+
+  if (typeof avatar.background === 'string') {
+    sanitized.background = avatar.background;
+  }
+
+  return sanitized;
+}
+
+function sanitizeMemberForStorage(member: PartyMember, forceHost?: boolean): PartyMember {
+  return {
+    ...member,
+    name: member.name.trim() || 'Player',
+    isHost: forceHost ?? member.isHost,
+    avatar: sanitizeAvatarForStorage(member.avatar),
+  };
+}
+
 function generateCode() {
   let code = '';
   for (let i = 0; i < 4; i++) {
@@ -196,10 +227,11 @@ export async function hostParty(host: PartyMember): Promise<PartyRoom | null> {
     const code = generateCode();
     const ref = doc(db, 'parties', code);
     const now = Date.now();
+    const hostMember = sanitizeMemberForStorage({ ...host, joinedAt: now }, true);
     const room: PartyRoom = {
       code,
-      hostId: host.id,
-      members: [{ ...host, isHost: true, joinedAt: now }],
+      hostId: hostMember.id,
+      members: [hostMember],
       createdAt: now,
       updatedAt: now,
       expiresAt: expiresAtFromNow(now),
@@ -254,7 +286,7 @@ export async function joinParty(code: string, member: PartyMember): Promise<bool
       const members = data.members ?? [];
       const deduped = members.filter(m => m.id !== member.id);
       const now = Date.now();
-      deduped.push({ ...member, isHost: false, joinedAt: Date.now() });
+      deduped.push(sanitizeMemberForStorage({ ...member, isHost: false, joinedAt: now }));
       tx.update(ref, {
         members: deduped,
         updatedAt: serverTimestamp(),
@@ -285,13 +317,14 @@ export async function upsertPartyMember(code: string, member: PartyMember): Prom
       const members = data.members ?? [];
       const existing = members.find(m => m.id === member.id);
       const now = Date.now();
+      const sanitizedMember = sanitizeMemberForStorage(member);
 
       if (!existing) {
-        members.push({ ...member, isHost: false, joinedAt: Date.now() });
+        members.push({ ...sanitizedMember, isHost: false, joinedAt: now });
       } else {
         Object.assign(existing, {
-          name: member.name,
-          avatar: member.avatar,
+          name: sanitizedMember.name,
+          avatar: sanitizedMember.avatar,
           joinedAt: existing.joinedAt,
         });
       }

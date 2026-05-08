@@ -7,7 +7,7 @@ import MainBottomNav from '@/components/MainBottomNav';
 import {
   AvatarSpec, avatarToDataUri, AVATAR_ATTRIBUTES,
   SKIN_OPTIONS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS,
-  SHOE_COLORS, EYE_COLORS,
+  SHOE_COLORS, EYE_COLORS, defaultAvatarSpec,
 } from '@/lib/avatarSystem';
 import { readLocalProfile, UserProfile, writeLocalProfile } from '@/lib/userProfile';
 import { useAccountSync } from '@/lib/accountSync';
@@ -101,7 +101,7 @@ function AvatarEditor({
 }
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile>(() => readLocalProfile());
+  const [profile, setProfile] = useState<UserProfile>({ name: '', avatar: defaultAvatarSpec(0) });
   const [statusMessage, setStatusMessage] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const {
@@ -116,13 +116,19 @@ export default function ProfilePage() {
     user,
   } = useAccountSync();
 
-  useEffect(() => { writeLocalProfile(profile); }, [profile]);
+  const updateProfile = (updater: (prev: UserProfile) => UserProfile) => {
+    setProfile(prev => {
+      const next = updater(prev);
+      writeLocalProfile(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setProfile(readLocalProfile());
     }, 0);
-    return () => clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }, [appStateNonce]);
 
   const handleSignIn = async () => {
@@ -141,7 +147,7 @@ export default function ProfilePage() {
       {showEditor && (
         <AvatarEditor
           avatar={profile.avatar}
-          onChange={avatar => setProfile(prev => ({ ...prev, avatar }))}
+          onChange={avatar => updateProfile(prev => ({ ...prev, avatar }))}
           onClose={() => setShowEditor(false)}
         />
       )}
@@ -171,7 +177,7 @@ export default function ProfilePage() {
             <label className="block text-sm font-semibold mb-1">Display Name</label>
             <input
               value={profile.name}
-              onChange={e => setProfile(prev => ({ ...prev, name: e.target.value }))}
+              onChange={e => updateProfile(prev => ({ ...prev, name: e.target.value }))}
               className="settings-input !w-full mb-3"
               placeholder="Your name"
             />
