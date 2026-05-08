@@ -286,7 +286,7 @@ export default function MultiplayerPage() {
           {tab === 'hot-seat' && (
             <div className="hotseat-shell min-w-0">
               <div className="hotseat-rounds-turn-row">
-                <div className="min-w-0">
+                <div className="hotseat-wheel-slot">
                   <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
                 </div>
                 <div className="hotseat-turn-buttons">
@@ -305,7 +305,7 @@ export default function MultiplayerPage() {
                 </div>
               </div>
 
-              <div className="min-w-0">
+              <div className="hotseat-wheel-slot">
                 <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
               </div>
 

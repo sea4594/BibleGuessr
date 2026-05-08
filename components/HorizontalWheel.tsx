@@ -17,6 +17,7 @@ export default function HorizontalWheel({
   onChange,
   itemWidth = 64,
 }: Props) {
+  const viewportRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sidePadding, setSidePadding] = useState(itemWidth);
@@ -35,17 +36,17 @@ export default function HorizontalWheel({
   }, [getScrollLeftForIndex]);
 
   useEffect(() => {
-    if (!listRef.current) return;
+    if (!viewportRef.current) return;
 
     const updatePadding = () => {
-      if (!listRef.current) return;
-      const nextPadding = Math.max(0, (listRef.current.clientWidth - itemWidth) / 2);
-      setSidePadding(nextPadding);
+      if (!viewportRef.current) return;
+      const nextPadding = Math.max(0, Math.round((viewportRef.current.clientWidth - itemWidth) / 2));
+      setSidePadding(prev => (prev === nextPadding ? prev : nextPadding));
     };
 
     updatePadding();
     const observer = new ResizeObserver(updatePadding);
-    observer.observe(listRef.current);
+    observer.observe(viewportRef.current);
     return () => observer.disconnect();
   }, [itemWidth]);
 
@@ -71,7 +72,7 @@ export default function HorizontalWheel({
   return (
     <div className="h-wheel-wrap">
       <span className="h-wheel-label">{label}</span>
-      <div className="h-wheel-viewport">
+      <div className="h-wheel-viewport" ref={viewportRef}>
         <div className="h-wheel-track" ref={listRef} onScroll={onScroll}>
           <div className="h-wheel-spacer" style={{ width: `${sidePadding}px`, minWidth: `${sidePadding}px` }} aria-hidden="true" />
           {values.map(value => (
