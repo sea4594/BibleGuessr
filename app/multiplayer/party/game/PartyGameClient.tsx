@@ -20,6 +20,8 @@ import { bibleData, BookData } from '@/lib/bibleData';
 import { calculateScore } from '@/lib/scoring';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 
+const PARTY_CODE_STORAGE_KEY = 'bg-party-room-code-v1';
+
 function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
   const book = books[Math.floor(Math.random() * books.length)];
   const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
@@ -254,6 +256,9 @@ export default function PartyGameClient() {
     if (!shouldLeave) return;
 
     await leaveParty(room.code, partyMemberId);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(PARTY_CODE_STORAGE_KEY);
+    }
     router.push('/multiplayer?tab=party');
   };
 

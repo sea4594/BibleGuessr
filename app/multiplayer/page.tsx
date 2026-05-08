@@ -134,6 +134,9 @@ export default function MultiplayerPage() {
   );
 
   const isHost = Boolean(room?.hostId === partyMemberId);
+  const isCurrentMember = Boolean(
+    room?.members.some(member => member.id === partyMemberId || member.id === clientId)
+  );
   const lobbySettings = room?.lobbySettings;
   const lobbyComplete = Boolean(
     lobbySettings?.modeId &&
@@ -200,8 +203,8 @@ export default function MultiplayerPage() {
     const subscribeToRoom = (code: string) => {
       unsubscribe = subscribeToParty(code, next => {
         if (cancelled) return;
-        setRoom(next);
         if (!next) {
+          setRoom(null);
           setActiveRoomCode(null);
           setPartyLobbyError('Party lobby unavailable. Recreating your code...');
           if (!retryTimer) {
@@ -212,6 +215,16 @@ export default function MultiplayerPage() {
           }
           return;
         }
+
+        const stillMember = next.members.some(member => member.id === partyMemberId || member.id === clientId);
+        if (!stillMember) {
+          setRoom(null);
+          setActiveRoomCode(null);
+          setPartyLobbyError('You left that party.');
+          return;
+        }
+
+        setRoom(next);
 
         setPartyLobbyError('');
       });
@@ -269,10 +282,10 @@ export default function MultiplayerPage() {
         window.clearTimeout(retryTimer);
       }
     };
-  }, [tab, activeRoomCode, displayName, firebaseConfigured, partyMemberId, profile.avatar, user]);
+  }, [tab, activeRoomCode, clientId, displayName, firebaseConfigured, partyMemberId, profile.avatar, user]);
 
   useEffect(() => {
-    if (tab !== 'party' || !firebaseConfigured || !activeRoomCode) return;
+    if (tab !== 'party' || !firebaseConfigured || !activeRoomCode || !isCurrentMember) return;
 
     const syncMember = () => {
       void upsertPartyMember(activeRoomCode, {
@@ -288,7 +301,7 @@ export default function MultiplayerPage() {
     const heartbeat = window.setInterval(syncMember, 60_000);
 
     return () => window.clearInterval(heartbeat);
-  }, [activeRoomCode, displayName, firebaseConfigured, partyMemberId, profile.avatar, room?.hostId, tab]);
+  }, [activeRoomCode, displayName, firebaseConfigured, isCurrentMember, partyMemberId, profile.avatar, room?.hostId, tab]);
 
   useEffect(() => {
     return () => {
