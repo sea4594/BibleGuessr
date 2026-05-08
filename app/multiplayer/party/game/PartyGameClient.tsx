@@ -6,6 +6,8 @@ import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import {
   hostAdvancePartyRound,
+  hostReturnPartyToLobby,
+  leaveParty,
   PartyRoom,
   PartyVerse,
   submitPartyRound,
@@ -65,6 +67,7 @@ export default function PartyGameClient() {
   const [error, setError] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [isReturningToLobby, setIsReturningToLobby] = useState(false);
 
   const timeoutSubmittedRoundRef = useRef<number | null>(null);
   const localRoundSeenRef = useRef<{ round: number; seenAt: number } | null>(null);
@@ -230,6 +233,36 @@ export default function PartyGameClient() {
     setIsAdvancing(false);
   };
 
+  const handleHostReturnToLobby = async () => {
+    if (!room || !isHost) return;
+
+    setIsReturningToLobby(true);
+    const ok = await hostReturnPartyToLobby(room.code, partyMemberId);
+    if (!ok) {
+      setError('Unable to return party to lobby. Please try again.');
+      setIsReturningToLobby(false);
+      return;
+    }
+
+    setIsReturningToLobby(false);
+  };
+
+  const handleExitParty = async () => {
+    if (!room || isHost) return;
+
+    const shouldLeave = window.confirm('Are you sure you want to leave the party?');
+    if (!shouldLeave) return;
+
+    await leaveParty(room.code, partyMemberId);
+    router.push('/multiplayer?tab=party');
+  };
+
+  useEffect(() => {
+    if (!room || !room.code) return;
+    if (room.game) return;
+    router.push(`/multiplayer?tab=party&code=${room.code}`);
+  }, [room, router]);
+
   if (!code) {
     return (
       <main className="app-screen">
@@ -282,7 +315,11 @@ export default function PartyGameClient() {
     <main className="app-screen game-shell">
       <header className="game-topbar">
         <div className="game-topbar-exit">
-          <button onClick={() => router.push(`/multiplayer?tab=party&code=${room.code}`)} className="btn-outline px-3 py-1.5 text-sm">Back</button>
+          {!isHost ? (
+            <button onClick={() => void handleExitParty()} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
+          ) : (
+            <span className="topbar-placeholder" aria-hidden="true" />
+          )}
         </div>
         <p className="game-topbar-round">
           {modeConfig.name} · Round {game.currentRound}/{game.totalRounds}
@@ -379,8 +416,7 @@ export default function PartyGameClient() {
 
           {game.status === 'finished' && (
             <section className="surface-card p-5 party-round-summary">
-              <h2 className="headline-serif text-3xl mb-2">Party Game Complete</h2>
-              <p className="content-muted mb-4">Final scores</p>
+              <h2 className="headline-serif text-3xl mb-2">Final Scores</h2>
 
               <div className="grid gap-2 mb-5">
                 {room.members
@@ -394,9 +430,17 @@ export default function PartyGameClient() {
                   ))}
               </div>
 
-              <button onClick={() => router.push(`/multiplayer?tab=party&code=${room.code}`)} className="btn-primary w-full py-3 text-lg">
-                Back to Party Lobby
-              </button>
+              {isHost ? (
+                <button
+                  onClick={() => void handleHostReturnToLobby()}
+                  disabled={isReturningToLobby}
+                  className="btn-primary w-full py-3 text-lg"
+                >
+                  {isReturningToLobby ? 'Returning...' : 'Back to Party Lobby'}
+                </button>
+              ) : (
+                <p className="content-muted text-sm">Waiting for host to return everyone to the party lobby.</p>
+              )}
             </section>
           )}
         </div>
