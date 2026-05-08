@@ -3,10 +3,11 @@ import {
   getDoc,
   onSnapshot,
   runTransaction,
+  setDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { ensureFirebaseSession, getFirebaseDb } from './firebaseClient';
-import type { AvatarSpec } from './avatarSystem';
+import { ensureFirebaseSession, getFirebaseAuth, getFirebaseDb } from './firebaseClient';
+import { defaultAvatarSpec, type AvatarSpec } from './avatarSystem';
 import { gameModes, type GameModeId } from './gameModes';
 
 export interface PartyMember {
@@ -80,18 +81,19 @@ const PARTY_TIMER_MIN_SECONDS = 5;
 const PARTY_TIMER_MAX_SECONDS = 90;
 
 function sanitizeAvatarForStorage(avatar: AvatarSpec): AvatarSpec {
+  const fallback = defaultAvatarSpec(0);
   const sanitized: AvatarSpec = {
-    skinColor: avatar.skinColor,
-    hairStyle: avatar.hairStyle,
-    hairColor: avatar.hairColor,
-    eyeType: avatar.eyeType,
-    eyeColor: avatar.eyeColor,
-    mouthType: avatar.mouthType,
-    shirtStyle: avatar.shirtStyle,
-    shirtColor: avatar.shirtColor,
-    pantsColor: avatar.pantsColor,
-    shoeColor: avatar.shoeColor,
-    accessory: avatar.accessory,
+    skinColor: typeof avatar.skinColor === 'string' ? avatar.skinColor : fallback.skinColor,
+    hairStyle: typeof avatar.hairStyle === 'string' ? avatar.hairStyle : fallback.hairStyle,
+    hairColor: typeof avatar.hairColor === 'string' ? avatar.hairColor : fallback.hairColor,
+    eyeType: typeof avatar.eyeType === 'string' ? avatar.eyeType : fallback.eyeType,
+    eyeColor: typeof avatar.eyeColor === 'string' ? avatar.eyeColor : fallback.eyeColor,
+    mouthType: typeof avatar.mouthType === 'string' ? avatar.mouthType : fallback.mouthType,
+    shirtStyle: typeof avatar.shirtStyle === 'string' ? avatar.shirtStyle : fallback.shirtStyle,
+    shirtColor: typeof avatar.shirtColor === 'string' ? avatar.shirtColor : fallback.shirtColor,
+    pantsColor: typeof avatar.pantsColor === 'string' ? avatar.pantsColor : fallback.pantsColor,
+    shoeColor: typeof avatar.shoeColor === 'string' ? avatar.shoeColor : fallback.shoeColor,
+    accessory: typeof avatar.accessory === 'string' ? avatar.accessory : fallback.accessory,
   };
 
   if (typeof avatar.background === 'string') {
@@ -108,6 +110,11 @@ function sanitizeMemberForStorage(member: PartyMember, forceHost?: boolean): Par
     isHost: forceHost ?? member.isHost,
     avatar: sanitizeAvatarForStorage(member.avatar),
   };
+}
+
+function resolveActorId(providedId: string) {
+  const auth = getFirebaseAuth();
+  return auth?.currentUser?.uid ?? providedId;
 }
 
 function generateCode() {
@@ -209,8 +216,13 @@ export async function createUniquePartyCode(): Promise<string | null> {
   for (let attempt = 0; attempt < 30; attempt++) {
     const code = generateCode();
     const ref = doc(db, 'parties', code);
-    const existing = await getDoc(ref);
-    if (!existing.exists() || isRoomExpired(existing.data())) {
+    try {
+      const existing = await getDoc(ref);
+      if (!existing.exists() || isRoomExpired(existing.data())) {
+        return code;
+      }
+    } catch {
+      // If reads are restricted by rules, still return a random candidate and rely on write path.
       return code;
     }
   }
@@ -227,7 +239,7 @@ export async function hostParty(host: PartyMember): Promise<PartyRoom | null> {
     const code = generateCode();
     const ref = doc(db, 'parties', code);
     const now = Date.now();
-    const hostMember = sanitizeMemberForStorage({ ...host, joinedAt: now }, true);
+    const hostMember = sanitizeMemberForStorage({ ...host, id: resolveActorId(host.id), joinedAt: now }, true);
     const room: PartyRoom = {
       code,
       hostId: hostMember.id,
@@ -257,7 +269,18 @@ export async function hostParty(host: PartyMember): Promise<PartyRoom | null> {
       if (error instanceof Error && error.message === 'party-code-in-use') {
         continue;
       }
-      return null;
+
+      try {
+        // Fallback for rule sets that disallow reads inside transactions.
+        await setDoc(ref, {
+          ...room,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        return room;
+      } catch {
+        return null;
+      }
     }
   }
 
@@ -270,6 +293,7 @@ export async function joinParty(code: string, member: PartyMember): Promise<bool
   await ensureFirebaseSession();
 
   const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(member.id);
 
   try {
     await runTransaction(db, async tx => {
@@ -284,9 +308,9 @@ export async function joinParty(code: string, member: PartyMember): Promise<bool
 
       const data = snapshot.data() as PartyRoom;
       const members = data.members ?? [];
-      const deduped = members.filter(m => m.id !== member.id);
+      const deduped = members.filter(m => m.id !== actorId);
       const now = Date.now();
-      deduped.push(sanitizeMemberForStorage({ ...member, isHost: false, joinedAt: now }));
+      deduped.push(sanitizeMemberForStorage({ ...member, id: actorId, isHost: false, joinedAt: now }));
       tx.update(ref, {
         members: deduped,
         updatedAt: serverTimestamp(),
@@ -306,6 +330,7 @@ export async function upsertPartyMember(code: string, member: PartyMember): Prom
   await ensureFirebaseSession();
 
   const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(member.id);
 
   try {
     await runTransaction(db, async tx => {
@@ -315,9 +340,9 @@ export async function upsertPartyMember(code: string, member: PartyMember): Prom
 
       const data = snapshot.data() as PartyRoom;
       const members = data.members ?? [];
-      const existing = members.find(m => m.id === member.id);
+      const existing = members.find(m => m.id === actorId);
       const now = Date.now();
-      const sanitizedMember = sanitizeMemberForStorage(member);
+      const sanitizedMember = sanitizeMemberForStorage({ ...member, id: actorId });
 
       if (!existing) {
         members.push({ ...sanitizedMember, isHost: false, joinedAt: now });
@@ -354,6 +379,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
   await ensureFirebaseSession();
 
   const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(hostId);
   const now = Date.now();
 
   try {
@@ -363,7 +389,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
       if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
 
       const room = snapshot.data() as PartyRoom;
-      if (room.hostId !== hostId) throw new Error('Only host can start');
+      if (room.hostId !== actorId) throw new Error('Only host can start');
 
       const members = room.members ?? [];
       const safeRounds = Math.max(1, Math.min(10, config.roundsPerPlayer));
@@ -380,7 +406,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
         submissions: {},
         roundScores: {},
         scores: initialScoresByMember(members),
-        startedBy: hostId,
+        startedBy: actorId,
         startedAt: now,
         updatedAt: now,
       };
@@ -413,6 +439,7 @@ export async function submitPartyRound(
   await ensureFirebaseSession();
 
   const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(memberId);
 
   try {
     await runTransaction(db, async tx => {
@@ -424,15 +451,15 @@ export async function submitPartyRound(
       const game = room.game;
       if (!game || game.status !== 'in-round') throw new Error('Round is not active');
 
-      const memberExists = (room.members ?? []).some(m => m.id === memberId);
+      const memberExists = (room.members ?? []).some(m => m.id === actorId);
       if (!memberExists) throw new Error('Member not found');
 
-      if (game.submissions[memberId]) return;
+      if (game.submissions[actorId]) return;
 
       const nextSubmissions: Record<string, PartySubmission> = {
         ...game.submissions,
-        [memberId]: {
-          memberId,
+        [actorId]: {
+          memberId: actorId,
           playerName: submission.playerName,
           score: submission.score,
           baseScore: submission.baseScore,
@@ -442,7 +469,7 @@ export async function submitPartyRound(
       };
 
       const nextScores: Record<string, number> = { ...game.scores };
-      nextScores[memberId] = (nextScores[memberId] ?? 0) + submission.score;
+      nextScores[actorId] = (nextScores[actorId] ?? 0) + submission.score;
 
       const activeMemberIds = (room.members ?? []).map(m => m.id);
       const allSubmitted = activeMemberIds.every(id => Boolean(nextSubmissions[id]));
@@ -482,6 +509,7 @@ export async function hostAdvancePartyRound(
   await ensureFirebaseSession();
 
   const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(hostId);
 
   try {
     await runTransaction(db, async tx => {
@@ -492,7 +520,7 @@ export async function hostAdvancePartyRound(
       const room = snapshot.data() as PartyRoom;
       const game = room.game;
       if (!game) throw new Error('No game state');
-      if (room.hostId !== hostId) throw new Error('Only host can advance');
+      if (room.hostId !== actorId) throw new Error('Only host can advance');
       if (game.status !== 'round-complete') throw new Error('Round not complete');
 
       if (game.currentRound >= game.totalRounds) {
@@ -544,6 +572,7 @@ export async function updatePartyLobbySettings(
   await ensureFirebaseSession();
 
   const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(hostId);
 
   try {
     await runTransaction(db, async tx => {
@@ -552,7 +581,7 @@ export async function updatePartyLobbySettings(
       if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
 
       const room = snapshot.data() as PartyRoom;
-      if (room.hostId !== hostId) throw new Error('Only host can edit settings');
+      if (room.hostId !== actorId) throw new Error('Only host can edit settings');
 
       const nextLobbySettings = mergeLobbySettings(normalizeLobbySettings(room.lobbySettings), incoming);
       const now = Date.now();
@@ -608,6 +637,7 @@ export async function leaveParty(code: string, memberId: string) {
   await ensureFirebaseSession();
 
   const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(memberId);
 
   await runTransaction(db, async tx => {
     const snapshot = await tx.get(ref);
@@ -618,13 +648,13 @@ export async function leaveParty(code: string, memberId: string) {
     }
 
     const room = snapshot.data() as PartyRoom;
-    const filtered = (room.members ?? []).filter(m => m.id !== memberId);
+    const filtered = (room.members ?? []).filter(m => m.id !== actorId);
     if (filtered.length === 0) {
       tx.delete(ref);
       return;
     }
 
-    const nextHostId = room.hostId === memberId ? (filtered[0]?.id ?? '') : room.hostId;
+    const nextHostId = room.hostId === actorId ? (filtered[0]?.id ?? '') : room.hostId;
     const normalizedMembers = filtered.map(member => ({
       ...member,
       isHost: member.id === nextHostId,
@@ -635,13 +665,13 @@ export async function leaveParty(code: string, memberId: string) {
 
     if (game) {
       const nextSubmissions = { ...game.submissions };
-      delete nextSubmissions[memberId];
+      delete nextSubmissions[actorId];
 
       const nextScores = { ...game.scores };
-      delete nextScores[memberId];
+      delete nextScores[actorId];
 
       const nextRoundScores = { ...game.roundScores };
-      delete nextRoundScores[memberId];
+      delete nextRoundScores[actorId];
 
       const activeMemberIds = normalizedMembers.map(member => member.id);
       const allSubmitted =

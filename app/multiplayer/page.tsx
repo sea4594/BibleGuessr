@@ -22,7 +22,7 @@ import {
   updatePartyLobbySettings,
   upsertPartyMember,
 } from '@/lib/partyEngine';
-import { isFirebaseConfigured } from '@/lib/firebaseClient';
+import { ensureFirebaseSession, getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
 import { clampTimerMinutes, clampTimerSeconds } from '@/lib/timerOptions';
@@ -81,6 +81,7 @@ export default function MultiplayerPage() {
   const { appStateNonce, user } = useAccountSync();
   const [profile, setProfile] = useState(() => readLocalProfile());
   const clientId = useMemo(() => readClientId(), []);
+  const [partyMemberId, setPartyMemberId] = useState(clientId);
   const [partyStartError, setPartyStartError] = useState('');
   const [partyStartPending, setPartyStartPending] = useState(false);
   const [partyLobbyError, setPartyLobbyError] = useState('');
@@ -100,7 +101,7 @@ export default function MultiplayerPage() {
     []
   );
 
-  const isHost = Boolean(room?.hostId === clientId);
+  const isHost = Boolean(room?.hostId === partyMemberId);
   const lobbySettings = room?.lobbySettings;
   const lobbyComplete = Boolean(
     lobbySettings?.modeId &&
@@ -114,6 +115,24 @@ export default function MultiplayerPage() {
     }, 0);
     return () => clearTimeout(timer);
   }, [appStateNonce]);
+
+  useEffect(() => {
+    if (!firebaseConfigured) return;
+    let cancelled = false;
+
+    const resolveId = async () => {
+      await ensureFirebaseSession();
+      const authUid = getFirebaseAuth()?.currentUser?.uid;
+      if (!cancelled) {
+        setPartyMemberId(authUid ?? clientId);
+      }
+    };
+
+    void resolveId();
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId, firebaseConfigured, tab]);
 
   useEffect(() => {
     writeHotSeatSettings({
@@ -161,7 +180,7 @@ export default function MultiplayerPage() {
       }
 
       const created = await hostParty({
-        id: clientId,
+        id: partyMemberId,
         name: displayName,
         avatar: profile.avatar,
         isHost: true,
@@ -189,17 +208,17 @@ export default function MultiplayerPage() {
         window.clearTimeout(retryTimer);
       }
     };
-  }, [tab, activeRoomCode, clientId, displayName, firebaseConfigured, profile.avatar]);
+  }, [tab, activeRoomCode, displayName, firebaseConfigured, partyMemberId, profile.avatar]);
 
   useEffect(() => {
     if (tab !== 'party' || !firebaseConfigured || !activeRoomCode) return;
 
     const syncMember = () => {
       void upsertPartyMember(activeRoomCode, {
-        id: clientId,
+        id: partyMemberId,
         name: displayName,
         avatar: profile.avatar,
-        isHost: room?.hostId === clientId,
+        isHost: room?.hostId === partyMemberId,
         joinedAt: Date.now(),
       });
     };
@@ -208,7 +227,7 @@ export default function MultiplayerPage() {
     const heartbeat = window.setInterval(syncMember, 60_000);
 
     return () => window.clearInterval(heartbeat);
-  }, [activeRoomCode, clientId, displayName, firebaseConfigured, profile.avatar, room?.hostId, tab]);
+  }, [activeRoomCode, displayName, firebaseConfigured, partyMemberId, profile.avatar, room?.hostId, tab]);
 
   useEffect(() => {
     if (tab !== 'party' || !room?.code) return;
@@ -237,10 +256,10 @@ export default function MultiplayerPage() {
     if (code.length !== 4 || !firebaseConfigured) return;
 
     if (activeRoomCode && activeRoomCode !== code) {
-      await leaveParty(activeRoomCode, clientId);
+      await leaveParty(activeRoomCode, partyMemberId);
     }
 
-    const ok = await joinParty(code, { id: clientId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: Date.now() });
+    const ok = await joinParty(code, { id: partyMemberId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: Date.now() });
     if (ok) {
       setPartyLobbyError('');
       setPartyStartError('');
@@ -261,7 +280,7 @@ export default function MultiplayerPage() {
   const applyLobbySettings = async (updates: Partial<PartyLobbySettings>) => {
     if (!room || !isHost) return;
 
-    const ok = await updatePartyLobbySettings(room.code, clientId, updates);
+    const ok = await updatePartyLobbySettings(room.code, partyMemberId, updates);
     if (!ok) {
       setPartyStartError('Could not update party settings. Please retry.');
       return;
@@ -287,7 +306,7 @@ export default function MultiplayerPage() {
       return;
     }
 
-    const ok = await startPartyGame(room.code, clientId, {
+    const ok = await startPartyGame(room.code, partyMemberId, {
       modeId: lobbySettings.modeId,
       roundsPerPlayer: lobbySettings.roundsPerPlayer,
       timerDurationSeconds: lobbySettings.timerDurationSeconds,

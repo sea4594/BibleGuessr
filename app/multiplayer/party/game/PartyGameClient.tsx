@@ -11,6 +11,7 @@ import {
   submitPartyRound,
   subscribeToParty,
 } from '@/lib/partyEngine';
+import { ensureFirebaseSession, getFirebaseAuth } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { gameModes } from '@/lib/gameModes';
 import { BookData } from '@/lib/bibleData';
@@ -57,6 +58,7 @@ export default function PartyGameClient() {
 
   const profile = useMemo(() => readLocalProfile(), []);
   const clientId = useMemo(() => readClientId(), []);
+  const [partyMemberId, setPartyMemberId] = useState(clientId);
 
   const [room, setRoom] = useState<PartyRoom | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -79,9 +81,26 @@ export default function PartyGameClient() {
     return () => unsubscribe();
   }, [code]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveId = async () => {
+      await ensureFirebaseSession();
+      const authUid = getFirebaseAuth()?.currentUser?.uid;
+      if (!cancelled) {
+        setPartyMemberId(authUid ?? clientId);
+      }
+    };
+
+    void resolveId();
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId]);
+
   const game = room?.game;
-  const myMember = useMemo(() => room?.members.find(member => member.id === clientId) ?? null, [clientId, room?.members]);
-  const isHost = Boolean(myMember?.isHost || room?.hostId === clientId);
+  const myMember = useMemo(() => room?.members.find(member => member.id === partyMemberId) ?? null, [partyMemberId, room?.members]);
+  const isHost = Boolean(myMember?.isHost || room?.hostId === partyMemberId);
 
   const modeConfig = useMemo(() => {
     if (!game) return null;
@@ -89,7 +108,7 @@ export default function PartyGameClient() {
   }, [game]);
 
   const verse = game?.roundVerse ?? null;
-  const mySubmission = game?.submissions?.[clientId] ?? null;
+  const mySubmission = game?.submissions?.[partyMemberId] ?? null;
 
   useEffect(() => {
     if (!game || game.status !== 'in-round') {
@@ -111,7 +130,7 @@ export default function PartyGameClient() {
   const submitRoundScore = useCallback(async (score: number, baseScore: number, wasBlankGuess = false) => {
     if (!code || !myMember) return;
 
-    const ok = await submitPartyRound(code, clientId, {
+    const ok = await submitPartyRound(code, partyMemberId, {
       playerName: myMember.name || profile.name,
       score,
       baseScore,
@@ -121,7 +140,7 @@ export default function PartyGameClient() {
     if (!ok) {
       setError('Failed to submit round score. Please try again.');
     }
-  }, [clientId, code, myMember, profile.name]);
+  }, [code, myMember, partyMemberId, profile.name]);
 
   useEffect(() => {
     if (!game || !verse || !modeConfig) return;
@@ -154,7 +173,7 @@ export default function PartyGameClient() {
     setIsAdvancing(true);
 
     if (game.currentRound >= game.totalRounds) {
-      const ok = await hostAdvancePartyRound(room.code, clientId);
+      const ok = await hostAdvancePartyRound(room.code, partyMemberId);
       if (!ok) setError('Unable to finish game. Please try again.');
       setIsAdvancing(false);
       return;
@@ -167,7 +186,7 @@ export default function PartyGameClient() {
       return;
     }
 
-    const ok = await hostAdvancePartyRound(room.code, clientId, nextVerse);
+    const ok = await hostAdvancePartyRound(room.code, partyMemberId, nextVerse);
     if (!ok) setError('Unable to move to next round. Please try again.');
     setIsAdvancing(false);
   };

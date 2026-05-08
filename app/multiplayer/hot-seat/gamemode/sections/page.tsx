@@ -11,7 +11,7 @@ export default function HotSeatSectionsPage() {
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-4xl">
-          <section className="mode-grid">
+          <section className="menu-grid">
             {sectionModeIds.map(modeId => (
               <Link
                 key={modeId}
