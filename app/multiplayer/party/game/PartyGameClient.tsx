@@ -29,6 +29,15 @@ type PartyGuess = {
   verse: number;
 };
 
+type VerseInfo = {
+  book: string;
+  chapter: number;
+  verse: number;
+  text: string;
+};
+
+type NeighborDirection = 'previous' | 'next';
+
 function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
   const book = books[Math.floor(Math.random() * books.length)];
   const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
@@ -36,6 +45,47 @@ function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; 
   const verseCount = parseInt(chapterData.verses, 10);
   const verse = Math.floor(Math.random() * verseCount) + 1;
   return { book, chapter, verse };
+}
+
+function resolveNeighborVerse(
+  book: string,
+  chapter: number,
+  verse: number,
+  direction: NeighborDirection
+): { book: string; chapter: number; verse: number } | null {
+  const bookIndex = bibleData.findIndex(b => b.book === book);
+  if (bookIndex < 0) return null;
+
+  const bookData = bibleData[bookIndex];
+  const chapterData = bookData.chapters[chapter - 1];
+  const maxVerse = chapterData ? parseInt(chapterData.verses, 10) : 1;
+
+  if (direction === 'previous') {
+    if (verse > 1) return { book, chapter, verse: verse - 1 };
+    if (chapter > 1) {
+      const previousChapter = chapter - 1;
+      const previousChapterData = bookData.chapters[previousChapter - 1];
+      return {
+        book,
+        chapter: previousChapter,
+        verse: previousChapterData ? parseInt(previousChapterData.verses, 10) : 1,
+      };
+    }
+    if (bookIndex === 0) return null;
+    const previousBook = bibleData[bookIndex - 1];
+    const previousBookChapterCount = previousBook.chapters.length;
+    const previousBookFinalChapter = previousBook.chapters[previousBookChapterCount - 1];
+    return {
+      book: previousBook.book,
+      chapter: previousBookChapterCount,
+      verse: parseInt(previousBookFinalChapter.verses, 10),
+    };
+  }
+
+  if (verse < maxVerse) return { book, chapter, verse: verse + 1 };
+  if (chapter < bookData.chapters.length) return { book, chapter: chapter + 1, verse: 1 };
+  if (bookIndex >= bibleData.length - 1) return null;
+  return { book: bibleData[bookIndex + 1].book, chapter: 1, verse: 1 };
 }
 
 function formatTime(totalSeconds: number) {
@@ -77,6 +127,9 @@ export default function PartyGameClient() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [isReturningToLobby, setIsReturningToLobby] = useState(false);
+  const [previousVerses, setPreviousVerses] = useState<VerseInfo[]>([]);
+  const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
+  const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
 
   const timeoutSubmittedRoundRef = useRef<number | null>(null);
   const localRoundSeenRef = useRef<{ round: number; seenAt: number } | null>(null);
@@ -135,10 +188,26 @@ export default function PartyGameClient() {
 
   const verse = game?.roundVerse ?? null;
   const mySubmission = game?.submissions?.[partyMemberId] ?? null;
+  const contextPenalty = (previousVerses.length + nextVerses.length) * 10;
+
+  const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
+    const text = await fetchVerseTextByReference(reference.book, reference.chapter, reference.verse);
+    if (!text) return null;
+
+    return {
+      book: reference.book,
+      chapter: reference.chapter,
+      verse: reference.verse,
+      text,
+    } satisfies VerseInfo;
+  }, []);
 
   useEffect(() => {
     if (!game || game.status !== 'in-round') {
       localRoundSeenRef.current = null;
+      setPreviousVerses([]);
+      setNextVerses([]);
+      setLoadingNeighbor(null);
       return;
     }
 
@@ -147,6 +216,9 @@ export default function PartyGameClient() {
         round: game.currentRound,
         seenAt: Date.now(),
       };
+      setPreviousVerses([]);
+      setNextVerses([]);
+      setLoadingNeighbor(null);
     }
   }, [game, game?.currentRound, game?.status]);
 
@@ -206,17 +278,31 @@ export default function PartyGameClient() {
     if (!game || !verse || !modeConfig) return;
     if (game.status !== 'in-round') return;
     if (mySubmission) return;
-    const secondsLeftNow = Math.max(0, game.timerDurationSeconds - Math.floor((Date.now() - game.roundStartedAt) / 1000));
-    const localSeenAt = localRoundSeenRef.current?.round === game.currentRound
-      ? localRoundSeenRef.current.seenAt
-      : Date.now();
-    const locallyExpired = (Date.now() - localSeenAt) >= game.timerDurationSeconds * 1000;
-    if (secondsLeftNow > 0 || !locallyExpired) return;
+    if (remainingSeconds > 0) return;
     if (timeoutSubmittedRoundRef.current === game.currentRound) return;
 
     timeoutSubmittedRoundRef.current = game.currentRound;
     void submitRoundScore(0, 0, true);
   }, [game, modeConfig, mySubmission, remainingSeconds, submitRoundScore, verse]);
+
+  const handleAddNeighborVerse = useCallback(async (direction: NeighborDirection) => {
+    if (!verse || loadingNeighbor || game?.status !== 'in-round') return;
+
+    const seedVerse = direction === 'previous'
+      ? previousVerses[0] ?? verse
+      : nextVerses[nextVerses.length - 1] ?? verse;
+
+    const targetRef = resolveNeighborVerse(seedVerse.book, seedVerse.chapter, seedVerse.verse, direction);
+    if (!targetRef) return;
+
+    setLoadingNeighbor(direction);
+    const data = await fetchVerseByReference(targetRef);
+    if (data) {
+      if (direction === 'previous') setPreviousVerses(prev => [data, ...prev]);
+      else setNextVerses(prev => [...prev, data]);
+    }
+    setLoadingNeighbor(null);
+  }, [fetchVerseByReference, game?.status, loadingNeighbor, nextVerses, previousVerses, verse]);
 
   const handleSubmitGuess = async (guess: { book: string; chapter: number; verse: number }) => {
     if (!game || !verse || !modeConfig || !myMember) return;
@@ -229,7 +315,11 @@ export default function PartyGameClient() {
       modeConfig.scoringType
     );
 
-    await submitRoundScore(breakdown.total, breakdown.total, false, guess, breakdown.feedback);
+    const contextVersesAdded = previousVerses.length + nextVerses.length;
+    const penalty = contextVersesAdded * 10;
+    const adjustedTotal = Math.max(0, breakdown.total - penalty);
+
+    await submitRoundScore(adjustedTotal, breakdown.total, false, guess, breakdown.feedback);
   };
 
   const handleHostAdvance = async () => {
@@ -397,7 +487,7 @@ export default function PartyGameClient() {
           <button onClick={() => void handleExitParty()} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
         </div>
         <p className="game-topbar-round">
-          {modeConfig.name} · Round {game.currentRound}/{game.totalRounds}
+          {modeConfig.name} · Round {game.currentRound}/{game.totalRounds} <span className="text-[var(--danger)]">(-{contextPenalty})</span>
         </p>
         <div className="game-topbar-actions">
           <p className="game-topbar-time">{game.status === 'in-round' ? formatTime(remainingSeconds) : '--:--'}</p>
@@ -417,15 +507,14 @@ export default function PartyGameClient() {
               <div className="play-verse">
                 <VerseDisplay
                   verse={verse}
-                  previousVerses={[]}
-                  nextVerses={[]}
+                  previousVerses={previousVerses}
+                  nextVerses={nextVerses}
                   isLoading={false}
                   error={null}
-                  isLoadingNeighbor={null}
-                  onAddPrevious={() => undefined}
-                  onAddNext={() => undefined}
+                  isLoadingNeighbor={loadingNeighbor}
+                  onAddPrevious={() => void handleAddNeighborVerse('previous')}
+                  onAddNext={() => void handleAddNeighborVerse('next')}
                   onRetry={() => undefined}
-                  showContextControls={false}
                 />
               </div>
 
