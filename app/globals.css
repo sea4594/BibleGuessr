@@ -126,6 +126,8 @@ body {
   margin: 0;
   height: 100%;
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   overflow-x: hidden;
   overscroll-behavior: none;
@@ -143,6 +145,22 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+main,
+.app-screen,
+.app-content,
+.app-content-scroll,
+.app-content-fixed {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.app-content-scroll > *,
+.app-content-fixed > * {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .app-content {
@@ -292,7 +310,9 @@ body {
 
 .surface-card {
   background: var(--panel);
+  min-width: 0;
   max-width: 100%;
+  overflow-x: clip;
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: var(--shadow), inset 0 1px rgba(255, 255, 255, 0.06);
@@ -300,7 +320,9 @@ body {
 
 .surface-card-soft {
   background: var(--panel-soft);
+  min-width: 0;
   max-width: 100%;
+  overflow-x: clip;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
 }
@@ -1171,6 +1193,8 @@ input[type='range']::-moz-range-thumb {
   gap: 4px;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 .h-wheel-label {
   font-size: 0.68rem;
@@ -1198,6 +1222,7 @@ input[type='range']::-moz-range-thumb {
   gap: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
+  touch-action: pan-x;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   border-radius: 12px;
