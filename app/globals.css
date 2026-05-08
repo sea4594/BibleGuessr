@@ -734,14 +734,14 @@ input[type='range']::-moz-range-thumb {
   overflow: hidden;
 }
 
-.game-shell .app-content {
+.game-shell .app-content-fixed {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.game-shell .page {
+.game-shell .app-content-fixed .page {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -751,7 +751,7 @@ input[type='range']::-moz-range-thumb {
   overflow: hidden;
 }
 
-.game-shell .play-layout {
+.game-shell .app-content-fixed .play-layout {
   flex: 1;
   min-height: 0;
   display: grid;
@@ -760,13 +760,13 @@ input[type='range']::-moz-range-thumb {
   overflow: visible;
 }
 
-.game-shell .play-verse {
+.game-shell .app-content-fixed .play-verse {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.game-shell .play-guess {
+.game-shell .app-content-fixed .play-guess {
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -774,7 +774,7 @@ input[type='range']::-moz-range-thumb {
 }
 
 @media (max-width: 960px) {
-  .game-shell .play-layout {
+  .game-shell .app-content-fixed .play-layout {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1.4fr;
   }
