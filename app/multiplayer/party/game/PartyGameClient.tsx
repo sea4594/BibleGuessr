@@ -23,56 +23,6 @@ import { fetchVerseTextByReference } from '@/lib/verseClient';
 
 const PARTY_CODE_STORAGE_KEY = 'bg-party-room-code-v1';
 
-type NeighborDirection = 'previous' | 'next';
-
-type VerseInfo = {
-  book: string;
-  chapter: number;
-  verse: number;
-  text: string;
-};
-
-function resolveNeighborVerse(
-  book: string,
-  chapter: number,
-  verse: number,
-  direction: NeighborDirection
-): { book: string; chapter: number; verse: number } | null {
-  const bookIndex = bibleData.findIndex(b => b.book === book);
-  if (bookIndex < 0) return null;
-
-  const bookData = bibleData[bookIndex];
-  const chapterData = bookData.chapters[chapter - 1];
-  const maxVerse = chapterData ? parseInt(chapterData.verses, 10) : 1;
-
-  if (direction === 'previous') {
-    if (verse > 1) return { book, chapter, verse: verse - 1 };
-    if (chapter > 1) {
-      const previousChapter = chapter - 1;
-      const previousChapterData = bookData.chapters[previousChapter - 1];
-      return {
-        book,
-        chapter: previousChapter,
-        verse: previousChapterData ? parseInt(previousChapterData.verses, 10) : 1,
-      };
-    }
-    if (bookIndex === 0) return null;
-    const previousBook = bibleData[bookIndex - 1];
-    const previousBookChapterCount = previousBook.chapters.length;
-    const previousBookFinalChapter = previousBook.chapters[previousBookChapterCount - 1];
-    return {
-      book: previousBook.book,
-      chapter: previousBookChapterCount,
-      verse: parseInt(previousBookFinalChapter.verses, 10),
-    };
-  }
-
-  if (verse < maxVerse) return { book, chapter, verse: verse + 1 };
-  if (chapter < bookData.chapters.length) return { book, chapter: chapter + 1, verse: 1 };
-  if (bookIndex >= bibleData.length - 1) return null;
-  return { book: bibleData[bookIndex + 1].book, chapter: 1, verse: 1 };
-}
-
 type PartyGuess = {
   book: string;
   chapter: number;
@@ -127,10 +77,6 @@ export default function PartyGameClient() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [isReturningToLobby, setIsReturningToLobby] = useState(false);
-  const [previousVerses, setPreviousVerses] = useState<VerseInfo[]>([]);
-  const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
-  const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
-  const [autoSubmitted, setAutoSubmitted] = useState(false);
 
   const timeoutSubmittedRoundRef = useRef<number | null>(null);
   const localRoundSeenRef = useRef<{ round: number; seenAt: number } | null>(null);
@@ -189,20 +135,6 @@ export default function PartyGameClient() {
 
   const verse = game?.roundVerse ?? null;
   const mySubmission = game?.submissions?.[partyMemberId] ?? null;
-
-  // Reset neighbor verses and auto-submit flag when a new round starts
-  const currentRound = game?.currentRound;
-  useEffect(() => {
-    setPreviousVerses([]);
-    setNextVerses([]);
-    setAutoSubmitted(false);
-  }, [currentRound]);
-
-  const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }): Promise<VerseInfo | null> => {
-    const text = await fetchVerseTextByReference(reference.book, reference.chapter, reference.verse);
-    if (!text) return null;
-    return { book: reference.book, chapter: reference.chapter, verse: reference.verse, text };
-  }, []);
 
   useEffect(() => {
     if (!game || game.status !== 'in-round') {
@@ -283,25 +215,8 @@ export default function PartyGameClient() {
     if (timeoutSubmittedRoundRef.current === game.currentRound) return;
 
     timeoutSubmittedRoundRef.current = game.currentRound;
-    setAutoSubmitted(true);
     void submitRoundScore(0, 0, true);
   }, [game, modeConfig, mySubmission, remainingSeconds, submitRoundScore, verse]);
-
-  const handleAddNeighborVerse = async (direction: NeighborDirection) => {
-    if (!verse || loadingNeighbor) return;
-    const seedVerse = direction === 'previous'
-      ? previousVerses[0] ?? verse
-      : nextVerses[nextVerses.length - 1] ?? verse;
-    const targetRef = resolveNeighborVerse(seedVerse.book, seedVerse.chapter, seedVerse.verse, direction);
-    if (!targetRef) return;
-    setLoadingNeighbor(direction);
-    const data = await fetchVerseByReference(targetRef);
-    if (data) {
-      if (direction === 'previous') setPreviousVerses(prev => [data, ...prev]);
-      else setNextVerses(prev => [...prev, data]);
-    }
-    setLoadingNeighbor(null);
-  };
 
   const handleSubmitGuess = async (guess: { book: string; chapter: number; verse: number }) => {
     if (!game || !verse || !modeConfig || !myMember) return;
@@ -314,11 +229,7 @@ export default function PartyGameClient() {
       modeConfig.scoringType
     );
 
-    const contextVersesAdded = previousVerses.length + nextVerses.length;
-    const contextPenalty = contextVersesAdded * 10;
-    const adjustedTotal = Math.max(0, breakdown.total - contextPenalty);
-
-    await submitRoundScore(adjustedTotal, breakdown.total, false, guess, breakdown.feedback);
+    await submitRoundScore(breakdown.total, breakdown.total, false, guess, breakdown.feedback);
   };
 
   const handleHostAdvance = async () => {
@@ -506,20 +417,20 @@ export default function PartyGameClient() {
               <div className="play-verse">
                 <VerseDisplay
                   verse={verse}
-                  previousVerses={previousVerses}
-                  nextVerses={nextVerses}
+                  previousVerses={[]}
+                  nextVerses={[]}
                   isLoading={false}
                   error={null}
-                  isLoadingNeighbor={loadingNeighbor}
-                  onAddPrevious={() => void handleAddNeighborVerse('previous')}
-                  onAddNext={() => void handleAddNeighborVerse('next')}
+                  isLoadingNeighbor={null}
+                  onAddPrevious={() => undefined}
+                  onAddNext={() => undefined}
                   onRetry={() => undefined}
-                  showContextControls={!mySubmission && !autoSubmitted}
+                  showContextControls={false}
                 />
               </div>
 
               <div className="play-guess">
-                {!mySubmission && !autoSubmitted ? (
+                {!mySubmission ? (
                   <>
                     <GuessInterface modeConfig={modeConfig} onSubmit={guess => void handleSubmitGuess(guess)} />
                   </>
