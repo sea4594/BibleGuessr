@@ -1,4 +1,4 @@
-import { TIMER_SECOND_OPTIONS } from '@/lib/timerOptions';
+import { formatTimerOptionLabel, NO_TIMER_SECONDS, TIMER_SECOND_OPTIONS } from '@/lib/timerOptions';
 
 interface Props {
   seconds: number;
@@ -12,25 +12,23 @@ export default function TimerSetupControls({
   embedded = false,
 }: Props) {
   const controls = (
-    <>
-      <div className="timer-inline-row">
-        <p className="text-sm font-semibold">Timer</p>
-        <div className="timer-inline-controls">
-          <label className="timer-inline-label">
+    <div className="timer-inline-row">
+      <p className="text-sm font-semibold">Timer</p>
+      <div className="timer-inline-controls">
+        <label className="timer-inline-label">
           <select
             value={seconds}
             onChange={e => onSecondsChange(Number(e.target.value))}
-              className="settings-input timer-inline-select"
+            className="settings-input timer-inline-select"
           >
             {TIMER_SECOND_OPTIONS.map(value => (
-              <option key={value} value={value}>{value}</option>
+              <option key={value} value={value}>{formatTimerOptionLabel(value)}</option>
             ))}
           </select>
-            <span>Seconds</span>
-          </label>
-        </div>
+          <span>{seconds === NO_TIMER_SECONDS ? '' : 'Seconds'}</span>
+        </label>
       </div>
-      </>
+    </div>
   );
 
   if (embedded) {

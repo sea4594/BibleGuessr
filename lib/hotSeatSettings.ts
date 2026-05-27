@@ -1,5 +1,6 @@
 import {
   DEFAULT_TIMER_SECONDS,
+  NO_TIMER_SECONDS,
   clampTimerSeconds,
 } from './timerOptions';
 import { setSyncedLocalStorageItem } from './localDataState';
@@ -46,7 +47,9 @@ export function readHotSeatSettings(): HotSeatSettings {
       names,
       rounds: Math.min(10, Math.max(1, parsed.rounds ?? defaultHotSeatSettings.rounds)),
       turnStyle: parsed.turnStyle ?? defaultHotSeatSettings.turnStyle,
-      timerSeconds: clampTimerSeconds(migratedTimerSeconds),
+      timerSeconds: migratedTimerSeconds === NO_TIMER_SECONDS
+        ? NO_TIMER_SECONDS
+        : clampTimerSeconds(migratedTimerSeconds),
     };
   } catch {
     return defaultHotSeatSettings;

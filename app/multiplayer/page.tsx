@@ -27,7 +27,7 @@ import {
 import { ensureFirebaseSession, getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { avatarToDataUri } from '@/lib/avatarSystem';
-import { PARTY_TIMER_SECOND_OPTIONS, clampTimerSeconds } from '@/lib/timerOptions';
+import { PARTY_TIMER_SECOND_OPTIONS, clampTimerSeconds, formatTimerOptionLabel } from '@/lib/timerOptions';
 import { useAccountSync } from '@/lib/accountSync';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 import { bibleData } from '@/lib/bibleData';
@@ -135,7 +135,8 @@ export default function MultiplayerPage() {
   const lobbyComplete = Boolean(
     lobbySettings?.modeId &&
     lobbySettings?.roundsPerPlayer &&
-    lobbySettings?.timerDurationSeconds &&
+    lobbySettings?.timerDurationSeconds !== null &&
+    lobbySettings?.timerDurationSeconds !== undefined &&
     (lobbySettings.modeId !== 'book-selection' || lobbySettings.selectedBook)
   );
 
@@ -412,7 +413,14 @@ export default function MultiplayerPage() {
   };
 
   const startParty = async () => {
-    if (!room || !isHost || !lobbySettings?.modeId || !lobbySettings.roundsPerPlayer || !lobbySettings.timerDurationSeconds) {
+    if (
+      !room ||
+      !isHost ||
+      !lobbySettings?.modeId ||
+      !lobbySettings.roundsPerPlayer ||
+      lobbySettings.timerDurationSeconds === null ||
+      lobbySettings.timerDurationSeconds === undefined
+    ) {
       return;
     }
 
@@ -676,7 +684,7 @@ export default function MultiplayerPage() {
                     >
                       <option value="">Select timer</option>
                       {PARTY_TIMER_VALUES.map(value => (
-                        <option key={value} value={value}>{value}</option>
+                        <option key={value} value={value}>{formatTimerOptionLabel(value)}</option>
                       ))}
                     </select>
 

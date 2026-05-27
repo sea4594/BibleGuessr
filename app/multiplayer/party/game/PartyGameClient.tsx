@@ -204,6 +204,7 @@ export default function PartyGameClient() {
   const verse = game?.roundVerse ?? null;
   const mySubmission = game?.submissions?.[partyMemberId] ?? null;
   const contextPenalty = (previousVerses.length + nextVerses.length) * 10;
+  const hasTimer = (game?.timerDurationSeconds ?? 0) > 0;
 
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
     const text = await fetchVerseTextByReference(reference.book, reference.chapter, reference.verse);
@@ -246,6 +247,10 @@ export default function PartyGameClient() {
   useEffect(() => {
     if (!game || game.status !== 'in-round') {
       timeoutSubmittedRoundRef.current = null;
+      return;
+    }
+
+    if (game.timerDurationSeconds <= 0) {
       return;
     }
 
@@ -298,6 +303,7 @@ export default function PartyGameClient() {
   useEffect(() => {
     if (!game || !verse || !modeConfig) return;
     if (game.status !== 'in-round') return;
+    if (game.timerDurationSeconds <= 0) return;
     if (mySubmission) return;
     if (remainingSeconds > 0) return;
     if (timeoutSubmittedRoundRef.current === game.currentRound) return;
@@ -545,7 +551,7 @@ export default function PartyGameClient() {
           {modeConfig.name} · Round {game.currentRound}/{game.totalRounds} <span className="text-[var(--danger)]">(-{contextPenalty})</span>
         </p>
         <div className="game-topbar-actions">
-          <p className="game-topbar-time">{game.status === 'in-round' ? formatTime(remainingSeconds) : '--:--'}</p>
+          <p className="game-topbar-time">{game.status === 'in-round' ? (hasTimer ? formatTime(remainingSeconds) : 'None') : '--:--'}</p>
         </div>
       </header>
 

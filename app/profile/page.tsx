@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import {
@@ -204,6 +205,9 @@ export default function ProfilePage() {
             )}
 
             <div className="flex flex-wrap gap-2">
+              <Link href="/profile/statistics" className="btn-outline px-4 py-2">
+                Statistics
+              </Link>
               {firebaseEnabled && !user && (
                 <button
                   onClick={() => void handleSignIn()}

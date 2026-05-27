@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { onSyncedLocalDataApplied, setSyncedLocalStorageItem } from './localDataState';
+import { bibleData } from './bibleData';
+import { NO_TIMER_SECONDS } from './timerOptions';
 
 export type ThemePresetId =
   | 'light'
@@ -19,6 +21,7 @@ export interface UiSettings {
   themePreset: ThemePresetId;
   preferredRounds: number;
   preferredGameMode: string;
+  preferredBook: string;
   quickPlayTimerSeconds: number;
 }
 
@@ -27,6 +30,7 @@ interface UiSettingsContextType {
   setThemePreset: (themePreset: ThemePresetId) => void;
   setPreferredRounds: (rounds: number) => void;
   setPreferredGameMode: (mode: string) => void;
+  setPreferredBook: (book: string) => void;
   setQuickPlayTimerSeconds: (seconds: number) => void;
 }
 
@@ -46,10 +50,12 @@ const DEFAULT_SETTINGS: UiSettings = {
   themePreset: 'ocean-light',
   preferredRounds: 5,
   preferredGameMode: 'full-bible',
+  preferredBook: bibleData[0]?.book ?? 'Genesis',
   quickPlayTimerSeconds: 60,
 };
 
 function clampQuickPlayTimerSeconds(value: number) {
+  if (value === NO_TIMER_SECONDS) return NO_TIMER_SECONDS;
   const normalized = Number.isFinite(value) ? Math.round(value / 5) * 5 : DEFAULT_SETTINGS.quickPlayTimerSeconds;
   return Math.min(90, Math.max(5, normalized));
 }
@@ -71,10 +77,14 @@ function readInitialSettings(): UiSettings {
     const preset = typeof parsed.themePreset === 'string' && themePresets.some(item => item.id === parsed.themePreset)
       ? parsed.themePreset
       : DEFAULT_SETTINGS.themePreset;
+    const preferredBook = typeof parsed.preferredBook === 'string' && bibleData.some(book => book.book === parsed.preferredBook)
+      ? parsed.preferredBook
+      : DEFAULT_SETTINGS.preferredBook;
     return {
       themePreset: preset,
       preferredRounds: Math.min(10, Math.max(1, parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds)),
       preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
+      preferredBook,
       quickPlayTimerSeconds: clampQuickPlayTimerSeconds(
         parsed.quickPlayTimerSeconds ?? DEFAULT_SETTINGS.quickPlayTimerSeconds
       ),
@@ -114,6 +124,9 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       },
       setPreferredGameMode: (preferredGameMode: string) => {
         setSettings(prev => ({ ...prev, preferredGameMode }));
+      },
+      setPreferredBook: (preferredBook: string) => {
+        setSettings(prev => ({ ...prev, preferredBook }));
       },
       setQuickPlayTimerSeconds: (quickPlayTimerSeconds: number) => {
         setSettings(prev => ({

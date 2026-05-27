@@ -170,6 +170,7 @@ function clampRoundsPerPlayer(value: number | null): number | null {
 
 function clampPartyTimerDurationSeconds(value: number | null): number | null {
   if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  if (value === 0) return 0;
   const rounded = Math.round(value / 5) * 5;
   return Math.max(PARTY_TIMER_MIN_SECONDS, Math.min(PARTY_TIMER_MAX_SECONDS, rounded));
 }
@@ -420,7 +421,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
 
       const members = room.members ?? [];
       const safeRounds = Math.max(1, Math.min(10, config.roundsPerPlayer));
-      const safeTimer = clampPartyTimerDurationSeconds(config.timerDurationSeconds) ?? PARTY_TIMER_MIN_SECONDS;
+      const safeTimer = clampPartyTimerDurationSeconds(config.timerDurationSeconds) ?? 0;
       const gameState: PartyGameState = {
         status: 'in-round',
         modeId: config.modeId,

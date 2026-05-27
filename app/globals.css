@@ -129,7 +129,7 @@ body {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   overscroll-behavior: none;
 }
 
@@ -145,7 +145,7 @@ body {
 }
 
 .app-screen {
-  min-height: 100svh;
+  min-height: 100dvh;
   height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -177,12 +177,12 @@ main,
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 74px);
 }
 
 .app-content-fixed {
   overflow: hidden;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 74px);
 }
 
 .main-bottom-nav {
@@ -252,11 +252,10 @@ main,
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 14px;
+  padding: calc(env(safe-area-inset-top) + 10px) 14px 10px;
   border-bottom: 1px solid var(--line);
   background: color-mix(in oklab, var(--bg) 88%, transparent);
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 20;
 }
 

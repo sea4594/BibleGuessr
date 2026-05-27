@@ -170,7 +170,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
       timestamp: Date.now(),
       modeId: session.mode,
       modeName: session.modeConfig.name,
-      totalScore,
+      totalScore: accuracy,
       accuracy,
       rounds: session.totalRounds,
     });

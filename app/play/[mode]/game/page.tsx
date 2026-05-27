@@ -438,7 +438,7 @@ export default function GamePage() {
           {currentPlayerName && <span className="game-topbar-player"> · {currentPlayerName}</span>}
         </p>
         <div className="game-topbar-actions">
-          <p className="game-topbar-time">{formatTime(Math.max(0, remainingSeconds))}</p>
+          <p className="game-topbar-time">{timerDurationSeconds > 0 ? formatTime(Math.max(0, remainingSeconds)) : 'None'}</p>
           <button onClick={() => setIsPaused(true)} className="game-topbar-pause" aria-label="Pause game">
             <Pause size={15} />
           </button>

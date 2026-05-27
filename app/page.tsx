@@ -9,7 +9,12 @@ import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
 import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
-import { QUICK_PLAY_TIMER_SECOND_OPTIONS } from "@/lib/timerOptions";
+import {
+  formatTimerOptionLabel,
+  NO_TIMER_SECONDS,
+  QUICK_PLAY_TIMER_SECOND_OPTIONS,
+  toTimerDurationSeconds,
+} from "@/lib/timerOptions";
 import HorizontalWheel from "@/components/HorizontalWheel";
 
 interface VerseOfDay {
@@ -32,7 +37,13 @@ function getDailyVerseRef(): { book: string; chapter: number; verse: number } {
 }
 
 export default function HomePage() {
-  const { settings, setPreferredGameMode, setPreferredRounds, setQuickPlayTimerSeconds } = useUiSettings();
+  const {
+    settings,
+    setPreferredBook,
+    setPreferredGameMode,
+    setPreferredRounds,
+    setQuickPlayTimerSeconds,
+  } = useUiSettings();
   const { startGame } = useGame();
   const router = useRouter();
   const [verseOfDay, setVerseOfDay] = useState<VerseOfDay | null>(null);
@@ -61,12 +72,19 @@ export default function HomePage() {
     const modeId: GameModeId = (settings.preferredGameMode in gameModes)
       ? (settings.preferredGameMode as GameModeId)
       : "full-bible";
-    const modeConfig = gameModes[modeId];
+    const selectedBookData = modeId === "book-selection"
+      ? bibleData.find(book => book.book === settings.preferredBook) ?? bibleData[0]
+      : null;
+    const modeConfig = modeId === "book-selection" && selectedBookData
+      ? { ...gameModes[modeId], books: [selectedBookData] }
+      : gameModes[modeId];
+
     startGame({
       mode: modeId,
       modeConfig,
       totalRounds: settings.preferredRounds,
-      timerDurationSeconds: settings.quickPlayTimerSeconds,
+      timerDurationSeconds: toTimerDurationSeconds(settings.quickPlayTimerSeconds),
+      selectedBook: selectedBookData?.book,
     });
     router.push(`/play/${modeId}/game`);
   };
@@ -96,17 +114,32 @@ export default function HomePage() {
             <section className="surface-card p-5 min-w-0">
               <p className="eyebrow mb-2">QUICK PLAY</p>
 
-              <select
-                value={settings.preferredGameMode}
-                onChange={e => setPreferredGameMode(e.target.value)}
-                className="settings-input !w-full mb-4"
-              >
-                {modeOptions.map(option => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
+              <div className={`party-gamemode-row mb-4 ${settings.preferredGameMode === "book-selection" ? "has-book" : ""}`}>
+                <select
+                  value={settings.preferredGameMode}
+                  onChange={e => setPreferredGameMode(e.target.value)}
+                  className="settings-input party-gamemode-select"
+                >
+                  {modeOptions.map(option => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                  <option value="book-selection">Book</option>
+                </select>
+
+                {settings.preferredGameMode === "book-selection" && (
+                  <select
+                    value={settings.preferredBook}
+                    onChange={e => setPreferredBook(e.target.value)}
+                    className="settings-input party-book-select"
+                  >
+                    {bibleData.map(book => (
+                      <option key={book.book} value={book.book}>{book.book}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
 
               <div className="mb-4 min-w-0">
                 <HorizontalWheel
@@ -127,10 +160,10 @@ export default function HomePage() {
                       className="settings-input timer-inline-select"
                     >
                       {QUICK_PLAY_TIMER_SECOND_OPTIONS.map(value => (
-                        <option key={value} value={value}>{value}</option>
+                        <option key={value} value={value}>{formatTimerOptionLabel(value)}</option>
                       ))}
                     </select>
-                    <span>Seconds</span>
+                    <span>{settings.quickPlayTimerSeconds === NO_TIMER_SECONDS ? "" : "Seconds"}</span>
                   </label>
                 </div>
               </div>
