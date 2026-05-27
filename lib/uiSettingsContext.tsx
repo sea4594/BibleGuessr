@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { onSyncedLocalDataApplied, setSyncedLocalStorageItem } from './localDataState';
 
 export type ThemePresetId =
@@ -68,8 +68,11 @@ function readInitialSettings(): UiSettings {
     }
 
     const parsed = JSON.parse(raw) as Partial<UiSettings>;
+    const preset = typeof parsed.themePreset === 'string' && themePresets.some(item => item.id === parsed.themePreset)
+      ? parsed.themePreset
+      : DEFAULT_SETTINGS.themePreset;
     return {
-      themePreset: parsed.themePreset ?? DEFAULT_SETTINGS.themePreset,
+      themePreset: preset,
       preferredRounds: Math.min(10, Math.max(1, parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds)),
       preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
       quickPlayTimerSeconds: clampQuickPlayTimerSeconds(
@@ -92,7 +95,7 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const preset = themePresets.find(item => item.id === settings.themePreset) ?? themePresets[0];
     document.documentElement.setAttribute('data-theme', preset.color);
     document.documentElement.setAttribute('data-mode', preset.mode);

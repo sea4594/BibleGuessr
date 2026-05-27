@@ -128,9 +128,13 @@ body {
   min-height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
   overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: none;
+}
+
+html {
+  background: var(--bg);
 }
 
 body {
@@ -141,6 +145,7 @@ body {
 }
 
 .app-screen {
+  min-height: 100svh;
   height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -1212,14 +1217,14 @@ input[type='range']::-moz-range-thumb {
   flex-direction: column;
   gap: 12px;
   overflow-x: hidden;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
+  padding-bottom: 8px;
 }
 .home-page {
   justify-content: flex-start;
 }
 .home-quickplay-stack {
   margin-top: auto;
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 .setup-title {
   margin-top: 2px;
@@ -1681,6 +1686,22 @@ input[type='range']::-moz-range-thumb {
 
   .hotseat-turn-buttons {
     grid-template-columns: 1fr 1fr;
+
+@media (max-height: 760px) {
+  .game-content.app-content-fixed {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .game-content.app-content-fixed .page {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .game-content.app-content-fixed .play-layout {
+    min-height: max-content;
+  }
+}
   }
 
   .hotseat-turn-style-btn {

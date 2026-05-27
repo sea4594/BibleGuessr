@@ -10,6 +10,7 @@ import {
 import { ensureFirebaseSession, getFirebaseAuth, getFirebaseDb } from './firebaseClient';
 import { defaultAvatarSpec, type AvatarSpec } from './avatarSystem';
 import { gameModes, type GameModeId } from './gameModes';
+import { verseReferenceKey } from './verseSelection';
 
 export interface PartyMember {
   id: string;
@@ -83,6 +84,7 @@ export interface PartyGameState {
   currentRound: number;
   roundStartedAt: number;
   roundVerse: PartyVerse;
+  usedVerseKeys: string[];
   submissions: Record<string, PartySubmission>;
   roundScores: Record<string, number>;
   scores: Record<string, number>;
@@ -429,6 +431,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
         currentRound: 1,
         roundStartedAt: now,
         roundVerse: config.firstVerse,
+        usedVerseKeys: [verseReferenceKey(config.firstVerse)],
         submissions: {},
         roundScores: {},
         scores: initialScoresByMember(members),
@@ -568,6 +571,12 @@ export async function hostAdvancePartyRound(
 
       if (!nextVerse) throw new Error('Next verse required');
 
+      const usedVerseKeys = new Set<string>(Array.isArray(game.usedVerseKeys) ? game.usedVerseKeys : []);
+      usedVerseKeys.add(verseReferenceKey(game.roundVerse));
+      const nextVerseKey = verseReferenceKey(nextVerse);
+      if (usedVerseKeys.has(nextVerseKey)) throw new Error('Verse already used');
+      usedVerseKeys.add(nextVerseKey);
+
       const now = Date.now();
       tx.update(ref, {
         game: {
@@ -576,6 +585,7 @@ export async function hostAdvancePartyRound(
           currentRound: game.currentRound + 1,
           roundStartedAt: now,
           roundVerse: nextVerse,
+          usedVerseKeys: Array.from(usedVerseKeys),
           submissions: {},
           roundScores: {},
           updatedAt: now,

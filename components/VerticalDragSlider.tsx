@@ -28,6 +28,7 @@ export default function VerticalDragSlider({
   const [rawPx, setRawPx] = useState(0); // calibrated px from top of track
 
   const compute = useCallback((clientY: number) => {
+    if (items.length === 0) return { idx: 0, px: 0 };
     const rect = trackRef.current?.getBoundingClientRect();
     if (!rect) return { idx: 0, px: 0 };
     const adjusted = clientY - CALIBRATION_OFFSET;
@@ -38,7 +39,7 @@ export default function VerticalDragSlider({
   }, [items.length]);
 
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
+    if (disabled || items.length === 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const { idx, px } = compute(e.clientY);
     setHoverIdx(idx);
@@ -54,11 +55,11 @@ export default function VerticalDragSlider({
   };
 
   const onUp = () => {
-    if (dragging) onChange(hoverIdx);
+    if (dragging && items.length > 0) onChange(hoverIdx);
     setDragging(false);
   };
 
-  const activeIdx = dragging ? hoverIdx : selectedIndex;
+  const activeIdx = items.length > 0 ? Math.max(0, Math.min(items.length - 1, dragging ? hoverIdx : selectedIndex)) : 0;
   const itemHeightPercent = items.length > 0 ? 100 / items.length : 100;
   const dynamicFontPx = Math.max(4, Math.min(14, Math.floor(220 / Math.max(items.length, 1))));
 

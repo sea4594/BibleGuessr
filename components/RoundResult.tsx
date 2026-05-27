@@ -40,6 +40,7 @@ export default function RoundResult({
   const scorePercent = Math.max(0, Math.min(100, Math.round(score)));
 
   const runningTotal = rounds.reduce((sum, r) => sum + r.score, 0);
+  const runningPercent = Math.max(0, Math.min(100, Math.round((runningTotal / Math.max(rounds.length * 100, 1)) * 100)));
   const isHotSeat = Boolean(multiplayer?.enabled);
 
   const groupedRoundRows = useMemo(() => {
@@ -137,7 +138,7 @@ export default function RoundResult({
             )}
             <div className="flex justify-between items-center text-[1.55rem] sm:text-[1.75rem] py-3 border-t border-[var(--line)] mt-1 font-extrabold">
               <span>Total</span>
-              <span>{score}</span>
+              <span>{scorePercent}%</span>
             </div>
           </div>
 
@@ -151,19 +152,19 @@ export default function RoundResult({
                   .map(player => (
                   <div key={`${logicalRound}-${player}`} className="flex justify-between text-sm py-1 pl-4">
                     <span>{player}</span>
-                    <span className="font-semibold">{byPlayer.get(player)}</span>
+                    <span className="font-semibold">{Math.max(0, Math.min(100, Math.round(byPlayer.get(player) ?? 0)))}%</span>
                   </div>
                 ))}
               </div>
             )) : rounds.map((item, idx) => (
               <div key={idx} className="flex justify-between text-sm py-1.5 border-t border-[var(--line)] first:border-0">
                 <span>Round {idx + 1}</span>
-                <span className="font-semibold">{item.score}</span>
+                <span className="font-semibold">{Math.max(0, Math.min(100, Math.round(item.score)))}%</span>
               </div>
             ))}
             <div className="flex justify-between items-center text-[1.55rem] sm:text-[1.75rem] py-3 mt-1 border-t border-[var(--line)] font-extrabold">
               <span>Current total</span>
-              <span>{runningTotal}</span>
+              <span>{runningPercent}%</span>
             </div>
           </div>
         </div>

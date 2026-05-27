@@ -20,12 +20,23 @@ export default function EnsureHomeOnLaunch() {
     if (typeof window === 'undefined') return;
     if (!isStandaloneLaunch()) return;
 
-    const hasSeenLaunch = sessionStorage.getItem(SESSION_KEY) === '1';
-    if (!hasSeenLaunch) {
+    let hasSeenLaunch = false;
+    try {
+      hasSeenLaunch = sessionStorage.getItem(SESSION_KEY) === '1';
+    } catch {
+      return;
+    }
+
+    if (hasSeenLaunch) return;
+
+    try {
       sessionStorage.setItem(SESSION_KEY, '1');
-      if (pathname !== '/') {
-        router.replace('/');
-      }
+    } catch {
+      return;
+    }
+
+    if (pathname !== '/') {
+      router.replace('/');
     }
   }, [pathname, router]);
 

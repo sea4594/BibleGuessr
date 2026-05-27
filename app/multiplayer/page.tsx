@@ -31,6 +31,7 @@ import { PARTY_TIMER_SECOND_OPTIONS, clampTimerSeconds } from '@/lib/timerOption
 import { useAccountSync } from '@/lib/accountSync';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 import { bibleData } from '@/lib/bibleData';
+import { buildVerseReferencePool, getShuffledAvailableVerseReferences } from '@/lib/verseSelection';
 
 const PLAYER_VALUES = [2, 3, 4, 5, 6, 7, 8];
 const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -62,22 +63,13 @@ function readInitialCodeParam() {
   return /^[A-Z]{4}$/.test(requested) ? requested : null;
 }
 
-function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
-  const book = books[Math.floor(Math.random() * books.length)];
-  const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
-  const chapter = parseInt(chapterData.chapter, 10);
-  const verseCount = parseInt(chapterData.verses, 10);
-  const verse = Math.floor(Math.random() * verseCount) + 1;
-  return { book, chapter, verse };
-}
-
 async function buildRandomPartyVerse(books: BookData[]): Promise<PartyVerse | null> {
-  for (let attempts = 0; attempts < 8; attempts += 1) {
-    const picked = pickRandomVerse(books);
-    const text = await fetchVerseTextByReference(picked.book.book, picked.chapter, picked.verse);
+  const references = getShuffledAvailableVerseReferences(buildVerseReferencePool(books), new Set());
+  for (const picked of references) {
+    const text = await fetchVerseTextByReference(picked.book, picked.chapter, picked.verse);
     if (text) {
       return {
-        book: picked.book.book,
+        book: picked.book,
         chapter: picked.chapter,
         verse: picked.verse,
         text,

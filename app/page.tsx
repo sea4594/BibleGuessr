@@ -74,7 +74,7 @@ export default function HomePage() {
   return (
     <main className="app-screen fade-up">
       <AppTopBar title="BibleGuessr" />
-      <div className="app-content app-content-fixed">
+      <div className="app-content app-content-scroll">
         <div className="page max-w-xl setup-page home-page min-w-0">
           <section className="surface-card p-5 min-w-0">
             <p className="eyebrow mb-2">(random) VERSE OF THE DAY</p>

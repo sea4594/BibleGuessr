@@ -20,6 +20,11 @@ import { gameModes } from '@/lib/gameModes';
 import { bibleData, BookData } from '@/lib/bibleData';
 import { calculateScore } from '@/lib/scoring';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
+import {
+  buildVerseReferencePool,
+  getShuffledAvailableVerseReferences,
+  verseReferenceKey,
+} from '@/lib/verseSelection';
 
 const PARTY_CODE_STORAGE_KEY = 'bg-party-room-code-v1';
 
@@ -36,16 +41,12 @@ type VerseInfo = {
   text: string;
 };
 
-type NeighborDirection = 'previous' | 'next';
+type PendingSelection = {
+  guess: PartyGuess | null;
+  hasInteracted: boolean;
+};
 
-function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
-  const book = books[Math.floor(Math.random() * books.length)];
-  const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
-  const chapter = parseInt(chapterData.chapter, 10);
-  const verseCount = parseInt(chapterData.verses, 10);
-  const verse = Math.floor(Math.random() * verseCount) + 1;
-  return { book, chapter, verse };
-}
+type NeighborDirection = 'previous' | 'next';
 
 function resolveNeighborVerse(
   book: string,
@@ -94,20 +95,30 @@ function formatTime(totalSeconds: number) {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-async function buildRandomPartyVerse(books: BookData[]): Promise<PartyVerse | null> {
-  let attempts = 0;
-  while (attempts < 8) {
-    const pick = pickRandomVerse(books);
-    const text = await fetchVerseTextByReference(pick.book.book, pick.chapter, pick.verse);
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function toOverallPercent(totalScore: number, roundsPlayed: number) {
+  if (roundsPlayed <= 0) return 0;
+  return clampPercent((totalScore / (roundsPlayed * 100)) * 100);
+}
+
+async function buildRandomPartyVerseFromPool(
+  books: BookData[],
+  excludedKeys: Set<string>
+): Promise<PartyVerse | null> {
+  const references = getShuffledAvailableVerseReferences(buildVerseReferencePool(books), excludedKeys);
+  for (const pick of references) {
+    const text = await fetchVerseTextByReference(pick.book, pick.chapter, pick.verse);
     if (text) {
       return {
-        book: pick.book.book,
+        book: pick.book,
         chapter: pick.chapter,
         verse: pick.verse,
         text,
       };
     }
-    attempts += 1;
   }
   return null;
 }
@@ -130,6 +141,10 @@ export default function PartyGameClient() {
   const [previousVerses, setPreviousVerses] = useState<VerseInfo[]>([]);
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<PendingSelection>({
+    guess: null,
+    hasInteracted: false,
+  });
 
   const timeoutSubmittedRoundRef = useRef<number | null>(null);
   const localRoundSeenRef = useRef<{ round: number; seenAt: number } | null>(null);
@@ -203,12 +218,17 @@ export default function PartyGameClient() {
   }, []);
 
   useEffect(() => {
-    if (!game || game.status !== 'in-round') {
-      localRoundSeenRef.current = null;
+    const resetRoundUi = () => {
       setPreviousVerses([]);
       setNextVerses([]);
       setLoadingNeighbor(null);
-      return;
+      setPendingSelection({ guess: null, hasInteracted: false });
+    };
+
+    if (!game || game.status !== 'in-round') {
+      localRoundSeenRef.current = null;
+      const timer = window.setTimeout(resetRoundUi, 0);
+      return () => window.clearTimeout(timer);
     }
 
     if (!localRoundSeenRef.current || localRoundSeenRef.current.round !== game.currentRound) {
@@ -216,10 +236,11 @@ export default function PartyGameClient() {
         round: game.currentRound,
         seenAt: Date.now(),
       };
-      setPreviousVerses([]);
-      setNextVerses([]);
-      setLoadingNeighbor(null);
+      const timer = window.setTimeout(resetRoundUi, 0);
+      return () => window.clearTimeout(timer);
     }
+
+    return undefined;
   }, [game, game?.currentRound, game?.status]);
 
   useEffect(() => {
@@ -282,8 +303,40 @@ export default function PartyGameClient() {
     if (timeoutSubmittedRoundRef.current === game.currentRound) return;
 
     timeoutSubmittedRoundRef.current = game.currentRound;
-    void submitRoundScore(0, 0, true);
-  }, [game, modeConfig, mySubmission, remainingSeconds, submitRoundScore, verse]);
+    const timer = window.setTimeout(() => {
+      const timeoutGuess = pendingSelection.hasInteracted ? pendingSelection.guess : null;
+      if (timeoutGuess) {
+        const bookData = modeConfig.books.find(b => b.book === verse.book) ?? modeConfig.books[0];
+        const breakdown = calculateScore(
+          { book: verse.book, chapter: verse.chapter, verse: verse.verse },
+          timeoutGuess,
+          bookData,
+          modeConfig.scoringType
+        );
+
+        const contextVersesAdded = previousVerses.length + nextVerses.length;
+        const penalty = contextVersesAdded * 10;
+        const adjustedTotal = Math.max(0, breakdown.total - penalty);
+        void submitRoundScore(adjustedTotal, breakdown.total, false, timeoutGuess, breakdown.feedback);
+        return;
+      }
+
+      void submitRoundScore(0, 0, true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    game,
+    modeConfig,
+    mySubmission,
+    nextVerses.length,
+    pendingSelection.guess,
+    pendingSelection.hasInteracted,
+    previousVerses.length,
+    remainingSeconds,
+    submitRoundScore,
+    verse,
+  ]);
 
   const handleAddNeighborVerse = useCallback(async (direction: NeighborDirection) => {
     if (!verse || loadingNeighbor || game?.status !== 'in-round') return;
@@ -304,7 +357,7 @@ export default function PartyGameClient() {
     setLoadingNeighbor(null);
   }, [fetchVerseByReference, game?.status, loadingNeighbor, nextVerses, previousVerses, verse]);
 
-  const handleSubmitGuess = async (guess: { book: string; chapter: number; verse: number }) => {
+  const handleSubmitGuess = useCallback(async (guess: { book: string; chapter: number; verse: number }) => {
     if (!game || !verse || !modeConfig || !myMember) return;
 
     const bookData = modeConfig.books.find(b => b.book === verse.book) ?? modeConfig.books[0];
@@ -320,7 +373,7 @@ export default function PartyGameClient() {
     const adjustedTotal = Math.max(0, breakdown.total - penalty);
 
     await submitRoundScore(adjustedTotal, breakdown.total, false, guess, breakdown.feedback);
-  };
+  }, [game, modeConfig, myMember, nextVerses.length, previousVerses.length, submitRoundScore, verse]);
 
   const handleHostAdvance = async () => {
     if (!room || !game || !modeConfig || !isHost) return;
@@ -334,9 +387,11 @@ export default function PartyGameClient() {
       return;
     }
 
-    const nextVerse = await buildRandomPartyVerse(modeConfig.books);
+    const excluded = new Set<string>(Array.isArray(game.usedVerseKeys) ? game.usedVerseKeys : []);
+    excluded.add(verseReferenceKey(game.roundVerse));
+    const nextVerse = await buildRandomPartyVerseFromPool(modeConfig.books, excluded);
     if (!nextVerse) {
-      setError('Failed to load a verse for the next round.');
+      setError('Failed to load a unique verse for the next round.');
       setIsAdvancing(false);
       return;
     }
@@ -521,12 +576,18 @@ export default function PartyGameClient() {
               <div className="play-guess">
                 {!mySubmission ? (
                   <>
-                    <GuessInterface modeConfig={modeConfig} onSubmit={guess => void handleSubmitGuess(guess)} />
+                    <GuessInterface
+                      modeConfig={modeConfig}
+                      onSubmit={guess => void handleSubmitGuess(guess)}
+                      onSelectionChange={setPendingSelection}
+                    />
                   </>
                 ) : (
                   <section className="surface-card p-5 party-wait-card">
                     <h2 className="headline-serif text-2xl mb-2">Submitted</h2>
-                    <p className="content-muted mb-4">Your score for this round: <strong>{mySubmission.score}</strong></p>
+                    <p className="content-muted mb-4">
+                      Your score for this round: <strong>{clampPercent(mySubmission.score)}%</strong>
+                    </p>
                     <p className="text-sm font-semibold mb-2">Waiting for other players ({submittedCount}/{totalPlayers})</p>
                     <div className="grid gap-2">
                       {room.members.map(member => {
@@ -534,7 +595,7 @@ export default function PartyGameClient() {
                         return (
                           <div key={member.id} className="party-score-row">
                             <span>{member.name}</span>
-                            <span className="font-semibold">{submission ? submission.score : 'Waiting…'}</span>
+                            <span className="font-semibold">{submission ? `${clampPercent(submission.score)}%` : 'Waiting…'}</span>
                           </div>
                         );
                       })}
@@ -571,7 +632,7 @@ export default function PartyGameClient() {
                           {submission ? renderSubmissionGuess(submission) : <span style={{ color: '#ef4444' }}>No guess</span>}
                         </p>
                       </div>
-                      <p className="party-round-table-score">{roundScore}</p>
+                      <p className="party-round-table-score">{clampPercent(roundScore)}%</p>
                     </div>
                   ))}
                 </div>
@@ -583,7 +644,7 @@ export default function PartyGameClient() {
                   {totalRows.map(({ member, totalScore }) => (
                     <div key={`total-${member.id}`} className="party-score-row">
                       <span>{member.name}</span>
-                      <span className="font-semibold">{totalScore}</span>
+                      <span className="font-semibold">{toOverallPercent(totalScore, game.currentRound)}%</span>
                     </div>
                   ))}
                 </div>
@@ -618,7 +679,7 @@ export default function PartyGameClient() {
                   .map(member => (
                     <div key={member.id} className="party-score-row">
                       <span>{member.name}</span>
-                      <span className="font-semibold">{game.scores[member.id] ?? 0}</span>
+                      <span className="font-semibold">{toOverallPercent(game.scores[member.id] ?? 0, game.totalRounds)}%</span>
                     </div>
                   ))}
               </div>

@@ -16,22 +16,31 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
   const [selectedRoundSourceIndex, setSelectedRoundSourceIndex] = useState<number | null>(null);
   const totalScore = session.rounds.reduce((sum, r) => sum + r.score, 0);
   const maxPossible = session.totalRounds * 100;
-  const accuracy = Math.round((totalScore / Math.max(maxPossible, 1)) * 100);
+  const accuracy = Math.max(0, Math.min(100, Math.round((totalScore / Math.max(maxPossible, 1)) * 100)));
   const isHotSeat = Boolean(session.multiplayer?.enabled && session.multiplayer?.lobbyType === 'hot-seat');
 
   const playerTotals = useMemo(() => {
-    if (!session.multiplayer?.enabled) return [] as Array<{ player: string; score: number }>;
+    if (!session.multiplayer?.enabled) return [] as Array<{ player: string; percent: number }>;
 
-    const totals = new Map<string, number>();
-    for (const player of session.multiplayer.players) totals.set(player, 0);
+    const totals = new Map<string, { score: number; rounds: number }>();
+    for (const player of session.multiplayer.players) totals.set(player, { score: 0, rounds: 0 });
     for (const round of session.rounds) {
       if (!round.playerName) continue;
-      totals.set(round.playerName, (totals.get(round.playerName) ?? 0) + round.score);
+      const existing = totals.get(round.playerName) ?? { score: 0, rounds: 0 };
+      totals.set(round.playerName, {
+        score: existing.score + round.score,
+        rounds: existing.rounds + 1,
+      });
     }
 
     return Array.from(totals.entries())
-      .map(([player, score]) => ({ player, score }))
-      .sort((a, b) => b.score - a.score);
+      .map(([player, value]) => ({
+        player,
+        percent: value.rounds > 0
+          ? Math.max(0, Math.min(100, Math.round((value.score / (value.rounds * 100)) * 100)))
+          : 0,
+      }))
+      .sort((a, b) => b.percent - a.percent);
   }, [session.multiplayer, session.rounds]);
 
   const multiplayerByRound = useMemo(() => {
@@ -100,6 +109,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
     }
 
     const grouped = new Map<number, { sourceIndex: number; round: GameSession['rounds'][number]; score: number }>();
+    const groupedCounts = new Map<number, number>();
 
     session.rounds.forEach((round, idx) => {
       const logicalRound = session.multiplayer!.turnStyle === 'alternate'
@@ -109,8 +119,10 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
       const existing = grouped.get(logicalRound);
       if (!existing) {
         grouped.set(logicalRound, { sourceIndex: idx, round, score: round.score });
+        groupedCounts.set(logicalRound, 1);
       } else {
         existing.score += round.score;
+        groupedCounts.set(logicalRound, (groupedCounts.get(logicalRound) ?? 1) + 1);
       }
     });
 
@@ -121,7 +133,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
         displayRound,
         sourceIndex: value.sourceIndex,
         round: value.round,
-        score: value.score,
+        score: Math.max(0, Math.min(100, Math.round(value.score / Math.max(groupedCounts.get(displayRound) ?? 1, 1)))),
       }));
   }, [isHotSeat, session.multiplayer, session.rounds]);
 
@@ -186,7 +198,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
               >
                 <span className="summary-round">Round {row.displayRound}</span>
                 <span className="summary-ref">{row.round.verse.book} {row.round.verse.chapter}:{row.round.verse.verse}</span>
-                <span className="summary-score">{row.score}</span>
+                <span className="summary-score">{Math.max(0, Math.min(100, Math.round(row.score)))}%</span>
               </button>
             ))}
           </div>
@@ -207,7 +219,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
                   <div key={entry.logicalRound} className="grid border-t border-[var(--line)] pt-2" style={{ gridTemplateColumns: `5.6rem repeat(${session.multiplayer?.players.length ?? 0}, minmax(0, 1fr))` }}>
                     <div className="text-sm font-semibold">Round {entry.logicalRound}</div>
                     {session.multiplayer?.players.map(player => (
-                      <div key={`${entry.logicalRound}-${player}`} className="text-right text-sm font-semibold">{entry.byPlayer.get(player) ?? 0}</div>
+                      <div key={`${entry.logicalRound}-${player}`} className="text-right text-sm font-semibold">{Math.max(0, Math.min(100, Math.round(entry.byPlayer.get(player) ?? 0)))}%</div>
                     ))}
                   </div>
                 ))}
@@ -246,7 +258,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
           {!isHotSeat && (
             <div className="surface-card text-center mb-4 p-6 w-full">
               <div className="text-[2.2rem] sm:text-[3.1rem] lg:text-[3.5rem] font-black leading-tight">
-                Total Score: {totalScore}
+                Final Score: {accuracy}%
               </div>
             </div>
           )}
@@ -259,7 +271,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
               {playerTotals.map((entry, idx) => (
                 <div key={entry.player} className="flex items-center justify-between py-3 border-t border-[var(--line)] first:border-0">
                   <span className={isHotSeat ? 'text-base font-semibold' : 'text-sm'}>{idx + 1}. {entry.player}</span>
-                  <span className={isHotSeat ? 'text-xl font-black' : 'font-bold'}>{entry.score}</span>
+                  <span className={isHotSeat ? 'text-xl font-black' : 'font-bold'}>{entry.percent}%</span>
                 </div>
               ))}
             </div>
@@ -324,7 +336,9 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
               })}
               <div className="flex items-center justify-between border-t border-[var(--line)] pt-2">
                 <span>Score</span>
-                <span className="font-extrabold">{isHotSeat ? (selectedRoundRow?.score ?? selectedRound.score) : selectedRound.score}</span>
+                <span className="font-extrabold">
+                  {Math.max(0, Math.min(100, Math.round(isHotSeat ? (selectedRoundRow?.score ?? selectedRound.score) : selectedRound.score)))}%
+                </span>
               </div>
             </div>
           </div>

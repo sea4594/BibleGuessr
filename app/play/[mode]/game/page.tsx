@@ -11,6 +11,11 @@ import VerseDisplay from '@/components/VerseDisplay';
 import RoundResult from '@/components/RoundResult';
 import GameSummary from '@/components/GameSummary';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
+import {
+  buildVerseReferencePool,
+  getShuffledAvailableVerseReferences,
+  verseReferenceKey,
+} from '@/lib/verseSelection';
 import { Pause, X } from 'lucide-react';
 import { useSettingsModal } from '@/components/SettingsModalProvider';
 
@@ -21,16 +26,12 @@ interface VerseInfo {
   text: string;
 }
 
-type NeighborDirection = 'previous' | 'next';
-
-function pickRandomVerse(books: BookData[]): { book: BookData; chapter: number; verse: number } {
-  const book = books[Math.floor(Math.random() * books.length)];
-  const chapterData = book.chapters[Math.floor(Math.random() * book.chapters.length)];
-  const chapter = parseInt(chapterData.chapter, 10);
-  const verseCount = parseInt(chapterData.verses, 10);
-  const verse = Math.floor(Math.random() * verseCount) + 1;
-  return { book, chapter, verse };
+interface PendingSelection {
+  guess: { book: string; chapter: number; verse: number } | null;
+  hasInteracted: boolean;
 }
+
+type NeighborDirection = 'previous' | 'next';
 
 function resolveNeighborVerse(
   book: string,
@@ -89,9 +90,14 @@ export default function GamePage() {
   const [previousVerses, setPreviousVerses] = useState<VerseInfo[]>([]);
   const [nextVerses, setNextVerses] = useState<VerseInfo[]>([]);
   const [loadingNeighbor, setLoadingNeighbor] = useState<NeighborDirection | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<PendingSelection>({
+    guess: null,
+    hasInteracted: false,
+  });
   const [canStartRound, setCanStartRound] = useState(false);
   const suppressEmptySessionRedirectRef = useRef(false);
   const timeoutSubmittedRef = useRef(false);
+  const usedVerseKeysRef = useRef<Set<string>>(new Set());
   const { openSettings } = useSettingsModal();
 
   useEffect(() => {
@@ -120,6 +126,7 @@ export default function GamePage() {
     setVerseError(null);
     setPreviousVerses([]);
     setNextVerses([]);
+    setPendingSelection({ guess: null, hasInteracted: false });
 
     const playerCount = session.multiplayer?.players.length ?? 1;
     const isAlternate = session.multiplayer?.enabled && session.multiplayer.turnStyle === 'alternate';
@@ -134,18 +141,22 @@ export default function GamePage() {
     }
 
     if (session.multiplayer?.enabled && sharedVerseByRound[logicalRound]) {
-      setCurrentVerse(sharedVerseByRound[logicalRound]);
+      const shared = sharedVerseByRound[logicalRound];
+      usedVerseKeysRef.current.add(verseReferenceKey(shared));
+      setCurrentVerse(shared);
       setRemainingSeconds(session.timerDurationSeconds ?? 0);
       timeoutSubmittedRef.current = false;
       setIsLoadingVerse(false);
       return;
     }
 
-    let attempts = 0;
-    while (attempts < 8) {
-      const { book, chapter, verse } = pickRandomVerse(books);
-      const data = await fetchVerseByReference({ book: book.book, chapter, verse });
+    const pool = buildVerseReferencePool(books);
+    const availableReferences = getShuffledAvailableVerseReferences(pool, usedVerseKeysRef.current);
+
+    for (const reference of availableReferences) {
+      const data = await fetchVerseByReference(reference);
       if (data) {
+        usedVerseKeysRef.current.add(verseReferenceKey(reference));
         setCurrentVerse(data);
         setRemainingSeconds(session.timerDurationSeconds ?? 0);
         timeoutSubmittedRef.current = false;
@@ -155,10 +166,9 @@ export default function GamePage() {
         }
         return;
       }
-      attempts++;
     }
 
-    setVerseError('Failed to load verse. Please try again.');
+    setVerseError('Failed to load a unique verse. Please try again.');
     setIsLoadingVerse(false);
   }, [fetchVerseByReference, session, sharedVerseByRound]);
 
@@ -195,39 +205,94 @@ export default function GamePage() {
     return session.multiplayer.players[boundedIndex];
   }, [session]);
 
+  const submitResolvedGuess = useCallback((
+    guess: { book: string; chapter: number; verse: number },
+    wasBlankGuess: boolean
+  ) => {
+    if (!session || !currentVerse) return;
+
+    if (wasBlankGuess) {
+      submitGuess(
+        { book: '', chapter: 0, verse: 0 },
+        currentVerse,
+        {
+          playerName: getCurrentPlayerName() ?? undefined,
+          baseScore: 0,
+          contextPenalty: 0,
+          contextVersesAdded: 0,
+          wasBlankGuess: true,
+        },
+        0,
+        {
+          bookPoints: 0,
+          chapterPoints: 0,
+          versePoints: 0,
+          baseTotal: 0,
+          contextPenalty: 0,
+          contextVersesAdded: 0,
+          total: 0,
+          feedback: {
+            book: 'wrong',
+            chapter: 'wrong',
+            verse: 'wrong',
+            chaptersOff: 0,
+            versesOff: 0,
+          },
+        }
+      );
+      return;
+    }
+
+    const bookData = session.modeConfig.books.find(b => b.book === currentVerse.book) ?? session.modeConfig.books[0];
+    const breakdown = calculateScore(
+      { book: currentVerse.book, chapter: currentVerse.chapter, verse: currentVerse.verse },
+      guess,
+      bookData,
+      session.modeConfig.scoringType
+    );
+
+    const contextVersesAdded = previousVerses.length + nextVerses.length;
+    const contextPenalty = contextVersesAdded * 10;
+    const adjustedTotal = Math.max(0, breakdown.total - contextPenalty);
+
+    submitGuess(
+      guess,
+      currentVerse,
+      {
+        playerName: getCurrentPlayerName() ?? undefined,
+        baseScore: breakdown.total,
+        contextPenalty,
+        contextVersesAdded,
+      },
+      adjustedTotal,
+      {
+        ...breakdown,
+        baseTotal: breakdown.total,
+        contextPenalty,
+        contextVersesAdded,
+        total: adjustedTotal,
+      }
+    );
+  }, [currentVerse, getCurrentPlayerName, nextVerses.length, previousVerses.length, session, submitGuess]);
+
+  const handleSubmitGuess = useCallback((guess: { book: string; chapter: number; verse: number }) => {
+    if (!currentVerse || timeoutSubmittedRef.current) return;
+    timeoutSubmittedRef.current = true;
+    submitResolvedGuess(guess, false);
+  }, [currentVerse, submitResolvedGuess]);
+
   const handleTimerExpired = useCallback(() => {
     if (!session || !currentVerse || timeoutSubmittedRef.current) return;
 
     timeoutSubmittedRef.current = true;
-    submitGuess(
-      { book: '', chapter: 0, verse: 0 },
-      currentVerse,
-      {
-        playerName: getCurrentPlayerName() ?? undefined,
-        baseScore: 0,
-        contextPenalty: 0,
-        contextVersesAdded: 0,
-        wasBlankGuess: true,
-      },
-      0,
-      {
-        bookPoints: 0,
-        chapterPoints: 0,
-        versePoints: 0,
-        baseTotal: 0,
-        contextPenalty: 0,
-        contextVersesAdded: 0,
-        total: 0,
-        feedback: {
-          book: 'wrong',
-          chapter: 'wrong',
-          verse: 'wrong',
-          chaptersOff: 0,
-          versesOff: 0,
-        },
-      }
-    );
-  }, [currentVerse, getCurrentPlayerName, session, submitGuess]);
+    const timeoutGuess = pendingSelection.hasInteracted ? pendingSelection.guess : null;
+    if (timeoutGuess) {
+      submitResolvedGuess(timeoutGuess, false);
+      return;
+    }
+
+    submitResolvedGuess({ book: '', chapter: 0, verse: 0 }, true);
+  }, [currentVerse, pendingSelection.guess, pendingSelection.hasInteracted, session, submitResolvedGuess]);
 
   useEffect(() => {
     if (!currentVerse || isLoadingVerse || isPaused || !roundCanStart || timerDurationSeconds <= 0) return;
@@ -283,48 +348,13 @@ export default function GamePage() {
     setLoadingNeighbor(null);
   };
 
-  const handleSubmitGuess = (guess: { book: string; chapter: number; verse: number }) => {
-    if (!currentVerse) return;
-    timeoutSubmittedRef.current = true;
-
-    const bookData = session.modeConfig.books.find(b => b.book === currentVerse.book) ?? session.modeConfig.books[0];
-    const breakdown = calculateScore(
-      { book: currentVerse.book, chapter: currentVerse.chapter, verse: currentVerse.verse },
-      guess,
-      bookData,
-      session.modeConfig.scoringType
-    );
-
-    const contextVersesAdded = previousVerses.length + nextVerses.length;
-    const contextPenalty = contextVersesAdded * 10;
-    const adjustedTotal = Math.max(0, breakdown.total - contextPenalty);
-
-    submitGuess(
-      guess,
-      currentVerse,
-      {
-        playerName: currentPlayerName ?? undefined,
-        baseScore: breakdown.total,
-        contextPenalty,
-        contextVersesAdded,
-      },
-      adjustedTotal,
-      {
-        ...breakdown,
-        baseTotal: breakdown.total,
-        contextPenalty,
-        contextVersesAdded,
-        total: adjustedTotal,
-      }
-    );
-  };
-
   const handleNextRound = () => {
     setCurrentVerse(null);
     setRemainingSeconds(timerDurationSeconds);
     timeoutSubmittedRef.current = false;
     setPreviousVerses([]);
     setNextVerses([]);
+    setPendingSelection({ guess: null, hasInteracted: false });
     if (isHotSeatGame) setCanStartRound(false);
     nextRound();
   };
@@ -347,6 +377,9 @@ export default function GamePage() {
   };
 
   const handlePlayAgain = () => {
+    usedVerseKeysRef.current = new Set();
+    setSharedVerseByRound({});
+    setPendingSelection({ guess: null, hasInteracted: false });
     const shouldRandomizeBook = session.mode === 'book-selection' && session.randomizeBookOnReplay;
     const randomBook = shouldRandomizeBook
       ? bibleData[Math.floor(Math.random() * bibleData.length)]
@@ -431,7 +464,11 @@ export default function GamePage() {
 
             <div className="play-guess">
               {currentVerse && !isLoadingVerse && (
-                <GuessInterface modeConfig={session.modeConfig} onSubmit={handleSubmitGuess} />
+                <GuessInterface
+                  modeConfig={session.modeConfig}
+                  onSubmit={handleSubmitGuess}
+                  onSelectionChange={setPendingSelection}
+                />
               )}
             </div>
           </div>

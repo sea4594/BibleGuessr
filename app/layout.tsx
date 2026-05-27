@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Barlow } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import { GameProvider } from '@/lib/gameContext';
 import { UiSettingsProvider } from '@/lib/uiSettingsContext';
@@ -13,6 +14,33 @@ const bodyFont = Barlow({
   variable: '--font-body',
 });
 
+const THEME_BOOTSTRAP_SCRIPT = `
+(() => {
+  const fallback = { color: 'ocean', mode: 'light' };
+  const byPreset = {
+    light: { color: 'bw', mode: 'light' },
+    dark: { color: 'bw', mode: 'dark' },
+    clay: { color: 'clay', mode: 'light' },
+    'ocean-light': { color: 'ocean', mode: 'light' },
+    'ocean-dark': { color: 'ocean', mode: 'dark' },
+    forest: { color: 'forest', mode: 'light' },
+    berry: { color: 'berry', mode: 'light' },
+  };
+
+  try {
+    const raw = localStorage.getItem('bg-ui-settings-v1');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    const preset = parsed && typeof parsed.themePreset === 'string' ? parsed.themePreset : '';
+    const resolved = byPreset[preset] || fallback;
+    document.documentElement.setAttribute('data-theme', resolved.color);
+    document.documentElement.setAttribute('data-mode', resolved.mode);
+  } catch {
+    // no-op
+  }
+})();
+`;
+
 export const metadata: Metadata = {
   title: 'BibleGuessr',
   description: 'A GeoGuessr-style Bible verse guessing game',
@@ -25,7 +53,7 @@ export const metadata: Metadata = {
       { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
     shortcut: ['/favicon-32x32.png'],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '512x512', type: 'image/png' }],
   },
   appleWebApp: {
     capable: true,
@@ -37,13 +65,19 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover',
   maximumScale: 1,
   userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="ocean" data-mode="light">
+      <head>
+        <Script id="theme-bootstrap" strategy="beforeInteractive">
+          {THEME_BOOTSTRAP_SCRIPT}
+        </Script>
+      </head>
       <body className={`${bodyFont.variable} min-h-screen font-[var(--font-body)] antialiased`}>
         <AccountSyncProvider>
           <UiSettingsProvider>
