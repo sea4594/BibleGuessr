@@ -606,7 +606,7 @@ export default function MultiplayerPage() {
 
               {showPartyLobbyAction && (
                 <div className="party-header-actions mb-4">
-                  {isHost && room.members.length > 1 ? (
+                  {isHost && (room?.members.length ?? 0) > 1 ? (
                     <button
                       onClick={() => void handleEndLobby()}
                       disabled={partyActionPending}

@@ -337,7 +337,10 @@ export default function PartyGameClient() {
 
     if (!ok) {
       setError('Failed to submit round score. Please try again.');
+      return;
     }
+
+    setError(null);
   }, [code, myMember, partyMemberId, profile.name]);
 
   useEffect(() => {
@@ -379,6 +382,7 @@ export default function PartyGameClient() {
     nextVerses.length,
     pendingSelection.guess,
     previousVerses.length,
+    remainingSeconds,
     submitRoundScore,
     verse,
   ]);
