@@ -285,14 +285,14 @@ export default function GamePage() {
     if (!session || !currentVerse || timeoutSubmittedRef.current) return;
 
     timeoutSubmittedRef.current = true;
-    const timeoutGuess = pendingSelection.hasInteracted ? pendingSelection.guess : null;
+    const timeoutGuess = pendingSelection.guess;
     if (timeoutGuess) {
       submitResolvedGuess(timeoutGuess, false);
       return;
     }
 
     submitResolvedGuess({ book: '', chapter: 0, verse: 0 }, true);
-  }, [currentVerse, pendingSelection.guess, pendingSelection.hasInteracted, session, submitResolvedGuess]);
+  }, [currentVerse, pendingSelection.guess, session, submitResolvedGuess]);
 
   useEffect(() => {
     if (!currentVerse || isLoadingVerse || isPaused || !roundCanStart || timerDurationSeconds <= 0) return;

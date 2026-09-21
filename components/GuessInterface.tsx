@@ -14,12 +14,10 @@ interface Props {
 
 function getInitialSelection(modeConfig: GameModeConfig) {
   const onlyBook = modeConfig.books.length === 1 ? 0 : null;
-  const selectedBook = onlyBook === null ? null : modeConfig.books[onlyBook];
-  const onlyChapter = selectedBook?.chapters.length === 1 ? 1 : null;
 
   return {
     bookIdx: onlyBook,
-    chapter: onlyChapter,
+    chapter: null as number | null,
     verse: null as number | null,
   };
 }
@@ -64,8 +62,8 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
   const handleBookChange = (idx: number) => {
     setSelection({
       bookIdx: idx,
-      chapter: 1,
-      verse: 1,
+      chapter: null,
+      verse: null,
     });
     setHasInteracted(true);
   };
@@ -74,7 +72,7 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
     setSelection(prev => ({
       ...prev,
       chapter: idx + 1,
-      verse: 1,
+      verse: null,
     }));
     setHasInteracted(true);
   };
@@ -98,21 +96,21 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
         <VerticalDragSlider
           label="Book"
           items={bookNames}
-          selectedIndex={selection.bookIdx ?? 0}
+          selectedIndex={selection.bookIdx}
           onChange={handleBookChange}
           disabled={bookNames.length <= 1}
         />
         <VerticalDragSlider
           label="Chapter"
           items={chapterItems}
-          selectedIndex={(selection.chapter ?? 1) - 1}
+          selectedIndex={selection.chapter === null ? null : selection.chapter - 1}
           onChange={handleChapterChange}
           disabled={!selectedBook}
         />
         <VerticalDragSlider
           label="Verse"
           items={verseItems}
-          selectedIndex={(selection.verse ?? 1) - 1}
+          selectedIndex={selection.verse === null ? null : selection.verse - 1}
           onChange={handleVerseChange}
           disabled={!selectedBook || !selection.chapter}
         />

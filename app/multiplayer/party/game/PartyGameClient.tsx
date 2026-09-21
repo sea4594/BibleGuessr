@@ -350,7 +350,7 @@ export default function PartyGameClient() {
 
     timeoutSubmittedRoundRef.current = game.currentRound;
     const timer = window.setTimeout(() => {
-      const timeoutGuess = pendingSelection.hasInteracted ? pendingSelection.guess : null;
+      const timeoutGuess = pendingSelection.guess;
       if (timeoutGuess) {
         const bookData = modeConfig.books.find(b => b.book === verse.book) ?? modeConfig.books[0];
         const breakdown = calculateScore(
@@ -377,7 +377,6 @@ export default function PartyGameClient() {
     mySubmission,
     nextVerses.length,
     pendingSelection.guess,
-    pendingSelection.hasInteracted,
     previousVerses.length,
     remainingSeconds,
     submitRoundScore,

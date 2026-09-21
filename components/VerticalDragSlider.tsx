@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 
 interface Props {
   items: string[];
-  selectedIndex: number;
+  selectedIndex: number | null;
   onChange: (index: number) => void;
   label: string;
   disabled?: boolean;
@@ -24,7 +24,7 @@ export default function VerticalDragSlider({
 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [hoverIdx, setHoverIdx] = useState(selectedIndex);
+  const [hoverIdx, setHoverIdx] = useState(selectedIndex ?? 0);
   const [rawPx, setRawPx] = useState(0); // calibrated px from top of track
 
   const compute = useCallback((clientY: number) => {
@@ -59,7 +59,9 @@ export default function VerticalDragSlider({
     setDragging(false);
   };
 
-  const activeIdx = items.length > 0 ? Math.max(0, Math.min(items.length - 1, dragging ? hoverIdx : selectedIndex)) : 0;
+  const activeIdx = dragging
+    ? (items.length > 0 ? Math.max(0, Math.min(items.length - 1, hoverIdx)) : null)
+    : selectedIndex;
   const itemHeightPercent = items.length > 0 ? 100 / items.length : 100;
   const dynamicFontPx = Math.max(4, Math.min(14, Math.floor(220 / Math.max(items.length, 1))));
 
@@ -75,7 +77,7 @@ export default function VerticalDragSlider({
   return (
     <div className={`vslider-col${disabled ? ' opacity-40' : ''}`}>
       <p className="vslider-label">{label}</p>
-      <p className="vslider-selected-val">{disabled ? '—' : items[activeIdx] ?? '—'}</p>
+      <p className="vslider-selected-val">{disabled ? '—' : (activeIdx === null ? '—' : (items[activeIdx] ?? '—'))}</p>
 
       <div className="vslider-track-wrap">
         <div
@@ -91,7 +93,7 @@ export default function VerticalDragSlider({
             {items.map((name, i) => (
               <div
                 key={i}
-                className={`vslider-book-item${i === activeIdx ? ' active' : ''}`}
+                className={`vslider-book-item${activeIdx !== null && i === activeIdx ? ' active' : ''}`}
                 style={{
                   height: `${itemHeightPercent}%`,
                   minHeight: `${itemHeightPercent}%`,
