@@ -71,27 +71,21 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
 
   const handleBookChange = (idx: number) => {
     const selectedNextBook = modeConfig.books[idx] ?? null;
-    const isFirstSelection = !hasInteracted && selection.chapter === null && selection.verse === null;
+    const centeredChapter = selectedNextBook
+      ? getCenteredOneBasedIndex(selectedNextBook.chapters.length)
+      : null;
+    const centeredChapterData = selectedNextBook && centeredChapter
+      ? selectedNextBook.chapters[centeredChapter - 1]
+      : null;
+    const centeredVerse = centeredChapterData
+      ? getCenteredOneBasedIndex(parsePositiveInt(centeredChapterData.verses))
+      : null;
 
-    if (isFirstSelection && selectedNextBook) {
-      const centeredChapter = getCenteredOneBasedIndex(selectedNextBook.chapters.length);
-      const centeredChapterData = centeredChapter ? selectedNextBook.chapters[centeredChapter - 1] : null;
-      const centeredVerse = centeredChapterData
-        ? getCenteredOneBasedIndex(parsePositiveInt(centeredChapterData.verses))
-        : null;
-
-      setSelection({
-        bookIdx: idx,
-        chapter: centeredChapter,
-        verse: centeredVerse,
-      });
-    } else {
-      setSelection({
-        bookIdx: idx,
-        chapter: null,
-        verse: null,
-      });
-    }
+    setSelection({
+      bookIdx: idx,
+      chapter: centeredChapter,
+      verse: centeredVerse,
+    });
 
     setHasInteracted(true);
   };
@@ -100,7 +94,6 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
     const nextChapter = idx + 1;
     const nextBook = selection.bookIdx === null ? null : modeConfig.books[selection.bookIdx] ?? null;
     const nextChapterData = nextBook?.chapters[nextChapter - 1] ?? null;
-    const isFirstSelection = !hasInteracted && selection.chapter === null && selection.verse === null;
     const centeredVerse = nextChapterData
       ? getCenteredOneBasedIndex(parsePositiveInt(nextChapterData.verses))
       : null;
@@ -108,7 +101,7 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
     setSelection(prev => ({
       ...prev,
       chapter: nextChapter,
-      verse: isFirstSelection ? centeredVerse : null,
+      verse: centeredVerse,
     }));
     setHasInteracted(true);
   };
