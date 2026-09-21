@@ -8,7 +8,7 @@ import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
-import CustomBookSelector from '@/components/CustomBookSelector';
+import CustomBookSelectorPopup from '@/components/CustomBookSelectorPopup';
 import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
 import { BookData } from '@/lib/bibleData';
 import { gameModes, GameModeId } from '@/lib/gameModes';
@@ -680,7 +680,7 @@ export default function MultiplayerPage() {
                     {lobbySettings?.modeId === 'custom' && (
                       <div className="mb-3">
                         <label className="text-sm font-semibold block mb-2">Books</label>
-                        <CustomBookSelector
+                        <CustomBookSelectorPopup
                           selectedBooks={lobbySettings.selectedBooks ?? []}
                           onChange={books => {
                             void applyLobbySettings({ selectedBooks: books });

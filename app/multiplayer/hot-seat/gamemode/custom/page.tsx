@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppTopBar from '@/components/AppTopBar';
-import CustomBookSelector from '@/components/CustomBookSelector';
+import CustomBookSelectorPopup from '@/components/CustomBookSelectorPopup';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
 import { gameModes } from '@/lib/gameModes';
@@ -49,7 +49,7 @@ export default function HotSeatCustomModePage() {
           <section className="setup-panel">
             <div className="setup-panel-section">
               <h1 className="headline-serif text-3xl mb-4">Custom</h1>
-              <CustomBookSelector selectedBooks={selectedBooks} onChange={setSelectedBooks} />
+              <CustomBookSelectorPopup selectedBooks={selectedBooks} onChange={setSelectedBooks} />
               {selectedBooks.length === 0 && (
                 <p className="text-xs text-[var(--danger)] mt-2">Select at least one book to start.</p>
               )}

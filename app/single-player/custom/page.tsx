@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import AppTopBar from '@/components/AppTopBar';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
-import CustomBookSelector from '@/components/CustomBookSelector';
+import CustomBookSelectorPopup from '@/components/CustomBookSelectorPopup';
 import { useGame } from '@/lib/gameContext';
 import { bibleData } from '@/lib/bibleData';
 import { gameModes } from '@/lib/gameModes';
@@ -60,7 +60,7 @@ export default function CustomModeSetupPage() {
 
             <div className="setup-panel-section">
               <label className="block text-sm font-semibold mb-2">Book Selection</label>
-              <CustomBookSelector selectedBooks={selectedBooks} onChange={setSelectedBooks} />
+              <CustomBookSelectorPopup selectedBooks={selectedBooks} onChange={setSelectedBooks} />
               {selectedBooks.length === 0 && (
                 <p className="text-xs text-[var(--danger)] mt-2">Select at least one book to start.</p>
               )}

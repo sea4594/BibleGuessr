@@ -9,7 +9,7 @@ import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
 import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
-import CustomBookSelector from "@/components/CustomBookSelector";
+import CustomBookSelectorPopup from "@/components/CustomBookSelectorPopup";
 import {
   formatTimerOptionLabel,
   NO_TIMER_SECONDS,
@@ -154,7 +154,7 @@ export default function HomePage() {
               {settings.preferredGameMode === "custom" && (
                 <div className="mb-4">
                   <label className="block text-sm font-semibold mb-2">Books</label>
-                  <CustomBookSelector
+                  <CustomBookSelectorPopup
                     selectedBooks={settings.preferredCustomBooks}
                     onChange={setPreferredCustomBooks}
                   />
