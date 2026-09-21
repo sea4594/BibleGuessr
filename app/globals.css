@@ -1618,18 +1618,17 @@ input[type='range']::-moz-range-thumb {
 .party-header-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 .party-header-half {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  min-height: 100%;
   border: 1px solid var(--line-strong);
   border-radius: 12px;
   background: color-mix(in oklab, var(--panel-soft) 92%, transparent);
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .party-host-half {
@@ -1644,24 +1643,25 @@ input[type='range']::-moz-range-thumb {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   width: 100%;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .party-join-slot-input {
   width: 100%;
   min-width: 0;
-  min-height: 40px;
+  height: 34px;
+  padding: 2px 0 4px;
   border: none;
   border-bottom: 2px solid var(--line-strong);
   border-radius: 0;
   background: transparent;
   color: var(--text);
-  font-size: 1.2rem;
-  line-height: 1;
+  font-size: 1rem;
+  line-height: 1.15;
   font-weight: 700;
   text-align: center;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   transition: border-color 0.2s ease, color 0.2s ease;
 }
@@ -1677,6 +1677,13 @@ input[type='range']::-moz-range-thumb {
   cursor: not-allowed;
 }
 
+.party-join-action-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+}
+
 .party-code-block {
   display: flex;
   flex-direction: column;
@@ -1684,10 +1691,10 @@ input[type='range']::-moz-range-thumb {
 }
 
 .party-code-value {
-  font-size: clamp(2rem, 4.8vw, 2.8rem);
+  font-size: clamp(1.8rem, 4.2vw, 2.4rem);
   line-height: 1;
-  letter-spacing: 0.16em;
-  margin-top: 2px;
+  letter-spacing: 0.14em;
+  margin-top: 1px;
 }
 
 .party-header-actions {

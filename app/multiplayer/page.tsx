@@ -131,6 +131,9 @@ export default function MultiplayerPage() {
   const isCurrentMember = Boolean(
     room?.members.some(member => member.id === partyMemberId || member.id === clientId)
   );
+  const showPartyLobbyAction = Boolean(
+    room && isCurrentMember && ((isHost && room.members.length > 1) || !isHost)
+  );
   const lobbySettings = room?.lobbySettings;
   const lobbyComplete = Boolean(
     lobbySettings?.modeId &&
@@ -562,7 +565,7 @@ export default function MultiplayerPage() {
 
           {tab === 'party' && (
             <section className="surface-card p-4">
-              <div className="party-header-row mb-4">
+              <div className="party-header-row mb-3">
                 <div className="party-header-half party-host-half">
                   <p className="content-muted text-xs">Host</p>
                   <p className="headline-serif party-code-value">{firebaseConfigured && room ? room.code : '....'}</p>
@@ -589,21 +592,21 @@ export default function MultiplayerPage() {
                       />
                     ))}
                   </div>
+                  <button
+                    onClick={() => {
+                      if (!partyJoinPending) void submitJoin();
+                    }}
+                    className="btn-outline party-join-action-btn"
+                    disabled={!firebaseConfigured || joinCode.some(char => !char) || partyJoinPending}
+                  >
+                    {partyJoinPending ? 'Joining...' : 'Join Party'}
+                  </button>
                 </div>
               </div>
 
-              <div className="party-header-actions mb-4">
-                <button
-                  onClick={() => {
-                    if (!partyJoinPending) void submitJoin();
-                  }}
-                  className="btn-outline px-3 py-2 text-sm"
-                  disabled={!firebaseConfigured || joinCode.some(char => !char) || partyJoinPending}
-                >
-                  {partyJoinPending ? 'Joining...' : 'Join Party'}
-                </button>
-                {room && isCurrentMember && (
-                  isHost && room.members.length > 1 ? (
+              {showPartyLobbyAction && (
+                <div className="party-header-actions mb-4">
+                  {isHost && room.members.length > 1 ? (
                     <button
                       onClick={() => void handleEndLobby()}
                       disabled={partyActionPending}
@@ -619,9 +622,9 @@ export default function MultiplayerPage() {
                     >
                       {partyActionPending ? 'Leaving...' : 'Leave Lobby'}
                     </button>
-                  ) : null
-                )}
-              </div>
+                  ) : null}
+                </div>
+              )}
 
               {!firebaseConfigured && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
               {firebaseConfigured && !room && (
