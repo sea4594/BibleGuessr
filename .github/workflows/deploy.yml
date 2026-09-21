@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -16,33 +16,23 @@ concurrency:
 
 jobs:
   build:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    outputs:
+      pages_build_type: ${{ steps.pages_mode.outputs.build_type }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure GitHub Pages uses workflow deployments
+      - name: Detect GitHub Pages build type
+        id: pages_mode
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-
-          current_build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"')"
-          echo "Current Pages build type: ${current_build_type}"
-
-          if [ "$current_build_type" != "workflow" ]; then
-            echo "Switching GitHub Pages build type to workflow..."
-            gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow >/dev/null
-          fi
-
-          resolved_build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"')"
-          echo "Resolved Pages build type: ${resolved_build_type}"
-
-          if [ "$resolved_build_type" != "workflow" ]; then
-            echo "Failed to set GitHub Pages build type to workflow."
-            echo "Please open repository Settings -> Pages and set Source to GitHub Actions."
-            exit 1
-          fi
+          build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"' 2>/dev/null || echo "legacy")"
+          echo "Detected Pages build type: ${build_type}"
+          echo "build_type=${build_type}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -100,11 +90,56 @@ jobs:
           rsync -a --delete --exclude 'BibleGuessr' out/ out/BibleGuessr/
 
       - name: Upload Pages artifact
+        if: steps.pages_mode.outputs.build_type == 'workflow'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
 
+      - name: Sync static export into repository for legacy Pages mode
+        if: steps.pages_mode.outputs.build_type != 'workflow'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+
+          rm -rf BibleGuessr
+          mkdir -p BibleGuessr
+          rsync -a --delete out/BibleGuessr/ BibleGuessr/
+
+          cat > index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <meta http-equiv="refresh" content="0; url=/BibleGuessr/" />
+              <title>BibleGuessr</title>
+              <script>
+                window.location.replace('/BibleGuessr/');
+              </script>
+            </head>
+            <body>
+              <p>Redirecting to <a href="/BibleGuessr/">BibleGuessr</a>...</p>
+            </body>
+          </html>
+          HTML
+
+          printf '' > .nojekyll
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BibleGuessr index.html .nojekyll
+
+          if git diff --cached --quiet; then
+            echo "No legacy Pages changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(pages): sync static export for legacy source [skip ci]"
+          git push origin HEAD:main
+
   deploy:
+    if: needs.build.outputs.pages_build_type == 'workflow'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
