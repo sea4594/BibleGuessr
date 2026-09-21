@@ -345,7 +345,10 @@ export default function PartyGameClient() {
     if (game.status !== 'in-round') return;
     if (game.timerDurationSeconds <= 0) return;
     if (mySubmission) return;
-    if (remainingSeconds > 0) return;
+    const sharedRoundStartMs = resolveSharedRoundStartMs(game);
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - sharedRoundStartMs) / 1000));
+    const secondsLeft = Math.max(0, game.timerDurationSeconds - elapsedSeconds);
+    if (secondsLeft > 0) return;
     if (timeoutSubmittedRoundRef.current === game.currentRound) return;
 
     timeoutSubmittedRoundRef.current = game.currentRound;
@@ -376,7 +379,6 @@ export default function PartyGameClient() {
     nextVerses.length,
     pendingSelection.guess,
     previousVerses.length,
-    remainingSeconds,
     submitRoundScore,
     verse,
   ]);
@@ -634,9 +636,17 @@ export default function PartyGameClient() {
                       {room.members.map(member => {
                         const submission = game.submissions[member.id];
                         return (
-                          <div key={member.id} className="party-score-row">
-                            <span>{member.name}</span>
-                            <span className="font-semibold">{submission ? `${clampPercent(submission.score)}%` : 'Waiting…'}</span>
+                          <div key={member.id} className="party-round-table-row">
+                            <div className="party-round-table-meta">
+                              <p className="text-sm font-semibold">{member.name}</p>
+                              <p className="text-sm whitespace-nowrap overflow-x-auto">
+                                <span className="content-muted">Guess:&nbsp;</span>
+                                {submission ? renderSubmissionGuess(submission) : <span className="content-muted">Waiting…</span>}
+                              </p>
+                            </div>
+                            <span className="party-round-table-score">
+                              {submission ? `${clampPercent(submission.score)}%` : '--'}
+                            </span>
                           </div>
                         );
                       })}
