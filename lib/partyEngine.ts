@@ -531,8 +531,8 @@ export async function submitPartyRound(
           score: submission.score,
           baseScore: submission.baseScore,
           wasBlankGuess: submission.wasBlankGuess,
-          guess: submission.guess,
-          feedback: submission.feedback,
+          ...(submission.guess ? { guess: submission.guess } : {}),
+          ...(submission.feedback ? { feedback: submission.feedback } : {}),
           submittedAt: Date.now(),
         },
       };

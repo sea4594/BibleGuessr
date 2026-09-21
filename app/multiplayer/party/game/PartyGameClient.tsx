@@ -323,11 +323,11 @@ export default function PartyGameClient() {
       chaptersOff: number;
       versesOff: number;
     }
-  ) => {
-    if (!code || !myMember) return;
+  ): Promise<boolean> => {
+    if (!code) return false;
 
     const ok = await submitPartyRound(code, partyMemberId, {
-      playerName: myMember.name || profile.name,
+      playerName: myMember?.name || profile.name,
       score,
       baseScore,
       wasBlankGuess,
@@ -337,11 +337,12 @@ export default function PartyGameClient() {
 
     if (!ok) {
       setError('Failed to submit round score. Please try again.');
-      return;
+      return false;
     }
 
     setError(null);
-  }, [code, myMember, partyMemberId, profile.name]);
+    return true;
+  }, [code, myMember?.name, partyMemberId, profile.name]);
 
   useEffect(() => {
     if (!game || !verse || !modeConfig) return;
@@ -354,24 +355,34 @@ export default function PartyGameClient() {
     if (secondsLeft > 0) return;
     if (timeoutSubmittedRoundRef.current === game.currentRound) return;
 
-    timeoutSubmittedRoundRef.current = game.currentRound;
     const timer = window.setTimeout(() => {
-      const timeoutGuess = pendingSelection.guess;
-      if (timeoutGuess) {
-        const breakdown = calculateScore(
-          { book: verse.book, chapter: verse.chapter, verse: verse.verse },
-          timeoutGuess,
-          modeConfig.books
-        );
+      timeoutSubmittedRoundRef.current = game.currentRound;
 
-        const contextVersesAdded = previousVerses.length + nextVerses.length;
-        const penalty = contextVersesAdded * 10;
-        const adjustedTotal = Math.max(0, breakdown.total - penalty);
-        void submitRoundScore(adjustedTotal, breakdown.total, false, timeoutGuess, breakdown.feedback);
-        return;
-      }
+      const runTimeoutSubmit = async () => {
+        const timeoutGuess = pendingSelection.guess;
+        let submitted = false;
 
-      void submitRoundScore(0, 0, true);
+        if (timeoutGuess) {
+          const breakdown = calculateScore(
+            { book: verse.book, chapter: verse.chapter, verse: verse.verse },
+            timeoutGuess,
+            modeConfig.books
+          );
+
+          const contextVersesAdded = previousVerses.length + nextVerses.length;
+          const penalty = contextVersesAdded * 10;
+          const adjustedTotal = Math.max(0, breakdown.total - penalty);
+          submitted = await submitRoundScore(adjustedTotal, breakdown.total, false, timeoutGuess, breakdown.feedback);
+        } else {
+          submitted = await submitRoundScore(0, 0, true);
+        }
+
+        if (!submitted && timeoutSubmittedRoundRef.current === game.currentRound) {
+          timeoutSubmittedRoundRef.current = null;
+        }
+      };
+
+      void runTimeoutSubmit();
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -497,29 +508,21 @@ export default function PartyGameClient() {
         };
       })
       .sort((a, b) => {
+        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
         if (b.roundScore !== a.roundScore) return b.roundScore - a.roundScore;
-        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
         return a.member.name.localeCompare(b.member.name);
       });
   }, [game, room]);
 
-  const totalRows = useMemo(() => {
-    if (!room || !game) return [];
-
-    return room.members
-      .map(member => ({
-        member,
-        totalScore: game.scores[member.id] ?? 0,
-      }))
-      .sort((a, b) => {
-        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
-        return a.member.name.localeCompare(b.member.name);
-      });
-  }, [game, room]);
-
-  const renderSubmissionGuess = (submission: PartySubmission) => {
+  const renderSubmissionGuess = (submission: PartySubmission, revealAccuracy: boolean) => {
     if (submission.wasBlankGuess || !submission.guess || !submission.feedback) {
-      return <span style={{ color: '#ef4444' }}>No guess (time expired)</span>;
+      return revealAccuracy
+        ? <span style={{ color: '#ef4444' }}>No guess (time expired)</span>
+        : <span className="content-muted">No guess (time expired)</span>;
+    }
+
+    if (!revealAccuracy) {
+      return <>{submission.guess.book} {submission.guess.chapter}:{submission.guess.verse}</>;
     }
 
     const bookCorrect = submission.feedback.book === 'correct';
@@ -645,7 +648,7 @@ export default function PartyGameClient() {
                               <p className="text-sm font-semibold">{member.name}</p>
                               <p className="text-sm whitespace-nowrap overflow-x-auto">
                                 <span className="content-muted">Guess:&nbsp;</span>
-                                {submission ? renderSubmissionGuess(submission) : <span className="content-muted">Waiting…</span>}
+                                {submission ? renderSubmissionGuess(submission, false) : <span className="content-muted">Waiting…</span>}
                               </p>
                             </div>
                             <span className="party-round-table-score">
@@ -678,28 +681,21 @@ export default function PartyGameClient() {
               <div className="surface-card p-4 sm:p-5 mb-4 w-full">
                 <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Round Scores</h3>
                 <div className="grid gap-2">
-                  {roundRows.map(({ member, submission, roundScore }) => (
+                  {roundRows.map(({ member, submission, roundScore, totalScore }) => (
                     <div key={member.id} className="party-round-table-row">
                       <div className="party-round-table-meta">
                         <p className="text-sm font-semibold">{member.name}</p>
                         <p className="text-sm whitespace-nowrap overflow-x-auto">
                           <span className="content-muted">Guess:&nbsp;</span>
-                          {submission ? renderSubmissionGuess(submission) : <span style={{ color: '#ef4444' }}>No guess</span>}
+                          {submission ? renderSubmissionGuess(submission, true) : <span style={{ color: '#ef4444' }}>No guess</span>}
                         </p>
                       </div>
-                      <p className="party-round-table-score">{clampPercent(roundScore)}%</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="surface-card p-4 sm:p-5 mb-4 w-full">
-                <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Total Scores</h3>
-                <div className="grid gap-2">
-                  {totalRows.map(({ member, totalScore }) => (
-                    <div key={`total-${member.id}`} className="party-score-row">
-                      <span>{member.name}</span>
-                      <span className="font-semibold">{toOverallPercent(totalScore, game.currentRound)}%</span>
+                      <div className="text-right">
+                        <p className="party-round-table-score">{clampPercent(roundScore)}%</p>
+                        <p className="text-xs content-muted">
+                          total {toOverallPercent(totalScore, game.currentRound)}%
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
