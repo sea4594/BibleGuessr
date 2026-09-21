@@ -21,6 +21,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Ensure GitHub Pages uses workflow deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+
+          current_build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"')"
+          echo "Current Pages build type: ${current_build_type}"
+
+          if [ "$current_build_type" != "workflow" ]; then
+            echo "Switching GitHub Pages build type to workflow..."
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow >/dev/null
+          fi
+
+          resolved_build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"')"
+          echo "Resolved Pages build type: ${resolved_build_type}"
+
+          if [ "$resolved_build_type" != "workflow" ]; then
+            echo "Failed to set GitHub Pages build type to workflow."
+            echo "Please open repository Settings -> Pages and set Source to GitHub Actions."
+            exit 1
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
