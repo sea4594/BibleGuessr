@@ -70,6 +70,12 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '414225257381' }}
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID || '1:414225257381:web:170f63bff206c9eebb4e4c' }}
 
+      - name: Mirror export to /BibleGuessr path
+        run: |
+          set -e
+          mkdir -p out/BibleGuessr
+          rsync -a --delete --exclude 'BibleGuessr' out/ out/BibleGuessr/
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
