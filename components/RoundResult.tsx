@@ -44,9 +44,7 @@ export default function RoundResult({
   const isHotSeat = Boolean(multiplayer?.enabled);
 
   const formatPoints = (value: number) => {
-    const rounded = Math.round(value * 10) / 10;
-    if (Number.isInteger(rounded)) return String(rounded);
-    return rounded.toFixed(1);
+    return String(Math.round(value));
   };
 
   const breakdownRows = useMemo(() => {
