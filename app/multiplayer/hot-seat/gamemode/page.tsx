@@ -8,7 +8,7 @@ import { gameModes } from '@/lib/gameModes';
 import { readHotSeatSettings } from '@/lib/hotSeatSettings';
 import { toTimerDurationSeconds } from '@/lib/timerOptions';
 
-type ModeChoice = 'full-bible' | 'sections' | 'book';
+type ModeChoice = 'full-bible' | 'sections' | 'book' | 'custom';
 
 export default function HotSeatGamemodePage() {
   const router = useRouter();
@@ -31,6 +31,11 @@ export default function HotSeatGamemodePage() {
       title: 'Book Mode',
       description: 'Play within one selected Bible book.',
     },
+    {
+      id: 'custom' as const,
+      title: 'Custom',
+      description: 'Pick your exact set of books from the Old and New Testaments.',
+    },
   ], []);
 
   const handleStart = () => {
@@ -43,6 +48,11 @@ export default function HotSeatGamemodePage() {
 
     if (selectedMode === 'book') {
       router.push('/multiplayer/hot-seat/gamemode/book');
+      return;
+    }
+
+    if (selectedMode === 'custom') {
+      router.push('/multiplayer/hot-seat/gamemode/custom');
       return;
     }
 

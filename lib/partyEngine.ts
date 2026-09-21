@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { ensureFirebaseSession, getFirebaseAuth, getFirebaseDb } from './firebaseClient';
 import { defaultAvatarSpec, type AvatarSpec } from './avatarSystem';
+import { bibleData } from './bibleData';
 import { gameModes, type GameModeId } from './gameModes';
 import { verseReferenceKey } from './verseSelection';
 
@@ -34,6 +35,7 @@ export interface PartyRoom {
 export interface PartyLobbySettings {
   modeId: GameModeId | null;
   selectedBook: string | null;
+  selectedBooks: string[] | null;
   roundsPerPlayer: number | null;
   timerDurationSeconds: number | null;
 }
@@ -71,6 +73,7 @@ export interface StartPartyGameConfig {
   roundsPerPlayer: number;
   timerDurationSeconds: number;
   selectedBook?: string;
+  selectedBooks?: string[];
   firstVerse: PartyVerse;
 }
 
@@ -78,6 +81,7 @@ export interface PartyGameState {
   status: 'lobby' | 'in-round' | 'round-complete' | 'finished';
   modeId: GameModeId;
   selectedBook?: string;
+  selectedBooks?: string[];
   roundsPerPlayer: number;
   totalRounds: number;
   timerDurationSeconds: number;
@@ -181,9 +185,26 @@ function makeDefaultLobbySettings(): PartyLobbySettings {
   return {
     modeId: null,
     selectedBook: null,
+    selectedBooks: null,
     roundsPerPlayer: null,
     timerDurationSeconds: null,
   };
+}
+
+function normalizeSelectedBooks(raw: unknown) {
+  if (!Array.isArray(raw)) return null;
+
+  const availableBooks = new Set(bibleData.map(book => book.book));
+  const deduped = new Set<string>();
+  for (const value of raw) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (!trimmed || !availableBooks.has(trimmed)) continue;
+    deduped.add(trimmed);
+  }
+
+  const ordered = bibleData.map(book => book.book).filter(book => deduped.has(book));
+  return ordered.length > 0 ? ordered : null;
 }
 
 function normalizeLobbySettings(raw: unknown): PartyLobbySettings {
@@ -191,13 +212,18 @@ function normalizeLobbySettings(raw: unknown): PartyLobbySettings {
   const value = raw as {
     modeId?: unknown;
     selectedBook?: unknown;
+    selectedBooks?: unknown;
     roundsPerPlayer?: unknown;
     timerDurationSeconds?: unknown;
   };
 
+  const modeId = typeof value.modeId === 'string' && isSelectablePartyMode(value.modeId) ? value.modeId : null;
+  const normalizedSelectedBooks = normalizeSelectedBooks(value.selectedBooks);
+
   return {
-    modeId: typeof value.modeId === 'string' && isSelectablePartyMode(value.modeId) ? value.modeId : null,
+    modeId,
     selectedBook: typeof value.selectedBook === 'string' && value.selectedBook.trim() ? value.selectedBook : null,
+    selectedBooks: modeId === 'custom' ? normalizedSelectedBooks : null,
     roundsPerPlayer: clampRoundsPerPlayer(
       typeof value.roundsPerPlayer === 'number' ? value.roundsPerPlayer : null
     ),
@@ -222,6 +248,10 @@ function mergeLobbySettings(current: PartyLobbySettings, incoming: Partial<Party
       ? incoming.selectedBook
       : null;
 
+  const nextSelectedBooks = incoming.selectedBooks === undefined
+    ? current.selectedBooks
+    : normalizeSelectedBooks(incoming.selectedBooks);
+
   const nextRounds = incoming.roundsPerPlayer === undefined
     ? current.roundsPerPlayer
     : clampRoundsPerPlayer(incoming.roundsPerPlayer);
@@ -233,6 +263,7 @@ function mergeLobbySettings(current: PartyLobbySettings, incoming: Partial<Party
   return {
     modeId: nextMode,
     selectedBook: nextMode === 'book-selection' ? nextSelectedBook : null,
+    selectedBooks: nextMode === 'custom' ? nextSelectedBooks : null,
     roundsPerPlayer: nextRounds,
     timerDurationSeconds: nextTimer,
   } satisfies PartyLobbySettings;
@@ -428,6 +459,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
         status: 'in-round',
         modeId: config.modeId,
         ...(config.selectedBook ? { selectedBook: config.selectedBook } : {}),
+        ...(config.selectedBooks && config.selectedBooks.length > 0 ? { selectedBooks: config.selectedBooks } : {}),
         roundsPerPlayer: safeRounds,
         totalRounds: safeRounds,
         timerDurationSeconds: safeTimer,
@@ -449,6 +481,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
         lobbySettings: {
           modeId: config.modeId,
           selectedBook: config.modeId === 'book-selection' ? (config.selectedBook ?? null) : null,
+          selectedBooks: config.modeId === 'custom' ? (normalizeSelectedBooks(config.selectedBooks) ?? null) : null,
           roundsPerPlayer: safeRounds,
           timerDurationSeconds: safeTimer,
         },

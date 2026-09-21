@@ -9,6 +9,7 @@ import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
 import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
+import CustomBookSelector from "@/components/CustomBookSelector";
 import {
   formatTimerOptionLabel,
   NO_TIMER_SECONDS,
@@ -40,6 +41,7 @@ export default function HomePage() {
   const {
     settings,
     setPreferredBook,
+    setPreferredCustomBooks,
     setPreferredGameMode,
     setPreferredRounds,
     setQuickPlayTimerSeconds,
@@ -72,12 +74,20 @@ export default function HomePage() {
     const modeId: GameModeId = (settings.preferredGameMode in gameModes)
       ? (settings.preferredGameMode as GameModeId)
       : "full-bible";
+    const selectedCustomBooks = modeId === "custom"
+      ? bibleData.filter(book => settings.preferredCustomBooks.includes(book.book))
+      : [];
     const selectedBookData = modeId === "book-selection"
       ? bibleData.find(book => book.book === settings.preferredBook) ?? bibleData[0]
       : null;
     const modeConfig = modeId === "book-selection" && selectedBookData
       ? { ...gameModes[modeId], books: [selectedBookData] }
-      : gameModes[modeId];
+      : modeId === "custom"
+        ? {
+            ...gameModes[modeId],
+            books: selectedCustomBooks.length > 0 ? selectedCustomBooks : gameModes[modeId].books,
+          }
+        : gameModes[modeId];
 
     startGame({
       mode: modeId,
@@ -140,6 +150,16 @@ export default function HomePage() {
                   </select>
                 )}
               </div>
+
+              {settings.preferredGameMode === "custom" && (
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold mb-2">Books</label>
+                  <CustomBookSelector
+                    selectedBooks={settings.preferredCustomBooks}
+                    onChange={setPreferredCustomBooks}
+                  />
+                </div>
+              )}
 
               <div className="mb-4 min-w-0">
                 <HorizontalWheel

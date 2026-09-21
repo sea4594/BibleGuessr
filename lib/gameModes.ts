@@ -4,7 +4,7 @@ export type GameModeId =
   | 'old-testament' | 'new-testament' | 'pentateuch' | 'historical'
   | 'wisdom' | 'major-prophets' | 'minor-prophets' | 'gospels'
   | 'pauline-epistles' | 'general-epistles' | 'all-epistles'
-  | 'book-selection' | 'full-bible';
+  | 'book-selection' | 'full-bible' | 'custom';
 
 export const sectionModeIds: GameModeId[] = [
   'old-testament',
@@ -29,7 +29,7 @@ export interface GameModeConfig {
   scoringType: 'full-bible' | 'multi-book' | 'single-book';
 }
 
-const OT_BOOKS = [
+export const OLD_TESTAMENT_BOOK_NAMES = [
   'Genesis','Exodus','Leviticus','Numbers','Deuteronomy',
   'Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings',
   '1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther',
@@ -38,7 +38,7 @@ const OT_BOOKS = [
   'Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum',
   'Habakkuk','Zephaniah','Haggai','Zechariah','Malachi',
 ];
-const NT_BOOKS = [
+export const NEW_TESTAMENT_BOOK_NAMES = [
   'Matthew','Mark','Luke','John','Acts',
   'Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians',
   'Philippians','Colossians','1 Thessalonians','2 Thessalonians',
@@ -65,7 +65,7 @@ export const gameModes: Record<GameModeId, GameModeConfig> = {
     id: 'old-testament',
     name: 'Old Testament',
     description: 'All 39 books of the Old Testament',
-    books: getBooks(OT_BOOKS),
+    books: getBooks(OLD_TESTAMENT_BOOK_NAMES),
     isSingleBook: false,
     scoringType: 'multi-book',
   },
@@ -73,7 +73,7 @@ export const gameModes: Record<GameModeId, GameModeConfig> = {
     id: 'new-testament',
     name: 'New Testament',
     description: 'All 27 books of the New Testament',
-    books: getBooks(NT_BOOKS),
+    books: getBooks(NEW_TESTAMENT_BOOK_NAMES),
     isSingleBook: false,
     scoringType: 'multi-book',
   },
@@ -156,5 +156,13 @@ export const gameModes: Record<GameModeId, GameModeConfig> = {
     books: bibleData,
     isSingleBook: true,
     scoringType: 'single-book',
+  },
+  'custom': {
+    id: 'custom',
+    name: 'Custom',
+    description: 'Pick exactly which books are included in this game',
+    books: bibleData,
+    isSingleBook: false,
+    scoringType: 'multi-book',
   },
 };

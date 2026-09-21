@@ -516,6 +516,33 @@ input:not([type='range']) {
   border-radius: 10px;
 }
 
+.custom-books-tree {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--panel-soft) 90%, transparent);
+  padding: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.custom-books-indent {
+  padding-left: 18px;
+  margin-bottom: 8px;
+}
+
+.custom-books-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  font-size: 0.95rem;
+}
+
+.custom-books-testament-row {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
 .settings-input {
   width: 6rem;
   border: 1px solid var(--line-strong);
@@ -1590,6 +1617,19 @@ input[type='range']::-moz-range-thumb {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.party-code-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.party-code-value {
+  font-size: clamp(2rem, 4.8vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: 0.16em;
+  margin-top: 2px;
 }
 
 .party-header-actions {

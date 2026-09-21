@@ -8,6 +8,7 @@ import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
+import CustomBookSelector from '@/components/CustomBookSelector';
 import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
 import { BookData } from '@/lib/bibleData';
 import { gameModes, GameModeId } from '@/lib/gameModes';
@@ -40,9 +41,9 @@ const MULTIPLAYER_TAB_STORAGE_KEY = 'bg-multiplayer-tab-v1';
 const PARTY_CODE_STORAGE_KEY = 'bg-party-room-code-v1';
 
 function readInitialMultiplayerTab() {
-  if (typeof window === 'undefined') return 'hot-seat' as const;
+  if (typeof window === 'undefined') return 'party' as const;
   const stored = localStorage.getItem(MULTIPLAYER_TAB_STORAGE_KEY);
-  return stored === 'party' ? 'party' : 'hot-seat';
+  return stored === 'hot-seat' ? 'hot-seat' : 'party';
 }
 
 function readInitialPartyCode() {
@@ -137,7 +138,8 @@ export default function MultiplayerPage() {
     lobbySettings?.roundsPerPlayer &&
     lobbySettings?.timerDurationSeconds !== null &&
     lobbySettings?.timerDurationSeconds !== undefined &&
-    (lobbySettings.modeId !== 'book-selection' || lobbySettings.selectedBook)
+    (lobbySettings.modeId !== 'book-selection' || lobbySettings.selectedBook) &&
+    (lobbySettings.modeId !== 'custom' || (lobbySettings.selectedBooks?.length ?? 0) > 0)
   );
 
   useEffect(() => {
@@ -438,7 +440,14 @@ export default function MultiplayerPage() {
     const selectedBookData = lobbySettings.modeId === 'book-selection'
       ? bibleData.find(book => book.book === lobbySettings.selectedBook)
       : null;
-    const playableBooks = selectedBookData ? [selectedBookData] : modeConfig.books;
+    const selectedCustomBooks = lobbySettings.modeId === 'custom'
+      ? bibleData.filter(book => (lobbySettings.selectedBooks ?? []).includes(book.book))
+      : [];
+    const playableBooks = selectedBookData
+      ? [selectedBookData]
+      : selectedCustomBooks.length > 0
+        ? selectedCustomBooks
+        : modeConfig.books;
     const firstVerse = await buildRandomPartyVerse(playableBooks);
 
     if (!firstVerse) {
@@ -452,6 +461,7 @@ export default function MultiplayerPage() {
       roundsPerPlayer: lobbySettings.roundsPerPlayer,
       timerDurationSeconds: lobbySettings.timerDurationSeconds,
       selectedBook: selectedBookData?.book,
+      selectedBooks: selectedCustomBooks.map(book => book.book),
       firstVerse,
     });
 
@@ -505,8 +515,8 @@ export default function MultiplayerPage() {
       <div className="app-content app-content-scroll">
         <div className="page max-w-4xl min-w-0">
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <button onClick={() => void switchTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
             <button onClick={() => void switchTab('party')} className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Party</button>
+            <button onClick={() => void switchTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
           </div>
 
           {tab === 'hot-seat' && (
@@ -557,6 +567,12 @@ export default function MultiplayerPage() {
           {tab === 'party' && (
             <section className="surface-card p-4">
               <div className="party-header-row mb-4">
+                {firebaseConfigured && room && (
+                  <div className="party-code-block">
+                    <p className="content-muted text-xs">Your Code</p>
+                    <p className="headline-serif party-code-value">{room.code}</p>
+                  </div>
+                )}
                 <div className="party-header-actions">
                   {room && isCurrentMember ? (
                     isHost && room.members.length > 1 ? (
@@ -595,11 +611,6 @@ export default function MultiplayerPage() {
               )}
               {firebaseConfigured && room && (
                 <>
-                  <div className="text-center mb-3">
-                    <p className="content-muted text-sm">Party Code</p>
-                    <p className="headline-serif text-4xl tracking-[0.18em] mt-1">{room.code}</p>
-                  </div>
-
                   <div className="party-members-block mb-3">
                     <p className="font-semibold mb-2">Party Members</p>
                     <div className="grid gap-2">
@@ -634,6 +645,9 @@ export default function MultiplayerPage() {
                           void applyLobbySettings({
                             modeId: value ? (value as GameModeId) : null,
                             selectedBook: value === 'book-selection' ? (lobbySettings?.selectedBook ?? bibleData[0].book) : null,
+                            selectedBooks: value === 'custom'
+                              ? (lobbySettings?.selectedBooks?.length ? lobbySettings.selectedBooks : bibleData.map(book => book.book))
+                              : null,
                           });
                         }}
                         className="settings-input party-gamemode-select"
@@ -662,6 +676,22 @@ export default function MultiplayerPage() {
                         </select>
                       )}
                     </div>
+
+                    {lobbySettings?.modeId === 'custom' && (
+                      <div className="mb-3">
+                        <label className="text-sm font-semibold block mb-2">Books</label>
+                        <CustomBookSelector
+                          selectedBooks={lobbySettings.selectedBooks ?? []}
+                          onChange={books => {
+                            void applyLobbySettings({ selectedBooks: books });
+                          }}
+                          disabled={!isHost}
+                        />
+                        {(lobbySettings.selectedBooks?.length ?? 0) === 0 && (
+                          <p className="text-xs text-[var(--danger)] mt-2">Select at least one book.</p>
+                        )}
+                      </div>
+                    )}
 
                     <label className="text-sm font-semibold block mb-1">Rounds</label>
                     <select

@@ -236,6 +236,16 @@ export default function PartyGameClient() {
       }
     }
 
+    if (game.modeId === 'custom' && Array.isArray(game.selectedBooks) && game.selectedBooks.length > 0) {
+      const selectedBooks = bibleData.filter(book => game.selectedBooks?.includes(book.book));
+      if (selectedBooks.length > 0) {
+        return {
+          ...baseMode,
+          books: selectedBooks,
+        };
+      }
+    }
+
     return baseMode;
   }, [game]);
 

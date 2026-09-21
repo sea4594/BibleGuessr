@@ -28,6 +28,11 @@ export default function SinglePlayerPage() {
               <h2 className="headline-serif text-2xl mb-1">Book</h2>
               <p className="content-muted text-sm">Focus on one specific book.</p>
             </Link>
+
+            <Link href="/single-player/custom" className="surface-card mode-card">
+              <h2 className="headline-serif text-2xl mb-1">Custom</h2>
+              <p className="content-muted text-sm">Select exactly which Bible books to include.</p>
+            </Link>
           </section>
         </div>
       </div>

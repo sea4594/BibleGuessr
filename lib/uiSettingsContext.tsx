@@ -22,6 +22,7 @@ export interface UiSettings {
   preferredRounds: number;
   preferredGameMode: string;
   preferredBook: string;
+  preferredCustomBooks: string[];
   quickPlayTimerSeconds: number;
 }
 
@@ -31,6 +32,7 @@ interface UiSettingsContextType {
   setPreferredRounds: (rounds: number) => void;
   setPreferredGameMode: (mode: string) => void;
   setPreferredBook: (book: string) => void;
+  setPreferredCustomBooks: (books: string[]) => void;
   setQuickPlayTimerSeconds: (seconds: number) => void;
 }
 
@@ -51,8 +53,26 @@ const DEFAULT_SETTINGS: UiSettings = {
   preferredRounds: 5,
   preferredGameMode: 'full-bible',
   preferredBook: bibleData[0]?.book ?? 'Genesis',
+  preferredCustomBooks: bibleData.map(book => book.book),
   quickPlayTimerSeconds: 60,
 };
+
+function normalizePreferredCustomBooks(raw: unknown) {
+  if (!Array.isArray(raw)) return DEFAULT_SETTINGS.preferredCustomBooks;
+
+  const availableBooks = new Set(bibleData.map(book => book.book));
+  const unique = new Set<string>();
+
+  for (const value of raw) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (!trimmed || !availableBooks.has(trimmed)) continue;
+    unique.add(trimmed);
+  }
+
+  const ordered = bibleData.map(book => book.book).filter(book => unique.has(book));
+  return ordered.length > 0 ? ordered : DEFAULT_SETTINGS.preferredCustomBooks;
+}
 
 function clampQuickPlayTimerSeconds(value: number) {
   if (value === NO_TIMER_SECONDS) return NO_TIMER_SECONDS;
@@ -85,6 +105,7 @@ function readInitialSettings(): UiSettings {
       preferredRounds: Math.min(10, Math.max(1, parsed.preferredRounds ?? DEFAULT_SETTINGS.preferredRounds)),
       preferredGameMode: parsed.preferredGameMode ?? DEFAULT_SETTINGS.preferredGameMode,
       preferredBook,
+      preferredCustomBooks: normalizePreferredCustomBooks(parsed.preferredCustomBooks),
       quickPlayTimerSeconds: clampQuickPlayTimerSeconds(
         parsed.quickPlayTimerSeconds ?? DEFAULT_SETTINGS.quickPlayTimerSeconds
       ),
@@ -127,6 +148,12 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
       },
       setPreferredBook: (preferredBook: string) => {
         setSettings(prev => ({ ...prev, preferredBook }));
+      },
+      setPreferredCustomBooks: (preferredCustomBooks: string[]) => {
+        setSettings(prev => ({
+          ...prev,
+          preferredCustomBooks: normalizePreferredCustomBooks(preferredCustomBooks),
+        }));
       },
       setQuickPlayTimerSeconds: (quickPlayTimerSeconds: number) => {
         setSettings(prev => ({
