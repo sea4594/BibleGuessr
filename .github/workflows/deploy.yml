@@ -26,8 +26,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"')"
-          echo "Detected Pages build type: ${build_type}"
+          build_type=""
+          for attempt in 1 2 3 4 5 6; do
+            build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"' 2>/dev/null || echo "legacy")"
+            echo "Detected Pages build type (attempt ${attempt}/6): ${build_type}"
+            if [ "$build_type" = "workflow" ]; then
+              break
+            fi
+            sleep 10
+          done
 
           if [ "$build_type" != "workflow" ]; then
             echo "GitHub Pages source is not set to GitHub Actions."
