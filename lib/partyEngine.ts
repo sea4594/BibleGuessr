@@ -83,6 +83,7 @@ export interface PartyGameState {
   timerDurationSeconds: number;
   currentRound: number;
   roundStartedAt: number;
+  roundServerStartedAt?: unknown;
   roundVerse: PartyVerse;
   usedVerseKeys: string[];
   submissions: Record<string, PartySubmission>;
@@ -97,6 +98,7 @@ const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const PARTY_CODE_TTL_MS = 1000 * 60 * 60 * 6;
 const PARTY_TIMER_MIN_SECONDS = 5;
 const PARTY_TIMER_MAX_SECONDS = 90;
+export const PARTY_ROUND_START_DELAY_MS = 2000;
 
 function sanitizeAvatarForStorage(avatar: AvatarSpec): AvatarSpec {
   const fallback = defaultAvatarSpec(0);
@@ -431,6 +433,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
         timerDurationSeconds: safeTimer,
         currentRound: 1,
         roundStartedAt: now,
+        roundServerStartedAt: serverTimestamp(),
         roundVerse: config.firstVerse,
         usedVerseKeys: [verseReferenceKey(config.firstVerse)],
         submissions: {},
@@ -585,6 +588,7 @@ export async function hostAdvancePartyRound(
           status: 'in-round',
           currentRound: game.currentRound + 1,
           roundStartedAt: now,
+          roundServerStartedAt: serverTimestamp(),
           roundVerse: nextVerse,
           usedVerseKeys: Array.from(usedVerseKeys),
           submissions: {},
@@ -696,36 +700,58 @@ export async function updatePartyLobbySettings(
   }
 }
 
-export function subscribeToParty(code: string, onUpdate: (room: PartyRoom | null) => void) {
+export function subscribeToParty(
+  code: string,
+  onUpdate: (room: PartyRoom | null) => void,
+  onError?: (error: unknown) => void
+) {
   const ref = partyDoc(code);
   if (!ref) {
     onUpdate(null);
     return () => undefined;
   }
 
-  return onSnapshot(
-    ref,
-    snapshot => {
-      if (!snapshot.exists()) {
-        onUpdate(null);
-        return;
-      }
+  let unsubscribeSnapshot: (() => void) | null = null;
+  let disposed = false;
 
-      const data = snapshot.data() as PartyRoom;
-      if (isRoomExpired(data)) {
-        onUpdate(null);
-        return;
-      }
+  void ensureFirebaseSession()
+    .then(() => {
+      if (disposed) return;
 
-      onUpdate({
-        ...data,
-        lobbySettings: normalizeLobbySettings(data.lobbySettings),
-      });
-    },
-    () => {
-      onUpdate(null);
-    }
-  );
+      unsubscribeSnapshot = onSnapshot(
+        ref,
+        snapshot => {
+          if (!snapshot.exists()) {
+            onUpdate(null);
+            return;
+          }
+
+          const data = snapshot.data() as PartyRoom;
+          if (isRoomExpired(data)) {
+            onUpdate(null);
+            return;
+          }
+
+          onUpdate({
+            ...data,
+            lobbySettings: normalizeLobbySettings(data.lobbySettings),
+          });
+        },
+        error => {
+          console.error('Party subscription failed:', error);
+          onError?.(error);
+        }
+      );
+    })
+    .catch(error => {
+      console.error('Party subscription initialization failed:', error);
+      onError?.(error);
+    });
+
+  return () => {
+    disposed = true;
+    unsubscribeSnapshot?.();
+  };
 }
 
 export async function leaveParty(code: string, memberId: string) {

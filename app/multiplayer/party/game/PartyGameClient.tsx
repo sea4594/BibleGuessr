@@ -8,6 +8,7 @@ import {
   hostAdvancePartyRound,
   hostReturnPartyToLobby,
   leaveParty,
+  PARTY_ROUND_START_DELAY_MS,
   PartyRoom,
   PartySubmission,
   PartyVerse,
@@ -104,6 +105,36 @@ function toOverallPercent(totalScore: number, roundsPlayed: number) {
   return clampPercent((totalScore / (roundsPlayed * 100)) * 100);
 }
 
+function resolveRoundServerStartedAtMs(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (value && typeof value === 'object') {
+    const valueWithToMillis = value as { toMillis?: unknown };
+    if (typeof valueWithToMillis.toMillis === 'function') {
+      return valueWithToMillis.toMillis();
+    }
+
+    const timestampLike = value as { seconds?: unknown; nanoseconds?: unknown };
+    if (typeof timestampLike.seconds === 'number') {
+      const nanos = typeof timestampLike.nanoseconds === 'number' ? timestampLike.nanoseconds : 0;
+      return timestampLike.seconds * 1000 + Math.floor(nanos / 1_000_000);
+    }
+  }
+
+  return null;
+}
+
+function resolveSharedRoundStartMs(game: { roundStartedAt: number; roundServerStartedAt?: unknown }) {
+  const serverStartedAtMs = resolveRoundServerStartedAtMs(game.roundServerStartedAt);
+  if (typeof serverStartedAtMs === 'number') {
+    return serverStartedAtMs + PARTY_ROUND_START_DELAY_MS;
+  }
+
+  return game.roundStartedAt;
+}
+
 async function buildRandomPartyVerseFromPool(
   books: BookData[],
   excludedKeys: Set<string>
@@ -147,17 +178,24 @@ export default function PartyGameClient() {
   });
 
   const timeoutSubmittedRoundRef = useRef<number | null>(null);
-  const localRoundSeenRef = useRef<{ round: number; seenAt: number } | null>(null);
+  const previousRoundRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!code) return;
 
-    const unsubscribe = subscribeToParty(code, nextRoom => {
-      setRoom(nextRoom);
-      setLoaded(true);
-      if (!nextRoom) setError('Party room not found.');
-      else setError(null);
-    });
+    const unsubscribe = subscribeToParty(
+      code,
+      nextRoom => {
+        setRoom(nextRoom);
+        setLoaded(true);
+        if (!nextRoom) setError('Party room not found.');
+        else setError(null);
+      },
+      () => {
+        setLoaded(true);
+        setError('Realtime connection to this party was interrupted. Retrying…');
+      }
+    );
 
     return () => unsubscribe();
   }, [code]);
@@ -227,16 +265,13 @@ export default function PartyGameClient() {
     };
 
     if (!game || game.status !== 'in-round') {
-      localRoundSeenRef.current = null;
+      previousRoundRef.current = null;
       const timer = window.setTimeout(resetRoundUi, 0);
       return () => window.clearTimeout(timer);
     }
 
-    if (!localRoundSeenRef.current || localRoundSeenRef.current.round !== game.currentRound) {
-      localRoundSeenRef.current = {
-        round: game.currentRound,
-        seenAt: Date.now(),
-      };
+    if (previousRoundRef.current !== game.currentRound) {
+      previousRoundRef.current = game.currentRound;
       const timer = window.setTimeout(resetRoundUi, 0);
       return () => window.clearTimeout(timer);
     }
@@ -255,14 +290,9 @@ export default function PartyGameClient() {
     }
 
     const tick = () => {
-      const elapsed = Math.floor((Date.now() - game.roundStartedAt) / 1000);
-      const localSeenAt = localRoundSeenRef.current?.round === game.currentRound
-        ? localRoundSeenRef.current.seenAt
-        : Date.now();
-      const localElapsed = Math.floor((Date.now() - localSeenAt) / 1000);
-      const sharedRemaining = game.timerDurationSeconds - elapsed;
-      const localRemaining = game.timerDurationSeconds - localElapsed;
-      const next = Math.max(0, Math.max(sharedRemaining, localRemaining));
+      const sharedRoundStartMs = resolveSharedRoundStartMs(game);
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - sharedRoundStartMs) / 1000));
+      const next = Math.max(0, game.timerDurationSeconds - elapsedSeconds);
       setRemainingSeconds(next);
     };
 

@@ -196,33 +196,40 @@ export default function MultiplayerPage() {
     let retryTimer: number | null = null;
 
     const subscribeToRoom = (code: string) => {
-      unsubscribe = subscribeToParty(code, next => {
-        if (cancelled) return;
-        if (!next) {
-          setRoom(null);
-          setActiveRoomCode(null);
-          setPartyLobbyError('Party lobby unavailable. Recreating your code...');
-          if (!retryTimer) {
-            retryTimer = window.setTimeout(() => {
-              retryTimer = null;
-              setActiveRoomCode(null);
-            }, 500);
+      unsubscribe = subscribeToParty(
+        code,
+        next => {
+          if (cancelled) return;
+          if (!next) {
+            setRoom(null);
+            setActiveRoomCode(null);
+            setPartyLobbyError('Party lobby unavailable. Recreating your code...');
+            if (!retryTimer) {
+              retryTimer = window.setTimeout(() => {
+                retryTimer = null;
+                setActiveRoomCode(null);
+              }, 500);
+            }
+            return;
           }
-          return;
+
+          const stillMember = next.members.some(member => member.id === partyMemberId || member.id === clientId);
+          if (!stillMember) {
+            setRoom(null);
+            setActiveRoomCode(null);
+            setPartyLobbyError('You left that party.');
+            return;
+          }
+
+          setRoom(next);
+
+          setPartyLobbyError('');
+        },
+        () => {
+          if (cancelled) return;
+          setPartyLobbyError('Realtime connection to this party was interrupted. Retrying...');
         }
-
-        const stillMember = next.members.some(member => member.id === partyMemberId || member.id === clientId);
-        if (!stillMember) {
-          setRoom(null);
-          setActiveRoomCode(null);
-          setPartyLobbyError('You left that party.');
-          return;
-        }
-
-        setRoom(next);
-
-        setPartyLobbyError('');
-      });
+      );
     };
 
     const run = async () => {

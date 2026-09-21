@@ -49,6 +49,7 @@ export const firebaseEnabled = Boolean(
 
 let persistenceReadyPromise: Promise<void> | null = null;
 let anonymousSignInPromise: Promise<boolean> | null = null;
+let authReadyPromise: Promise<void> | null = null;
 
 export function isFirebaseConfigured() {
   return firebaseEnabled;
@@ -84,6 +85,7 @@ export function getGoogleProvider() {
 
 export async function ensureFirebaseSession(): Promise<boolean> {
   if (!firebaseEnabled || !auth) return false;
+  await ensureAuthReady();
   if (auth.currentUser) return true;
 
   if (!anonymousSignInPromise) {
@@ -112,6 +114,30 @@ function ensureAuthPersistence() {
   }
 
   return persistenceReadyPromise;
+}
+
+export async function ensureAuthReady() {
+  if (!firebaseEnabled || !auth) return;
+
+  await ensureAuthPersistence();
+
+  if (!authReadyPromise) {
+    authReadyPromise = new Promise(resolve => {
+      const unsubscribe = onAuthStateChanged(
+        auth,
+        () => {
+          unsubscribe();
+          resolve();
+        },
+        () => {
+          unsubscribe();
+          resolve();
+        }
+      );
+    });
+  }
+
+  await authReadyPromise;
 }
 
 if (firebaseEnabled && auth) {
