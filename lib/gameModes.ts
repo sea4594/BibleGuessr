@@ -46,7 +46,7 @@ export const NEW_TESTAMENT_BOOK_NAMES = [
   'Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation',
 ];
 
-export type Testament = 'OT' | 'NT';
+export type Testament = 'OT' | 'NT' | 'Unknown';
 
 export type BookCategory =
   | 'Pentateuch'
@@ -131,7 +131,9 @@ const BOOK_CATEGORY_BY_NAME: Record<string, BookCategory> = {
 };
 
 export function getBookTestament(book: string): Testament {
-  return OLD_TESTAMENT_BOOK_NAMES.includes(book) ? 'OT' : 'NT';
+  if (OLD_TESTAMENT_BOOK_NAMES.includes(book)) return 'OT';
+  if (NEW_TESTAMENT_BOOK_NAMES.includes(book)) return 'NT';
+  return 'Unknown';
 }
 
 export function getBookCategory(book: string): BookCategory {

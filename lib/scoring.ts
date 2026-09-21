@@ -107,8 +107,8 @@ export function calculateScore(
     total = clampScore(testamentPoints + categoryPoints);
 
     return {
-      testamentPoints,
-      categoryPoints,
+      testamentPoints: testamentGuaranteed ? undefined : testamentPoints,
+      categoryPoints: categoryGuaranteed ? undefined : categoryPoints,
       bookPoints,
       chapterPoints,
       versePoints,
@@ -125,8 +125,6 @@ export function calculateScore(
 
   if (guess.chapter === correct.chapter && guess.verse === correct.verse) {
     return {
-      testamentPoints,
-      categoryPoints,
       bookPoints: B,
       chapterPoints: chapterGuaranteed ? 0 : 30,
       versePoints: 100 - B - (chapterGuaranteed ? 0 : 30),
@@ -152,8 +150,6 @@ export function calculateScore(
     total = clampScore(bookPoints + chapterPoints + versePoints);
 
     return {
-      testamentPoints,
-      categoryPoints,
       bookPoints,
       chapterPoints,
       versePoints,
@@ -174,8 +170,6 @@ export function calculateScore(
   total = clampScore(bookPoints + chapterPoints + versePoints);
 
   return {
-    testamentPoints,
-    categoryPoints,
     bookPoints,
     chapterPoints,
     versePoints,

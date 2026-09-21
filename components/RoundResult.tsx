@@ -136,7 +136,7 @@ export default function RoundResult({
               <span>Verse</span>
               <span className="font-semibold">+{Math.round(scoreBreakdown.versePoints)}</span>
             </div>
-            {round.contextVersesAdded > 0 && (
+            {round.contextPenalty > 0 && (
               <div className="flex justify-between text-sm py-1 text-[var(--danger)]">
                 <span>Context verses ({round.contextVersesAdded} x -10)</span>
                 <span className="font-semibold">-{round.contextPenalty}</span>
