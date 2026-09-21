@@ -1644,34 +1644,36 @@ input[type='range']::-moz-range-thumb {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   width: 100%;
-  gap: 8px;
+  gap: 12px;
   margin-top: 8px;
 }
 
 .party-join-slot-input {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  background: var(--panel);
+  min-height: 40px;
+  border: none;
+  border-bottom: 2px solid var(--line-strong);
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   line-height: 1;
-  font-weight: 800;
+  font-weight: 700;
   text-align: center;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease;
 }
 
 .party-join-slot-input:focus-visible {
   outline: none;
-  border-color: var(--line-active);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--line-active) 45%, transparent);
+  border-bottom-color: var(--line-active);
+  color: color-mix(in oklab, var(--text) 88%, var(--accent));
 }
 
 .party-join-slot-input:disabled {
-  opacity: 0.7;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
