@@ -17,6 +17,20 @@
 /.next/
 /out/
 
+# static export artifacts (root-level)
+/_next/
+/_not-found/
+/play/
+/404/
+/index.html
+/index.txt
+/404.html
+/__next.__PAGE__.txt
+/__next._full.txt
+/__next._head.txt
+/__next._index.txt
+/__next._tree.txt
+
 # production
 /build
 
