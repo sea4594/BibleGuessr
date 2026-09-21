@@ -555,10 +555,6 @@ input:not([type='range']) {
   -webkit-backdrop-filter: blur(6px);
 }
 
-  min-height: 40px;
-  padding: 8px 10px;
-}
-
 .game-shell {
   display: flex;
   flex-direction: column;
