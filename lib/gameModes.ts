@@ -46,6 +46,98 @@ export const NEW_TESTAMENT_BOOK_NAMES = [
   'Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation',
 ];
 
+export type Testament = 'OT' | 'NT';
+
+export type BookCategory =
+  | 'Pentateuch'
+  | 'Historical'
+  | 'Wisdom'
+  | 'Major Prophets'
+  | 'Minor Prophets'
+  | 'Gospels'
+  | 'Acts'
+  | 'Pauline Epistles'
+  | 'General Epistles'
+  | 'Apocalypse'
+  | 'Unknown';
+
+const BOOK_CATEGORY_BY_NAME: Record<string, BookCategory> = {
+  Genesis: 'Pentateuch',
+  Exodus: 'Pentateuch',
+  Leviticus: 'Pentateuch',
+  Numbers: 'Pentateuch',
+  Deuteronomy: 'Pentateuch',
+  Joshua: 'Historical',
+  Judges: 'Historical',
+  Ruth: 'Historical',
+  '1 Samuel': 'Historical',
+  '2 Samuel': 'Historical',
+  '1 Kings': 'Historical',
+  '2 Kings': 'Historical',
+  '1 Chronicles': 'Historical',
+  '2 Chronicles': 'Historical',
+  Ezra: 'Historical',
+  Nehemiah: 'Historical',
+  Esther: 'Historical',
+  Job: 'Wisdom',
+  Psalms: 'Wisdom',
+  Proverbs: 'Wisdom',
+  Ecclesiastes: 'Wisdom',
+  'Song of Solomon': 'Wisdom',
+  Isaiah: 'Major Prophets',
+  Jeremiah: 'Major Prophets',
+  Lamentations: 'Major Prophets',
+  Ezekiel: 'Major Prophets',
+  Daniel: 'Major Prophets',
+  Hosea: 'Minor Prophets',
+  Joel: 'Minor Prophets',
+  Amos: 'Minor Prophets',
+  Obadiah: 'Minor Prophets',
+  Jonah: 'Minor Prophets',
+  Micah: 'Minor Prophets',
+  Nahum: 'Minor Prophets',
+  Habakkuk: 'Minor Prophets',
+  Zephaniah: 'Minor Prophets',
+  Haggai: 'Minor Prophets',
+  Zechariah: 'Minor Prophets',
+  Malachi: 'Minor Prophets',
+  Matthew: 'Gospels',
+  Mark: 'Gospels',
+  Luke: 'Gospels',
+  John: 'Gospels',
+  Acts: 'Acts',
+  Romans: 'Pauline Epistles',
+  '1 Corinthians': 'Pauline Epistles',
+  '2 Corinthians': 'Pauline Epistles',
+  Galatians: 'Pauline Epistles',
+  Ephesians: 'Pauline Epistles',
+  Philippians: 'Pauline Epistles',
+  Colossians: 'Pauline Epistles',
+  '1 Thessalonians': 'Pauline Epistles',
+  '2 Thessalonians': 'Pauline Epistles',
+  '1 Timothy': 'Pauline Epistles',
+  '2 Timothy': 'Pauline Epistles',
+  Titus: 'Pauline Epistles',
+  Philemon: 'Pauline Epistles',
+  Hebrews: 'General Epistles',
+  James: 'General Epistles',
+  '1 Peter': 'General Epistles',
+  '2 Peter': 'General Epistles',
+  '1 John': 'General Epistles',
+  '2 John': 'General Epistles',
+  '3 John': 'General Epistles',
+  Jude: 'General Epistles',
+  Revelation: 'Apocalypse',
+};
+
+export function getBookTestament(book: string): Testament {
+  return OLD_TESTAMENT_BOOK_NAMES.includes(book) ? 'OT' : 'NT';
+}
+
+export function getBookCategory(book: string): BookCategory {
+  return BOOK_CATEGORY_BY_NAME[book] ?? 'Unknown';
+}
+
 function getBooks(names: string[]): BookData[] {
   return names
     .map(name => bibleData.find(b => b.book === name))

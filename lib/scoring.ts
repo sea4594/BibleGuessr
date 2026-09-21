@@ -1,7 +1,9 @@
 import { BookData } from './bibleData';
+import { getBookCategory, getBookTestament } from './gameModes';
 
 export interface ScoreBreakdown {
   testamentPoints?: number;
+  categoryPoints?: number;
   bookPoints: number;
   chapterPoints: number;
   versePoints: number;
@@ -18,120 +20,171 @@ export interface ScoreBreakdown {
   };
 }
 
-const OT_BOOKS = [
-  'Genesis','Exodus','Leviticus','Numbers','Deuteronomy',
-  'Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings',
-  '1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther',
-  'Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon',
-  'Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel',
-  'Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum',
-  'Habakkuk','Zephaniah','Haggai','Zechariah','Malachi',
-];
+function getBookVerseOrdinal(bookData: BookData, chapter: number, verse: number): number {
+  let ordinal = 0;
 
-function getTestament(book: string): 'OT' | 'NT' {
-  return OT_BOOKS.includes(book) ? 'OT' : 'NT';
+  for (const chapterData of bookData.chapters) {
+    const chapterNumber = parseInt(chapterData.chapter, 10);
+    const verseCount = parseInt(chapterData.verses, 10);
+    if (!Number.isInteger(chapterNumber) || chapterNumber < 1 || !Number.isInteger(verseCount) || verseCount < 1) {
+      continue;
+    }
+
+    if (chapterNumber < chapter) {
+      ordinal += verseCount;
+      continue;
+    }
+
+    if (chapterNumber === chapter) {
+      const clampedVerse = Math.min(Math.max(verse, 1), verseCount);
+      return ordinal + clampedVerse;
+    }
+
+    break;
+  }
+
+  const totalVersesInBook = bookData.chapters.reduce((sum, chapterData) => {
+    const verseCount = parseInt(chapterData.verses, 10);
+    return Number.isInteger(verseCount) && verseCount > 0 ? sum + verseCount : sum;
+  }, 0);
+  return Math.max(totalVersesInBook, 1);
+}
+
+function clampScore(score: number): number {
+  return Math.min(100, Math.max(0, score));
 }
 
 export function calculateScore(
   correct: { book: string; chapter: number; verse: number },
   guess: { book: string; chapter: number; verse: number },
-  bookData: BookData,
-  scoringType: 'full-bible' | 'multi-book' | 'single-book'
+  activeBooks: BookData[]
 ): ScoreBreakdown {
-  const chaptersInBook = bookData.chapters.length;
-  const correctChapterData = bookData.chapters.find(c => parseInt(c.chapter) === correct.chapter);
-  const versesInChapter = correctChapterData ? parseInt(correctChapterData.verses) : 1;
+  const normalizedActiveBooks = activeBooks.length > 0 ? activeBooks : [];
+  const N = normalizedActiveBooks.length;
+  const activeTestaments = new Set(normalizedActiveBooks.map(book => getBookTestament(book.book)));
+  const activeCategories = new Set(normalizedActiveBooks.map(book => getBookCategory(book.book)));
+  const testamentGuaranteed = activeTestaments.size <= 1;
+  const categoryGuaranteed = activeCategories.size <= 1;
 
-  const chaptersOff = Math.abs(correct.chapter - guess.chapter);
-  const versesOff = Math.abs(correct.verse - guess.verse);
+  const correctBookData = normalizedActiveBooks.find(book => book.book === correct.book);
+  const chaptersInCorrectBook = correctBookData?.chapters.length ?? 1;
+  const chapterGuaranteed = chaptersInCorrectBook <= 1;
 
-  const chapterProximity = (basePoints: number, divisor = 4): number =>
-    basePoints * Math.max(1 - chaptersOff / (chaptersInBook / divisor), 0);
-  const verseProximity = (basePoints: number, divisor = 4): number =>
-    basePoints * Math.max(1 - versesOff / (versesInChapter / divisor), 0);
+  const guessBookIsCorrect = guess.book === correct.book;
+  const chapterDiff = guessBookIsCorrect ? Math.abs(correct.chapter - guess.chapter) : 0;
 
+  const correctOrdinal = correctBookData ? getBookVerseOrdinal(correctBookData, correct.chapter, correct.verse) : 1;
+  const guessOrdinal = guessBookIsCorrect && correctBookData
+    ? getBookVerseOrdinal(correctBookData, guess.chapter, guess.verse)
+    : correctOrdinal;
+  const textualVerseDistance = Math.abs(correctOrdinal - guessOrdinal);
+  const versesOff = guessBookIsCorrect && guess.chapter === correct.chapter ? Math.abs(correct.verse - guess.verse) : 0;
+
+  const B = N <= 1 ? 0 : 20 + (20 * Math.log(N)) / Math.log(66);
+  const g = B / 40;
+
+  const correctTestament = getBookTestament(correct.book);
+  const guessTestament = getBookTestament(guess.book);
+  const correctCategory = getBookCategory(correct.book);
+  const guessCategory = getBookCategory(guess.book);
+
+  let testamentPoints = 0;
+  let categoryPoints = 0;
   let bookPoints = 0;
-  let testamentPoints: number | undefined;
   let chapterPoints = 0;
   let versePoints = 0;
+  let total = 0;
 
-  if (scoringType === 'full-bible') {
-    const correctTestament = getTestament(correct.book);
-    const guessTestament = getTestament(guess.book);
-
-    if (guessTestament !== correctTestament) {
-      return {
-        testamentPoints: 0,
-        bookPoints: 0,
-        chapterPoints: 0,
-        versePoints: 0,
-        total: 0,
-        feedback: {
-          book: 'wrong',
-          chapter: 'wrong',
-          verse: 'wrong',
-          chaptersOff,
-          versesOff,
-        },
-      };
+  if (!guessBookIsCorrect) {
+    if (!testamentGuaranteed && guessTestament === correctTestament) {
+      testamentPoints = 15 * g;
     }
 
-    testamentPoints = 5;
+    if (!categoryGuaranteed && guessCategory === correctCategory) {
+      categoryPoints = 15 * g;
+    }
 
-    if (guess.book === correct.book) {
-      bookPoints = 25;
-      chapterPoints = chapterProximity(25);
-      if (guess.chapter === correct.chapter) {
-        chapterPoints = 25 + 10;
-        versePoints = verseProximity(25);
-        if (guess.verse === correct.verse) {
-          versePoints = 25 + 10;
-        }
-      }
-    }
-  } else if (scoringType === 'multi-book') {
-    if (guess.book === correct.book) {
-      bookPoints = 20;
-      chapterPoints = chapterProximity(30);
-      if (guess.chapter === correct.chapter) {
-        chapterPoints = 30 + 10;
-        versePoints = verseProximity(30);
-        if (guess.verse === correct.verse) {
-          versePoints = 30 + 10;
-        }
-      }
-    }
-  } else {
-    // single-book
-    chapterPoints = chapterProximity(35, 2);
-    if (guess.chapter === correct.chapter) {
-      chapterPoints = 35 + 15;
-      versePoints = verseProximity(35, 2);
-      if (guess.verse === correct.verse) {
-        versePoints = 35 + 15;
-      }
-    }
+    total = clampScore(testamentPoints + categoryPoints);
+
+    return {
+      testamentPoints,
+      categoryPoints,
+      bookPoints,
+      chapterPoints,
+      versePoints,
+      total,
+      feedback: {
+        book: 'wrong',
+        chapter: 'wrong',
+        verse: 'wrong',
+        chaptersOff: 0,
+        versesOff: 0,
+      },
+    };
   }
 
-  const total = (testamentPoints ?? 0) + bookPoints + chapterPoints + versePoints;
+  if (guess.chapter === correct.chapter && guess.verse === correct.verse) {
+    return {
+      testamentPoints,
+      categoryPoints,
+      bookPoints: B,
+      chapterPoints: chapterGuaranteed ? 0 : 30,
+      versePoints: 100 - B - (chapterGuaranteed ? 0 : 30),
+      total: 100,
+      feedback: {
+        book: 'correct',
+        chapter: 'correct',
+        verse: 'correct',
+        chaptersOff: 0,
+        versesOff: 0,
+      },
+    };
+  }
 
-  const bookFeedback = (): 'correct' | 'close' | 'wrong' => {
-    if (guess.book === correct.book) return 'correct';
-    if (getTestament(guess.book) === getTestament(correct.book)) return 'close';
-    return 'wrong';
-  };
+  const C = chapterGuaranteed ? 0 : 30;
+  const V = 97 - B - C;
+  const verseDecay = 1 + Math.pow(textualVerseDistance / 12, 1.5);
+
+  if (guess.chapter === correct.chapter) {
+    bookPoints = B;
+    chapterPoints = C;
+    versePoints = V / verseDecay;
+    total = clampScore(bookPoints + chapterPoints + versePoints);
+
+    return {
+      testamentPoints,
+      categoryPoints,
+      bookPoints,
+      chapterPoints,
+      versePoints,
+      total,
+      feedback: {
+        book: 'correct',
+        chapter: 'correct',
+        verse: versesOff <= 3 ? 'close' : 'wrong',
+        chaptersOff: 0,
+        versesOff,
+      },
+    };
+  }
+
+  bookPoints = B;
+  chapterPoints = C > 0 ? (0.6 * C) / Math.pow(Math.max(chapterDiff, 1), 1.5) : 0;
+  versePoints = (V + 5) / verseDecay;
+  total = clampScore(bookPoints + chapterPoints + versePoints);
 
   return {
     testamentPoints,
+    categoryPoints,
     bookPoints,
     chapterPoints,
     versePoints,
-    total: Math.round(total),
+    total,
     feedback: {
-      book: bookFeedback(),
-      chapter: guess.chapter === correct.chapter ? 'correct' : chaptersOff <= 3 ? 'close' : 'wrong',
-      verse: guess.verse === correct.verse ? 'correct' : versesOff <= 3 ? 'close' : 'wrong',
-      chaptersOff,
+      book: 'correct',
+      chapter: chapterDiff <= 3 ? 'close' : 'wrong',
+      verse: 'wrong',
+      chaptersOff: chapterDiff,
       versesOff,
     },
   };

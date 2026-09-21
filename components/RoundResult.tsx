@@ -115,7 +115,13 @@ export default function RoundResult({
             {scoreBreakdown.testamentPoints !== undefined && (
               <div className="flex justify-between text-sm py-1">
                 <span>Testament</span>
-                <span className="font-semibold">+{scoreBreakdown.testamentPoints}</span>
+                <span className="font-semibold">+{Math.round(scoreBreakdown.testamentPoints)}</span>
+              </div>
+            )}
+            {scoreBreakdown.categoryPoints !== undefined && (
+              <div className="flex justify-between text-sm py-1">
+                <span>Category</span>
+                <span className="font-semibold">+{Math.round(scoreBreakdown.categoryPoints)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm py-1">

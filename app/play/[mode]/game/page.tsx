@@ -243,12 +243,10 @@ export default function GamePage() {
       return;
     }
 
-    const bookData = session.modeConfig.books.find(b => b.book === currentVerse.book) ?? session.modeConfig.books[0];
     const breakdown = calculateScore(
       { book: currentVerse.book, chapter: currentVerse.chapter, verse: currentVerse.verse },
       guess,
-      bookData,
-      session.modeConfig.scoringType
+      session.modeConfig.books
     );
 
     const contextVersesAdded = previousVerses.length + nextVerses.length;

@@ -352,12 +352,10 @@ export default function PartyGameClient() {
     const timer = window.setTimeout(() => {
       const timeoutGuess = pendingSelection.guess;
       if (timeoutGuess) {
-        const bookData = modeConfig.books.find(b => b.book === verse.book) ?? modeConfig.books[0];
         const breakdown = calculateScore(
           { book: verse.book, chapter: verse.chapter, verse: verse.verse },
           timeoutGuess,
-          bookData,
-          modeConfig.scoringType
+          modeConfig.books
         );
 
         const contextVersesAdded = previousVerses.length + nextVerses.length;
@@ -405,12 +403,10 @@ export default function PartyGameClient() {
   const handleSubmitGuess = useCallback(async (guess: { book: string; chapter: number; verse: number }) => {
     if (!game || !verse || !modeConfig || !myMember) return;
 
-    const bookData = modeConfig.books.find(b => b.book === verse.book) ?? modeConfig.books[0];
     const breakdown = calculateScore(
       { book: verse.book, chapter: verse.chapter, verse: verse.verse },
       guess,
-      bookData,
-      modeConfig.scoringType
+      modeConfig.books
     );
 
     const contextVersesAdded = previousVerses.length + nextVerses.length;
