@@ -50,58 +50,35 @@ export default function RoundResult({
   };
 
   const breakdownRows = useMemo(() => {
-    const rows: Array<{ label: string; points: number; muted?: boolean }> = [];
+    const rows: Array<{ label: string; points: number }> = [];
 
-    if (round.wasBlankGuess) {
-      rows.push({ label: 'No guess submitted', points: 0, muted: true });
-      return rows;
+    if (scoreBreakdown.possiblePoints.testament) {
+      rows.push({ label: 'Testament', points: scoreBreakdown.testamentPoints ?? 0 });
     }
 
-    if (feedback.book !== 'correct') {
-      if (scoreBreakdown.testamentPoints !== undefined) {
-        rows.push({ label: 'Testament match', points: scoreBreakdown.testamentPoints });
-      }
-      if (scoreBreakdown.categoryPoints !== undefined) {
-        rows.push({ label: 'Category match', points: scoreBreakdown.categoryPoints });
-      }
-
-      if (scoreBreakdown.testamentPoints === undefined && scoreBreakdown.categoryPoints === undefined) {
-        rows.push({ label: 'High-level info (already guaranteed in this mode)', points: 0, muted: true });
-      }
-
-      rows.push({ label: 'Book/chapter/verse (book was incorrect)', points: 0, muted: true });
-      return rows;
+    if (scoreBreakdown.possiblePoints.category) {
+      rows.push({ label: 'Category', points: scoreBreakdown.categoryPoints ?? 0 });
     }
 
-    rows.push({
-      label: scoreBreakdown.bookPoints > 0 ? 'Book floor' : 'Book (guaranteed in this mode)',
-      points: scoreBreakdown.bookPoints,
-      muted: scoreBreakdown.bookPoints === 0,
-    });
+    if (scoreBreakdown.possiblePoints.book) {
+      rows.push({ label: 'Book', points: scoreBreakdown.bookPoints });
+    }
 
-    const chapterLabel = scoreBreakdown.chapterPoints === 0
-      ? 'Chapter (guaranteed in this mode)'
-      : feedback.chapter === 'correct'
-        ? 'Chapter'
-        : 'Chapter proximity';
-    rows.push({
-      label: chapterLabel,
-      points: scoreBreakdown.chapterPoints,
-      muted: scoreBreakdown.chapterPoints === 0,
-    });
+    if (scoreBreakdown.possiblePoints.chapter) {
+      rows.push({ label: 'Chapter', points: scoreBreakdown.chapterPoints });
+    }
 
-    const verseLabel = feedback.chapter === 'correct' ? 'Verse accuracy' : 'Verse proximity';
-    rows.push({
-      label: verseLabel,
-      points: scoreBreakdown.versePoints,
-      muted: scoreBreakdown.versePoints === 0,
-    });
+    if (scoreBreakdown.possiblePoints.verse) {
+      rows.push({ label: 'Verse', points: scoreBreakdown.versePoints });
+    }
 
     return rows;
   }, [
-    feedback.book,
-    feedback.chapter,
-    round.wasBlankGuess,
+    scoreBreakdown.possiblePoints.testament,
+    scoreBreakdown.possiblePoints.category,
+    scoreBreakdown.possiblePoints.book,
+    scoreBreakdown.possiblePoints.chapter,
+    scoreBreakdown.possiblePoints.verse,
     scoreBreakdown.testamentPoints,
     scoreBreakdown.categoryPoints,
     scoreBreakdown.bookPoints,
@@ -179,7 +156,7 @@ export default function RoundResult({
           <div className="surface-card p-4 sm:p-5 mb-4">
             <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-2">Score Breakdown</h3>
             {breakdownRows.map(row => (
-              <div key={row.label} className={`flex justify-between text-sm py-1${row.muted ? ' content-muted' : ''}`}>
+              <div key={row.label} className="flex justify-between text-sm py-1">
                 <span>{row.label}</span>
                 <span className="font-semibold">+{formatPoints(row.points)}</span>
               </div>

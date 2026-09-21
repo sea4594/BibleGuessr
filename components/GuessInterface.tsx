@@ -14,10 +14,12 @@ interface Props {
 
 function getInitialSelection(modeConfig: GameModeConfig) {
   const onlyBook = modeConfig.books.length === 1 ? 0 : null;
+  const initialBook = onlyBook === null ? null : modeConfig.books[onlyBook] ?? null;
+  const initialChapter = initialBook && initialBook.chapters.length === 1 ? 1 : null;
 
   return {
     bookIdx: onlyBook,
-    chapter: null as number | null,
+    chapter: initialChapter,
     verse: null as number | null,
   };
 }

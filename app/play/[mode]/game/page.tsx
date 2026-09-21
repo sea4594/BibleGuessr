@@ -212,6 +212,12 @@ export default function GamePage() {
     if (!session || !currentVerse) return;
 
     if (wasBlankGuess) {
+      const blankBreakdown = calculateScore(
+        { book: currentVerse.book, chapter: currentVerse.chapter, verse: currentVerse.verse },
+        { book: '', chapter: 0, verse: 0 },
+        session.modeConfig.books
+      );
+
       submitGuess(
         { book: '', chapter: 0, verse: 0 },
         currentVerse,
@@ -224,20 +230,11 @@ export default function GamePage() {
         },
         0,
         {
-          bookPoints: 0,
-          chapterPoints: 0,
-          versePoints: 0,
+          ...blankBreakdown,
           baseTotal: 0,
           contextPenalty: 0,
           contextVersesAdded: 0,
           total: 0,
-          feedback: {
-            book: 'wrong',
-            chapter: 'wrong',
-            verse: 'wrong',
-            chaptersOff: 0,
-            versesOff: 0,
-          },
         }
       );
       return;

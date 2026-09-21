@@ -7,6 +7,13 @@ export interface ScoreBreakdown {
   bookPoints: number;
   chapterPoints: number;
   versePoints: number;
+  possiblePoints: {
+    testament: boolean;
+    category: boolean;
+    book: boolean;
+    chapter: boolean;
+    verse: boolean;
+  };
   baseTotal?: number;
   contextPenalty?: number;
   contextVersesAdded?: number;
@@ -65,6 +72,7 @@ export function calculateScore(
   const activeCategories = new Set(normalizedActiveBooks.map(book => getBookCategory(book.book)));
   const testamentGuaranteed = activeTestaments.size <= 1;
   const categoryGuaranteed = activeCategories.size <= 1;
+  const bookGuaranteed = N <= 1;
 
   const correctBookData = normalizedActiveBooks.find(book => book.book === correct.book);
   const chaptersInCorrectBook = correctBookData?.chapters.length ?? 1;
@@ -112,6 +120,13 @@ export function calculateScore(
       bookPoints,
       chapterPoints,
       versePoints,
+      possiblePoints: {
+        testament: !testamentGuaranteed,
+        category: !categoryGuaranteed,
+        book: !bookGuaranteed,
+        chapter: !chapterGuaranteed,
+        verse: true,
+      },
       total,
       feedback: {
         book: 'wrong',
@@ -128,6 +143,13 @@ export function calculateScore(
       bookPoints: B,
       chapterPoints: chapterGuaranteed ? 0 : 30,
       versePoints: 100 - B - (chapterGuaranteed ? 0 : 30),
+      possiblePoints: {
+        testament: !testamentGuaranteed,
+        category: !categoryGuaranteed,
+        book: !bookGuaranteed,
+        chapter: !chapterGuaranteed,
+        verse: true,
+      },
       total: 100,
       feedback: {
         book: 'correct',
@@ -153,6 +175,13 @@ export function calculateScore(
       bookPoints,
       chapterPoints,
       versePoints,
+      possiblePoints: {
+        testament: !testamentGuaranteed,
+        category: !categoryGuaranteed,
+        book: !bookGuaranteed,
+        chapter: !chapterGuaranteed,
+        verse: true,
+      },
       total,
       feedback: {
         book: 'correct',
@@ -173,6 +202,13 @@ export function calculateScore(
     bookPoints,
     chapterPoints,
     versePoints,
+    possiblePoints: {
+      testament: !testamentGuaranteed,
+      category: !categoryGuaranteed,
+      book: !bookGuaranteed,
+      chapter: !chapterGuaranteed,
+      verse: true,
+    },
     total,
     feedback: {
       book: 'correct',
