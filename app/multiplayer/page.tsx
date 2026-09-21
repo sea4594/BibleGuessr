@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { createPortal } from 'react-dom';
 import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import HorizontalWheel from '@/components/HorizontalWheel';
@@ -99,7 +98,6 @@ export default function MultiplayerPage() {
 
   const [room, setRoom] = useState<PartyRoom | null>(null);
   const [activeRoomCode, setActiveRoomCode] = useState<string | null>(() => readInitialCodeParam() ?? readInitialPartyCode());
-  const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState(['', '', '', '']);
   const joinRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -112,6 +110,7 @@ export default function MultiplayerPage() {
   const [partyLobbyError, setPartyLobbyError] = useState('');
   const [partyLobbyPending, setPartyLobbyPending] = useState(false);
   const [partyActionPending, setPartyActionPending] = useState(false);
+  const [partyJoinPending, setPartyJoinPending] = useState(false);
   const suppressLobbyLeaveRef = useRef(false);
 
   const displayName = useMemo(() => {
@@ -321,10 +320,6 @@ export default function MultiplayerPage() {
     router.push(`/multiplayer/party/game?code=${room.code}`);
   }, [room?.code, room?.game, router, tab]);
 
-  useEffect(() => {
-    if (joinOpen) queueMicrotask(() => joinRefs.current[0]?.focus());
-  }, [joinOpen]);
-
   const applyPlayers = (value: number) => {
     const n = Math.min(8, Math.max(2, value));
     setPlayers(n);
@@ -339,12 +334,15 @@ export default function MultiplayerPage() {
 
   const submitJoin = async () => {
     const code = joinCode.join('').toUpperCase();
-    if (code.length !== 4 || !firebaseConfigured) return;
+    if (code.length !== 4 || !firebaseConfigured || partyJoinPending) return;
+
+    setPartyJoinPending(true);
 
     const hasSession = await ensureFirebaseSession();
     const authUid = getFirebaseAuth()?.currentUser?.uid;
     if ((!hasSession && !authUid) && !user) {
       setPartyLobbyError('Joining a party requires Firebase Authentication. Enable Anonymous sign-in in Firebase Auth (or log in with Google).');
+      setPartyJoinPending(false);
       return;
     }
 
@@ -352,15 +350,45 @@ export default function MultiplayerPage() {
       await leaveParty(activeRoomCode, partyMemberId);
     }
 
-    const ok = await joinParty(code, { id: partyMemberId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: Date.now() });
+    const ok = await joinParty(code, { id: partyMemberId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: 0 });
     if (ok) {
       setPartyLobbyError('');
       setPartyStartError('');
-      setJoinOpen(false);
       setJoinCode(['', '', '', '']);
       setActiveRoomCode(code);
     } else {
       setPartyLobbyError('Could not join that party code. Check the code and try again.');
+    }
+
+    setPartyJoinPending(false);
+  };
+
+  const updateJoinCodeSlot = (index: number, value: string) => {
+    const char = (value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(-1);
+    const next = joinCode.slice();
+    next[index] = char;
+    setJoinCode(next);
+
+    if (char && index < 3) {
+      joinRefs.current[index + 1]?.focus();
+    }
+
+    if (char && index === 3 && next.every(slot => slot.length === 1)) {
+      queueMicrotask(() => {
+        void submitJoin();
+      });
+    }
+  };
+
+  const handleJoinCodeKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Backspace' && !joinCode[index] && index > 0) {
+      joinRefs.current[index - 1]?.focus();
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void submitJoin();
     }
   };
 
@@ -476,38 +504,6 @@ export default function MultiplayerPage() {
     router.push(`/multiplayer/party/game?code=${room.code}`);
   };
 
-  const joinModal = joinOpen && typeof window !== 'undefined'
-    ? createPortal(
-      <div className="party-join-modal-backdrop" onClick={() => setJoinOpen(false)}>
-        <div className="party-join-modal-card" onClick={e => e.stopPropagation()}>
-          <button
-            onClick={() => setJoinOpen(false)}
-            className="party-join-modal-close"
-            aria-label="Close join code dialog"
-          >
-            x
-          </button>
-          <h3 className="headline-serif text-2xl mb-4">Enter 4-letter code</h3>
-          <div className="grid grid-cols-4 gap-2 mb-5">
-            {joinCode.map((value, idx) => (
-              <input key={idx} ref={el => { joinRefs.current[idx] = el; }} value={value} maxLength={1} onChange={e => {
-                const char = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '');
-                const next = joinCode.slice();
-                next[idx] = char;
-                setJoinCode(next);
-                if (char && idx < 3) joinRefs.current[idx + 1]?.focus();
-              }} className="settings-input !w-full text-center text-2xl font-bold" inputMode="text" />
-            ))}
-          </div>
-          <div>
-            <button onClick={() => void submitJoin()} className="btn-primary w-full py-2.5">Join</button>
-          </div>
-        </div>
-      </div>,
-      document.body
-    )
-    : null;
-
   return (
     <main className="app-screen">
       <AppTopBar title="Multiplayer" />
@@ -567,38 +563,66 @@ export default function MultiplayerPage() {
           {tab === 'party' && (
             <section className="surface-card p-4">
               <div className="party-header-row mb-4">
-                {firebaseConfigured && room && (
-                  <div className="party-code-block">
-                    <p className="content-muted text-xs">Your Code</p>
-                    <p className="headline-serif party-code-value">{room.code}</p>
+                <div className="party-header-half party-host-half">
+                  <p className="content-muted text-xs">Host</p>
+                  <p className="headline-serif party-code-value">{firebaseConfigured && room ? room.code : '....'}</p>
+                </div>
+
+                <div className="party-header-half party-join-half">
+                  <p className="content-muted text-xs">Join</p>
+                  <div className="party-join-slot-row" role="group" aria-label="Enter party join code">
+                    {joinCode.map((value, idx) => (
+                      <input
+                        key={idx}
+                        ref={el => {
+                          joinRefs.current[idx] = el;
+                        }}
+                        value={value}
+                        maxLength={1}
+                        onChange={event => updateJoinCodeSlot(idx, event.target.value)}
+                        onKeyDown={event => handleJoinCodeKeyDown(idx, event)}
+                        className="party-join-slot-input"
+                        inputMode="text"
+                        autoCapitalize="characters"
+                        aria-label={`Join code letter ${idx + 1}`}
+                        disabled={!firebaseConfigured || partyJoinPending}
+                      />
+                    ))}
                   </div>
-                )}
-                <div className="party-header-actions">
-                  {room && isCurrentMember ? (
-                    isHost && room.members.length > 1 ? (
-                      <button
-                        onClick={() => void handleEndLobby()}
-                        disabled={partyActionPending}
-                        className="btn-outline px-3 py-2 text-sm"
-                      >
-                        {partyActionPending ? 'Ending...' : 'End Lobby'}
-                      </button>
-                    ) : !isHost ? (
-                      <button
-                        onClick={() => void handleLeaveLobby()}
-                        disabled={partyActionPending}
-                        className="btn-outline px-3 py-2 text-sm"
-                      >
-                        {partyActionPending ? 'Leaving...' : 'Leave Lobby'}
-                      </button>
-                    ) : (
-                      <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Enter code to join</button>
-                    )
-                  ) : (
-                    <button onClick={() => setJoinOpen(true)} className="btn-outline px-3 py-2 text-sm">Enter code to join</button>
-                  )}
                 </div>
               </div>
+
+              <div className="party-header-actions mb-4">
+                <button
+                  onClick={() => {
+                    if (!partyJoinPending) void submitJoin();
+                  }}
+                  className="btn-outline px-3 py-2 text-sm"
+                  disabled={!firebaseConfigured || joinCode.some(char => !char) || partyJoinPending}
+                >
+                  {partyJoinPending ? 'Joining...' : 'Join Party'}
+                </button>
+                {room && isCurrentMember && (
+                  isHost && room.members.length > 1 ? (
+                    <button
+                      onClick={() => void handleEndLobby()}
+                      disabled={partyActionPending}
+                      className="btn-outline px-3 py-2 text-sm"
+                    >
+                      {partyActionPending ? 'Ending...' : 'End Lobby'}
+                    </button>
+                  ) : !isHost ? (
+                    <button
+                      onClick={() => void handleLeaveLobby()}
+                      disabled={partyActionPending}
+                      className="btn-outline px-3 py-2 text-sm"
+                    >
+                      {partyActionPending ? 'Leaving...' : 'Leave Lobby'}
+                    </button>
+                  ) : null
+                )}
+              </div>
+
               {!firebaseConfigured && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
               {firebaseConfigured && !room && (
                 <div className="surface-card-soft p-4 text-sm">
@@ -752,7 +776,6 @@ export default function MultiplayerPage() {
         </div>
       </div>
 
-      {joinModal}
       <MainBottomNav />
     </main>
   );
