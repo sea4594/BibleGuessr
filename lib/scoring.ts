@@ -57,6 +57,14 @@ function getBookVerseOrdinal(bookData: BookData, chapter: number, verse: number)
   return Math.max(totalVersesInBook, 1);
 }
 
+function getTotalVersesInBook(bookData: BookData): number {
+  const total = bookData.chapters.reduce((sum, chapterData) => {
+    const verseCount = parseInt(chapterData.verses, 10);
+    return Number.isInteger(verseCount) && verseCount > 0 ? sum + verseCount : sum;
+  }, 0);
+  return Math.max(total, 1);
+}
+
 function clampScore(score: number): number {
   return Math.min(100, Math.max(0, score));
 }
@@ -76,6 +84,7 @@ export function calculateScore(
 
   const correctBookData = normalizedActiveBooks.find(book => book.book === correct.book);
   const chaptersInCorrectBook = correctBookData?.chapters.length ?? 1;
+  const totalVersesInCorrectBook = correctBookData ? getTotalVersesInBook(correctBookData) : 1;
   const chapterGuaranteed = chaptersInCorrectBook <= 1;
 
   const guessBookIsCorrect = guess.book === correct.book;
@@ -123,9 +132,9 @@ export function calculateScore(
       possiblePoints: {
         testament: !testamentGuaranteed,
         category: !categoryGuaranteed,
-        book: !bookGuaranteed,
-        chapter: !chapterGuaranteed,
-        verse: true,
+        book: false,
+        chapter: false,
+        verse: false,
       },
       total,
       feedback: {
@@ -144,8 +153,8 @@ export function calculateScore(
       chapterPoints: chapterGuaranteed ? 0 : 30,
       versePoints: 100 - B - (chapterGuaranteed ? 0 : 30),
       possiblePoints: {
-        testament: !testamentGuaranteed,
-        category: !categoryGuaranteed,
+        testament: false,
+        category: false,
         book: !bookGuaranteed,
         chapter: !chapterGuaranteed,
         verse: true,
@@ -176,8 +185,8 @@ export function calculateScore(
       chapterPoints,
       versePoints,
       possiblePoints: {
-        testament: !testamentGuaranteed,
-        category: !categoryGuaranteed,
+        testament: false,
+        category: false,
         book: !bookGuaranteed,
         chapter: !chapterGuaranteed,
         verse: true,
@@ -193,9 +202,14 @@ export function calculateScore(
     };
   }
 
+  const maxChapterDistance = Math.max(chaptersInCorrectBook - 1, 1);
+  const chapterCloseness = Math.max(0, 1 - chapterDiff / maxChapterDistance);
+  const maxVerseDistance = Math.max(totalVersesInCorrectBook - 1, 1);
+  const positionCloseness = Math.max(0, 1 - textualVerseDistance / maxVerseDistance);
+
   bookPoints = B;
-  chapterPoints = C > 0 ? (0.6 * C) / Math.pow(Math.max(chapterDiff, 1), 1.5) : 0;
-  versePoints = (V + 5) / verseDecay;
+  chapterPoints = 0.6 * C * Math.pow(chapterCloseness, 1.5);
+  versePoints = (V + 5) * Math.pow(positionCloseness, 1.5);
   total = clampScore(bookPoints + chapterPoints + versePoints);
 
   return {
@@ -203,8 +217,8 @@ export function calculateScore(
     chapterPoints,
     versePoints,
     possiblePoints: {
-      testament: !testamentGuaranteed,
-      category: !categoryGuaranteed,
+      testament: false,
+      category: false,
       book: !bookGuaranteed,
       chapter: !chapterGuaranteed,
       verse: true,

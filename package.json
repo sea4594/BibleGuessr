@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app components lib"
+    "lint": "eslint app components lib",
+    "test": "node tests/scoring-system.test.cjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.3",

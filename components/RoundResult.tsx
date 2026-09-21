@@ -167,12 +167,6 @@ export default function RoundResult({
                 <span className="font-semibold">-{round.contextPenalty}</span>
               </div>
             )}
-            {round.contextPenalty > 0 && (
-              <div className="flex justify-between text-sm py-1">
-                <span>Adaptive subtotal</span>
-                <span className="font-semibold">{Math.round(round.baseScore)}%</span>
-              </div>
-            )}
             <div className="flex justify-between items-center text-[1.55rem] sm:text-[1.75rem] py-3 border-t border-[var(--line)] mt-1 font-extrabold">
               <span>Total</span>
               <span>{scorePercent}%</span>
