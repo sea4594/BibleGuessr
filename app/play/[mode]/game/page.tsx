@@ -250,8 +250,8 @@ export default function GamePage() {
     );
 
     const contextVersesAdded = previousVerses.length + nextVerses.length;
-    const contextPenalty = 0;
-    const adjustedTotal = breakdown.total;
+    const contextPenalty = contextVersesAdded * 10;
+    const adjustedTotal = Math.max(0, breakdown.total - contextPenalty);
 
     submitGuess(
       guess,
@@ -423,6 +423,8 @@ export default function GamePage() {
     );
   }
 
+  const contextPenalty = (previousVerses.length + nextVerses.length) * 10;
+
   return (
     <div className="app-screen game-shell">
       <header className="game-topbar">
@@ -430,7 +432,7 @@ export default function GamePage() {
           <button onClick={() => setShowQuitConfirm(true)} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
         </div>
         <p className="game-topbar-round">
-          Round {displayRound}/{displayTotalRounds}
+          Round {displayRound}/{displayTotalRounds} <span className="text-[var(--danger)]">(-{contextPenalty})</span>
           {currentPlayerName && <span className="game-topbar-player"> · {currentPlayerName}</span>}
         </p>
         <div className="game-topbar-actions">

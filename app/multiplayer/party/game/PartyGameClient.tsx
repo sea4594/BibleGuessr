@@ -251,6 +251,7 @@ export default function PartyGameClient() {
 
   const verse = game?.roundVerse ?? null;
   const mySubmission = game?.submissions?.[partyMemberId] ?? null;
+  const contextPenalty = (previousVerses.length + nextVerses.length) * 10;
   const hasTimer = (game?.timerDurationSeconds ?? 0) > 0;
 
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
@@ -357,7 +358,10 @@ export default function PartyGameClient() {
           modeConfig.books
         );
 
-        void submitRoundScore(breakdown.total, breakdown.total, false, timeoutGuess, breakdown.feedback);
+        const contextVersesAdded = previousVerses.length + nextVerses.length;
+        const penalty = contextVersesAdded * 10;
+        const adjustedTotal = Math.max(0, breakdown.total - penalty);
+        void submitRoundScore(adjustedTotal, breakdown.total, false, timeoutGuess, breakdown.feedback);
         return;
       }
 
@@ -369,7 +373,9 @@ export default function PartyGameClient() {
     game,
     modeConfig,
     mySubmission,
+    nextVerses.length,
     pendingSelection.guess,
+    previousVerses.length,
     remainingSeconds,
     submitRoundScore,
     verse,
@@ -403,8 +409,12 @@ export default function PartyGameClient() {
       modeConfig.books
     );
 
-    await submitRoundScore(breakdown.total, breakdown.total, false, guess, breakdown.feedback);
-  }, [game, modeConfig, myMember, submitRoundScore, verse]);
+    const contextVersesAdded = previousVerses.length + nextVerses.length;
+    const penalty = contextVersesAdded * 10;
+    const adjustedTotal = Math.max(0, breakdown.total - penalty);
+
+    await submitRoundScore(adjustedTotal, breakdown.total, false, guess, breakdown.feedback);
+  }, [game, modeConfig, myMember, nextVerses.length, previousVerses.length, submitRoundScore, verse]);
 
   const handleHostAdvance = async () => {
     if (!room || !game || !modeConfig || !isHost) return;
@@ -573,7 +583,7 @@ export default function PartyGameClient() {
           <button onClick={() => void handleExitParty()} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
         </div>
         <p className="game-topbar-round">
-          {modeConfig.name} · Round {game.currentRound}/{game.totalRounds}
+          {modeConfig.name} · Round {game.currentRound}/{game.totalRounds} <span className="text-[var(--danger)]">(-{contextPenalty})</span>
         </p>
         <div className="game-topbar-actions">
           <p className="game-topbar-time">{game.status === 'in-round' ? (hasTimer ? formatTime(remainingSeconds) : 'None') : '--:--'}</p>
