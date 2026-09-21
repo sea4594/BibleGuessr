@@ -22,6 +22,16 @@ function getInitialSelection(modeConfig: GameModeConfig) {
   };
 }
 
+function getCenteredOneBasedIndex(totalCount: number) {
+  if (totalCount <= 0) return null;
+  return Math.floor((totalCount + 1) / 2);
+}
+
+function parsePositiveInt(value: string | undefined) {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
 export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange }: Props) {
   const [selection, setSelection] = useState(() => getInitialSelection(modeConfig));
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -60,19 +70,45 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
   }, [hasInteracted, onSelectionChange, resolvedGuess]);
 
   const handleBookChange = (idx: number) => {
-    setSelection({
-      bookIdx: idx,
-      chapter: null,
-      verse: null,
-    });
+    const selectedNextBook = modeConfig.books[idx] ?? null;
+    const isFirstSelection = !hasInteracted && selection.chapter === null && selection.verse === null;
+
+    if (isFirstSelection && selectedNextBook) {
+      const centeredChapter = getCenteredOneBasedIndex(selectedNextBook.chapters.length);
+      const centeredChapterData = centeredChapter ? selectedNextBook.chapters[centeredChapter - 1] : null;
+      const centeredVerse = centeredChapterData
+        ? getCenteredOneBasedIndex(parsePositiveInt(centeredChapterData.verses))
+        : null;
+
+      setSelection({
+        bookIdx: idx,
+        chapter: centeredChapter,
+        verse: centeredVerse,
+      });
+    } else {
+      setSelection({
+        bookIdx: idx,
+        chapter: null,
+        verse: null,
+      });
+    }
+
     setHasInteracted(true);
   };
 
   const handleChapterChange = (idx: number) => {
+    const nextChapter = idx + 1;
+    const nextBook = selection.bookIdx === null ? null : modeConfig.books[selection.bookIdx] ?? null;
+    const nextChapterData = nextBook?.chapters[nextChapter - 1] ?? null;
+    const isFirstSelection = !hasInteracted && selection.chapter === null && selection.verse === null;
+    const centeredVerse = nextChapterData
+      ? getCenteredOneBasedIndex(parsePositiveInt(nextChapterData.verses))
+      : null;
+
     setSelection(prev => ({
       ...prev,
-      chapter: idx + 1,
-      verse: null,
+      chapter: nextChapter,
+      verse: isFirstSelection ? centeredVerse : null,
     }));
     setHasInteracted(true);
   };

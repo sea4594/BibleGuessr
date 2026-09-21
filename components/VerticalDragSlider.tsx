@@ -24,6 +24,7 @@ export default function VerticalDragSlider({
 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [hoveringMouse, setHoveringMouse] = useState(false);
   const [hoverIdx, setHoverIdx] = useState(selectedIndex ?? 0);
   const [rawPx, setRawPx] = useState(0); // calibrated px from top of track
 
@@ -44,20 +45,45 @@ export default function VerticalDragSlider({
     const { idx, px } = compute(e.clientY);
     setHoverIdx(idx);
     setRawPx(px);
+    if (e.pointerType === 'mouse') {
+      setHoveringMouse(true);
+    }
     setDragging(true);
   };
 
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging || disabled) return;
+    if (disabled) return;
+    if (!dragging && e.pointerType !== 'mouse') return;
+
     const { idx, px } = compute(e.clientY);
     setHoverIdx(idx);
     setRawPx(px);
+
+    if (!dragging && e.pointerType === 'mouse') {
+      setHoveringMouse(true);
+    }
+  };
+
+  const onEnter = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled || items.length === 0 || e.pointerType !== 'mouse') return;
+    const { idx, px } = compute(e.clientY);
+    setHoverIdx(idx);
+    setRawPx(px);
+    setHoveringMouse(true);
+  };
+
+  const onLeave = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') {
+      setHoveringMouse(false);
+    }
   };
 
   const onUp = () => {
     if (dragging && items.length > 0) onChange(hoverIdx);
     setDragging(false);
   };
+
+  const showPopup = (dragging || hoveringMouse) && !disabled && items.length > 0;
 
   const activeIdx = dragging
     ? (items.length > 0 ? Math.max(0, Math.min(items.length - 1, hoverIdx)) : null)
@@ -87,6 +113,8 @@ export default function VerticalDragSlider({
           onPointerMove={onMove}
           onPointerUp={onUp}
           onPointerCancel={onUp}
+          onPointerEnter={onEnter}
+          onPointerLeave={onLeave}
           style={{ touchAction: 'none', cursor: disabled ? 'default' : 'pointer' }}
         >
           <div className="vslider-book-list" aria-hidden="true">
@@ -108,7 +136,7 @@ export default function VerticalDragSlider({
 
         </div>
 
-        {dragging && (
+        {showPopup && (
           <div className="vslider-popup vslider-popup-above" style={{ top: `${popupTopPx}px` }}>
             {contextItems.map((item, i) =>
               item === null ? (
