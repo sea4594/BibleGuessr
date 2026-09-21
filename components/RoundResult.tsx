@@ -43,6 +43,72 @@ export default function RoundResult({
   const runningPercent = Math.max(0, Math.min(100, Math.round((runningTotal / Math.max(rounds.length * 100, 1)) * 100)));
   const isHotSeat = Boolean(multiplayer?.enabled);
 
+  const formatPoints = (value: number) => {
+    const rounded = Math.round(value * 10) / 10;
+    if (Number.isInteger(rounded)) return String(rounded);
+    return rounded.toFixed(1);
+  };
+
+  const breakdownRows = useMemo(() => {
+    const rows: Array<{ label: string; points: number; muted?: boolean }> = [];
+
+    if (round.wasBlankGuess) {
+      rows.push({ label: 'No guess submitted', points: 0, muted: true });
+      return rows;
+    }
+
+    if (feedback.book !== 'correct') {
+      if (scoreBreakdown.testamentPoints !== undefined) {
+        rows.push({ label: 'Testament match', points: scoreBreakdown.testamentPoints });
+      }
+      if (scoreBreakdown.categoryPoints !== undefined) {
+        rows.push({ label: 'Category match', points: scoreBreakdown.categoryPoints });
+      }
+
+      if (scoreBreakdown.testamentPoints === undefined && scoreBreakdown.categoryPoints === undefined) {
+        rows.push({ label: 'High-level info (already guaranteed in this mode)', points: 0, muted: true });
+      }
+
+      rows.push({ label: 'Book/chapter/verse (book was incorrect)', points: 0, muted: true });
+      return rows;
+    }
+
+    rows.push({
+      label: scoreBreakdown.bookPoints > 0 ? 'Book floor' : 'Book (guaranteed in this mode)',
+      points: scoreBreakdown.bookPoints,
+      muted: scoreBreakdown.bookPoints === 0,
+    });
+
+    const chapterLabel = scoreBreakdown.chapterPoints === 0
+      ? 'Chapter (guaranteed in this mode)'
+      : feedback.chapter === 'correct'
+        ? 'Chapter'
+        : 'Chapter proximity';
+    rows.push({
+      label: chapterLabel,
+      points: scoreBreakdown.chapterPoints,
+      muted: scoreBreakdown.chapterPoints === 0,
+    });
+
+    const verseLabel = feedback.chapter === 'correct' ? 'Verse accuracy' : 'Verse proximity';
+    rows.push({
+      label: verseLabel,
+      points: scoreBreakdown.versePoints,
+      muted: scoreBreakdown.versePoints === 0,
+    });
+
+    return rows;
+  }, [
+    feedback.book,
+    feedback.chapter,
+    round.wasBlankGuess,
+    scoreBreakdown.testamentPoints,
+    scoreBreakdown.categoryPoints,
+    scoreBreakdown.bookPoints,
+    scoreBreakdown.chapterPoints,
+    scoreBreakdown.versePoints,
+  ]);
+
   const groupedRoundRows = useMemo(() => {
     if (!multiplayer?.enabled || multiplayer.players.length === 0) return null;
 
@@ -112,34 +178,22 @@ export default function RoundResult({
 
           <div className="surface-card p-4 sm:p-5 mb-4">
             <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-2">Score Breakdown</h3>
-            {scoreBreakdown.testamentPoints !== undefined && (
-              <div className="flex justify-between text-sm py-1">
-                <span>Testament</span>
-                <span className="font-semibold">+{Math.round(scoreBreakdown.testamentPoints)}</span>
+            {breakdownRows.map(row => (
+              <div key={row.label} className={`flex justify-between text-sm py-1${row.muted ? ' content-muted' : ''}`}>
+                <span>{row.label}</span>
+                <span className="font-semibold">+{formatPoints(row.points)}</span>
               </div>
-            )}
-            {scoreBreakdown.categoryPoints !== undefined && (
-              <div className="flex justify-between text-sm py-1">
-                <span>Category</span>
-                <span className="font-semibold">+{Math.round(scoreBreakdown.categoryPoints)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm py-1">
-              <span>Book</span>
-              <span className="font-semibold">+{Math.round(scoreBreakdown.bookPoints)}</span>
-            </div>
-            <div className="flex justify-between text-sm py-1">
-              <span>Chapter</span>
-              <span className="font-semibold">+{Math.round(scoreBreakdown.chapterPoints)}</span>
-            </div>
-            <div className="flex justify-between text-sm py-1">
-              <span>Verse</span>
-              <span className="font-semibold">+{Math.round(scoreBreakdown.versePoints)}</span>
-            </div>
+            ))}
             {round.contextPenalty > 0 && (
               <div className="flex justify-between text-sm py-1 text-[var(--danger)]">
                 <span>Context verses ({round.contextVersesAdded} x -10)</span>
                 <span className="font-semibold">-{round.contextPenalty}</span>
+              </div>
+            )}
+            {round.contextPenalty > 0 && (
+              <div className="flex justify-between text-sm py-1">
+                <span>Adaptive subtotal</span>
+                <span className="font-semibold">{Math.round(round.baseScore)}%</span>
               </div>
             )}
             <div className="flex justify-between items-center text-[1.55rem] sm:text-[1.75rem] py-3 border-t border-[var(--line)] mt-1 font-extrabold">
