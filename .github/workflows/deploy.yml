@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -16,23 +16,25 @@ concurrency:
 
 jobs:
   build:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    outputs:
-      pages_build_type: ${{ steps.pages_mode.outputs.build_type }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect GitHub Pages build type
-        id: pages_mode
+      - name: Require GitHub Pages source to be GitHub Actions
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"' 2>/dev/null || echo "legacy")"
+          build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "legacy"')"
           echo "Detected Pages build type: ${build_type}"
-          echo "build_type=${build_type}" >> "$GITHUB_OUTPUT"
+
+          if [ "$build_type" != "workflow" ]; then
+            echo "GitHub Pages source is not set to GitHub Actions."
+            echo "Open repository Settings -> Pages -> Source and choose GitHub Actions."
+            echo "This workflow intentionally fails here to prevent shipping a broken site."
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -90,56 +92,11 @@ jobs:
           rsync -a --delete --exclude 'BibleGuessr' out/ out/BibleGuessr/
 
       - name: Upload Pages artifact
-        if: steps.pages_mode.outputs.build_type == 'workflow'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
 
-      - name: Sync static export into repository for legacy Pages mode
-        if: steps.pages_mode.outputs.build_type != 'workflow'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -e
-
-          rm -rf BibleGuessr
-          mkdir -p BibleGuessr
-          rsync -a --delete out/BibleGuessr/ BibleGuessr/
-
-          cat > index.html <<'HTML'
-          <!doctype html>
-          <html lang="en">
-            <head>
-              <meta charset="utf-8" />
-              <meta name="viewport" content="width=device-width, initial-scale=1" />
-              <meta http-equiv="refresh" content="0; url=/BibleGuessr/" />
-              <title>BibleGuessr</title>
-              <script>
-                window.location.replace('/BibleGuessr/');
-              </script>
-            </head>
-            <body>
-              <p>Redirecting to <a href="/BibleGuessr/">BibleGuessr</a>...</p>
-            </body>
-          </html>
-          HTML
-
-          printf '' > .nojekyll
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add BibleGuessr index.html .nojekyll
-
-          if git diff --cached --quiet; then
-            echo "No legacy Pages changes to commit."
-            exit 0
-          fi
-
-          git commit -m "chore(pages): sync static export for legacy source [skip ci]"
-          git push origin HEAD:main
-
   deploy:
-    if: needs.build.outputs.pages_build_type == 'workflow'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
