@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BibleGuessr Score Visualizer</title>
+<style>
+  :root {
+    --bg:#f7f8fb; --panel:#ffffff; --border:#d9dee8; --text:#172033; --muted:#687386;
+    --blue:#3375c4; --blueFill:#8fb9e7; --red:#d62929;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; min-height:100%; font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text); background:var(--bg); }
+  body { padding:8px; }
+  .app { width:100%; max-width:2200px; margin:0 auto; }
+  .topbar { min-height:42px; display:flex; gap:10px; align-items:center; margin-bottom:7px; }
+  .answer-block { flex:1; min-width:0; display:flex; align-items:center; gap:8px; }
+  label.head { flex:0 0 auto; font-size:11px; font-weight:750; color:var(--muted); text-transform:uppercase; letter-spacing:.055em; }
+  #answerBox { width:min(360px,42vw); min-width:190px; border:1px solid var(--border); border-radius:7px; padding:6px 9px; font-size:17px; line-height:1.15; font-weight:750; background:#fff; color:var(--text); }
+  .meta { min-width:0; font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .drawer-toggle { flex:0 0 auto; border:1px solid var(--border); background:#fff; color:var(--text); border-radius:8px; padding:7px 10px; font-weight:700; cursor:pointer; box-shadow:0 1px 2px rgba(20,30,50,.04); }
+  .drawer-toggle:hover { background:#f2f5f9; }
+  .left { min-width:0; }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:9px; margin-bottom:7px; overflow:hidden; box-shadow:0 1px 2px rgba(20,30,50,.035); }
+  .panel:last-child { margin-bottom:0; }
+  .panel-head { min-height:34px; padding:5px 9px; border-bottom:1px solid #edf0f4; display:flex; align-items:center; gap:10px; white-space:nowrap; overflow:hidden; }
+  .panel-head h2 { flex:0 0 auto; margin:0; font-size:13px; line-height:1.2; }
+  .graph-scroll { overflow-x:auto; overflow-y:hidden; position:relative; background:#fff; scrollbar-width:thin; }
+  svg { display:block; user-select:none; -webkit-user-select:none; touch-action:none; cursor:crosshair; }
+  #tooltip { position:fixed; display:none; z-index:100; pointer-events:none; background:rgba(20,27,39,.95); color:#fff; font-size:11px; line-height:1.3; padding:6px 8px; border-radius:6px; box-shadow:0 4px 18px rgba(0,0,0,.18); white-space:nowrap; }
+  .drawer-backdrop { position:fixed; inset:0; z-index:70; background:rgba(17,24,39,.16); opacity:0; pointer-events:none; transition:opacity .16s ease; }
+  .drawer-backdrop.open { opacity:1; pointer-events:auto; }
+  .drawer { position:fixed; z-index:80; top:0; right:0; width:285px; max-width:88vw; height:100vh; background:#fff; border-left:1px solid var(--border); box-shadow:-8px 0 28px rgba(24,34,52,.16); transform:translateX(102%); transition:transform .18s ease; display:flex; flex-direction:column; }
+  .drawer.open { transform:translateX(0); }
+  .drawer-head { flex:0 0 auto; height:43px; display:flex; align-items:center; justify-content:space-between; padding:7px 10px 7px 12px; border-bottom:1px solid #edf0f4; }
+  .drawer-head strong { font-size:14px; }
+  .drawer-close { width:29px; height:29px; border:0; border-radius:7px; background:transparent; font-size:22px; line-height:1; cursor:pointer; color:#566174; }
+  .drawer-close:hover { background:#f2f5f9; }
+  .drawer-body { flex:1; overflow:auto; padding:9px 11px 14px; }
+  .testament { border-top:1px solid #edf0f4; padding-top:7px; margin-top:7px; }
+  .testament:first-of-type { border-top:0; padding-top:0; margin-top:0; }
+  .parent-check { display:flex; align-items:center; gap:6px; font-weight:750; font-size:13px; margin-bottom:4px; }
+  .book-check { display:flex; align-items:center; gap:6px; font-size:12px; line-height:1.2; padding:1.5px 0 1.5px 18px; }
+  input[type=checkbox] { width:14px; height:14px; margin:0; accent-color:#2f70bd; }
+  @media (max-width:760px) {
+    body { padding:5px; }
+    .topbar { align-items:stretch; gap:5px; }
+    .answer-block { flex-wrap:wrap; gap:4px 6px; }
+    #answerBox { width:min(310px,70vw); font-size:15px; }
+    .meta { width:100%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="answer-block">
+      <label class="head" for="answerBox">Correct answer</label>
+      <input id="answerBox" type="text" readonly value="1 Corinthians 3:11" />
+      <div class="meta"><span id="poolText">66 books selected</span> · Scores before context-verse penalties</div>
+    </div>
+    <button id="drawerToggle" class="drawer-toggle" type="button" aria-controls="bookDrawer" aria-expanded="false">Books (<span id="drawerCount">66</span>)</button>
+  </div>
+
+  <main class="left">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Score range by chapter</h2>
+      </div>
+      <div id="graph1Scroll" class="graph-scroll"><svg id="graph1"></svg></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 id="graph2Title">Verse scores — 1 Corinthians</h2>
+      </div>
+      <div id="graph2Scroll" class="graph-scroll"><svg id="graph2"></svg></div>
+    </section>
+  </main>
+</div>
+<div id="drawerBackdrop" class="drawer-backdrop"></div>
+<aside id="bookDrawer" class="drawer" aria-hidden="true">
+  <div class="drawer-head"><strong>Books</strong><button id="drawerClose" class="drawer-close" type="button" aria-label="Close books">×</button></div>
+  <div class="drawer-body">
+    <div id="bookChecklist"></div>
+  </div>
+</aside>
+<div id="tooltip"></div>
+
+<script>
+'use strict';
+const bibleData = [{"abbr":"Gen","book":"Genesis","chapters":[{"chapter":"1","verses":"31"},{"chapter":"2","verses":"25"},{"chapter":"3","verses":"24"},{"chapter":"4","verses":"26"},{"chapter":"5","verses":"32"},{"chapter":"6","verses":"22"},{"chapter":"7","verses":"24"},{"chapter":"8","verses":"22"},{"chapter":"9","verses":"29"},{"chapter":"10","verses":"32"},{"chapter":"11","verses":"32"},{"chapter":"12","verses":"20"},{"chapter":"13","verses":"18"},{"chapter":"14","verses":"24"},{"chapter":"15","verses":"21"},{"chapter":"16","verses":"16"},{"chapter":"17","verses":"27"},{"chapter":"18","verses":"33"},{"chapter":"19","verses":"38"},{"chapter":"20","verses":"18"},{"chapter":"21","verses":"34"},{"chapter":"22","verses":"24"},{"chapter":"23","verses":"20"},{"chapter":"24","verses":"67"},{"chapter":"25","verses":"34"},{"chapter":"26","verses":"35"},{"chapter":"27","verses":"46"},{"chapter":"28","verses":"22"},{"chapter":"29","verses":"35"},{"chapter":"30","verses":"43"},{"chapter":"31","verses":"55"},{"chapter":"32","verses":"32"},{"chapter":"33","verses":"20"},{"chapter":"34","verses":"31"},{"chapter":"35","verses":"29"},{"chapter":"36","verses":"43"},{"chapter":"37","verses":"36"},{"chapter":"38","verses":"30"},{"chapter":"39","verses":"23"},{"chapter":"40","verses":"23"},{"chapter":"41","verses":"57"},{"chapter":"42","verses":"38"},{"chapter":"43","verses":"34"},{"chapter":"44","verses":"34"},{"chapter":"45","verses":"28"},{"chapter":"46","verses":"34"},{"chapter":"47","verses":"31"},{"chapter":"48","verses":"22"},{"chapter":"49","verses":"33"},{"chapter":"50","verses":"26"}]},{"abbr":"Exod","book":"Exodus","chapters":[{"chapter":"1","verses":"22"},{"chapter":"2","verses":"25"},{"chapter":"3","verses":"22"},{"chapter":"4","verses":"31"},{"chapter":"5","verses":"23"},{"chapter":"6","verses":"30"},{"chapter":"7","verses":"25"},{"chapter":"8","verses":"32"},{"chapter":"9","verses":"35"},{"chapter":"10","verses":"29"},{"chapter":"11","verses":"10"},{"chapter":"12","verses":"51"},{"chapter":"13","verses":"22"},{"chapter":"14","verses":"31"},{"chapter":"15","verses":"27"},{"chapter":"16","verses":"36"},{"chapter":"17","verses":"16"},{"chapter":"18","verses":"27"},{"chapter":"19","verses":"25"},{"chapter":"20","verses":"26"},{"chapter":"21","verses":"36"},{"chapter":"22","verses":"31"},{"chapter":"23","verses":"33"},{"chapter":"24","verses":"18"},{"chapter":"25","verses":"40"},{"chapter":"26","verses":"37"},{"chapter":"27","verses":"21"},{"chapter":"28","verses":"43"},{"chapter":"29","verses":"46"},{"chapter":"30","verses":"38"},{"chapter":"31","verses":"18"},{"chapter":"32","verses":"35"},{"chapter":"33","verses":"23"},{"chapter":"34","verses":"35"},{"chapter":"35","verses":"35"},{"chapter":"36","verses":"38"},{"chapter":"37","verses":"29"},{"chapter":"38","verses":"31"},{"chapter":"39","verses":"43"},{"chapter":"40","verses":"38"}]},{"abbr":"Lev","book":"Leviticus","chapters":[{"chapter":"1","verses":"17"},{"chapter":"2","verses":"16"},{"chapter":"3","verses":"17"},{"chapter":"4","verses":"35"},{"chapter":"5","verses":"19"},{"chapter":"6","verses":"30"},{"chapter":"7","verses":"38"},{"chapter":"8","verses":"36"},{"chapter":"9","verses":"24"},{"chapter":"10","verses":"20"},{"chapter":"11","verses":"47"},{"chapter":"12","verses":"8"},{"chapter":"13","verses":"59"},{"chapter":"14","verses":"57"},{"chapter":"15","verses":"33"},{"chapter":"16","verses":"34"},{"chapter":"17","verses":"16"},{"chapter":"18","verses":"30"},{"chapter":"19","verses":"37"},{"chapter":"20","verses":"27"},{"chapter":"21","verses":"24"},{"chapter":"22","verses":"33"},{"chapter":"23","verses":"44"},{"chapter":"24","verses":"23"},{"chapter":"25","verses":"55"},{"chapter":"26","verses":"46"},{"chapter":"27","verses":"34"}]},{"abbr":"Num","book":"Numbers","chapters":[{"chapter":"1","verses":"54"},{"chapter":"2","verses":"34"},{"chapter":"3","verses":"51"},{"chapter":"4","verses":"49"},{"chapter":"5","verses":"31"},{"chapter":"6","verses":"27"},{"chapter":"7","verses":"89"},{"chapter":"8","verses":"26"},{"chapter":"9","verses":"23"},{"chapter":"10","verses":"36"},{"chapter":"11","verses":"35"},{"chapter":"12","verses":"16"},{"chapter":"13","verses":"33"},{"chapter":"14","verses":"45"},{"chapter":"15","verses":"41"},{"chapter":"16","verses":"50"},{"chapter":"17","verses":"13"},{"chapter":"18","verses":"32"},{"chapter":"19","verses":"22"},{"chapter":"20","verses":"29"},{"chapter":"21","verses":"35"},{"chapter":"22","verses":"41"},{"chapter":"23","verses":"30"},{"chapter":"24","verses":"25"},{"chapter":"25","verses":"18"},{"chapter":"26","verses":"65"},{"chapter":"27","verses":"23"},{"chapter":"28","verses":"31"},{"chapter":"29","verses":"40"},{"chapter":"30","verses":"16"},{"chapter":"31","verses":"54"},{"chapter":"32","verses":"42"},{"chapter":"33","verses":"56"},{"chapter":"34","verses":"29"},{"chapter":"35","verses":"34"},{"chapter":"36","verses":"13"}]},{"abbr":"Deut","book":"Deuteronomy","chapters":[{"chapter":"1","verses":"46"},{"chapter":"2","verses":"37"},{"chapter":"3","verses":"29"},{"chapter":"4","verses":"49"},{"chapter":"5","verses":"33"},{"chapter":"6","verses":"25"},{"chapter":"7","verses":"26"},{"chapter":"8","verses":"20"},{"chapter":"9","verses":"29"},{"chapter":"10","verses":"22"},{"chapter":"11","verses":"32"},{"chapter":"12","verses":"32"},{"chapter":"13","verses":"18"},{"chapter":"14","verses":"29"},{"chapter":"15","verses":"23"},{"chapter":"16","verses":"22"},{"chapter":"17","verses":"20"},{"chapter":"18","verses":"22"},{"chapter":"19","verses":"21"},{"chapter":"20","verses":"20"},{"chapter":"21","verses":"23"},{"chapter":"22","verses":"30"},{"chapter":"23","verses":"25"},{"chapter":"24","verses":"22"},{"chapter":"25","verses":"19"},{"chapter":"26","verses":"19"},{"chapter":"27","verses":"26"},{"chapter":"28","verses":"68"},{"chapter":"29","verses":"29"},{"chapter":"30","verses":"20"},{"chapter":"31","verses":"30"},{"chapter":"32","verses":"52"},{"chapter":"33","verses":"29"},{"chapter":"34","verses":"12"}]},{"abbr":"Josh","book":"Joshua","chapters":[{"chapter":"1","verses":"18"},{"chapter":"2","verses":"24"},{"chapter":"3","verses":"17"},{"chapter":"4","verses":"24"},{"chapter":"5","verses":"15"},{"chapter":"6","verses":"27"},{"chapter":"7","verses":"26"},{"chapter":"8","verses":"35"},{"chapter":"9","verses":"27"},{"chapter":"10","verses":"43"},{"chapter":"11","verses":"23"},{"chapter":"12","verses":"24"},{"chapter":"13","verses":"33"},{"chapter":"14","verses":"15"},{"chapter":"15","verses":"63"},{"chapter":"16","verses":"10"},{"chapter":"17","verses":"18"},{"chapter":"18","verses":"28"},{"chapter":"19","verses":"51"},{"chapter":"20","verses":"9"},{"chapter":"21","verses":"45"},{"chapter":"22","verses":"34"},{"chapter":"23","verses":"16"},{"chapter":"24","verses":"33"}]},{"abbr":"Judg","book":"Judges","chapters":[{"chapter":"1","verses":"36"},{"chapter":"2","verses":"23"},{"chapter":"3","verses":"31"},{"chapter":"4","verses":"24"},{"chapter":"5","verses":"31"},{"chapter":"6","verses":"40"},{"chapter":"7","verses":"25"},{"chapter":"8","verses":"35"},{"chapter":"9","verses":"57"},{"chapter":"10","verses":"18"},{"chapter":"11","verses":"40"},{"chapter":"12","verses":"15"},{"chapter":"13","verses":"25"},{"chapter":"14","verses":"20"},{"chapter":"15","verses":"20"},{"chapter":"16","verses":"31"},{"chapter":"17","verses":"13"},{"chapter":"18","verses":"31"},{"chapter":"19","verses":"30"},{"chapter":"20","verses":"48"},{"chapter":"21","verses":"25"}]},{"abbr":"Ruth","book":"Ruth","chapters":[{"chapter":"1","verses":"22"},{"chapter":"2","verses":"23"},{"chapter":"3","verses":"18"},{"chapter":"4","verses":"22"}]},{"abbr":"1Sam","book":"1 Samuel","chapters":[{"chapter":"1","verses":"28"},{"chapter":"2","verses":"36"},{"chapter":"3","verses":"21"},{"chapter":"4","verses":"22"},{"chapter":"5","verses":"12"},{"chapter":"6","verses":"21"},{"chapter":"7","verses":"17"},{"chapter":"8","verses":"22"},{"chapter":"9","verses":"27"},{"chapter":"10","verses":"27"},{"chapter":"11","verses":"15"},{"chapter":"12","verses":"25"},{"chapter":"13","verses":"23"},{"chapter":"14","verses":"52"},{"chapter":"15","verses":"35"},{"chapter":"16","verses":"23"},{"chapter":"17","verses":"58"},{"chapter":"18","verses":"30"},{"chapter":"19","verses":"24"},{"chapter":"20","verses":"42"},{"chapter":"21","verses":"15"},{"chapter":"22","verses":"23"},{"chapter":"23","verses":"29"},{"chapter":"24","verses":"22"},{"chapter":"25","verses":"44"},{"chapter":"26","verses":"25"},{"chapter":"27","verses":"12"},{"chapter":"28","verses":"25"},{"chapter":"29","verses":"11"},{"chapter":"30","verses":"31"},{"chapter":"31","verses":"13"}]},{"abbr":"2Sam","book":"2 Samuel","chapters":[{"chapter":"1","verses":"27"},{"chapter":"2","verses":"32"},{"chapter":"3","verses":"39"},{"chapter":"4","verses":"12"},{"chapter":"5","verses":"25"},{"chapter":"6","verses":"23"},{"chapter":"7","verses":"29"},{"chapter":"8","verses":"18"},{"chapter":"9","verses":"13"},{"chapter":"10","verses":"19"},{"chapter":"11","verses":"27"},{"chapter":"12","verses":"31"},{"chapter":"13","verses":"39"},{"chapter":"14","verses":"33"},{"chapter":"15","verses":"37"},{"chapter":"16","verses":"23"},{"chapter":"17","verses":"29"},{"chapter":"18","verses":"33"},{"chapter":"19","verses":"43"},{"chapter":"20","verses":"26"},{"chapter":"21","verses":"22"},{"chapter":"22","verses":"51"},{"chapter":"23","verses":"39"},{"chapter":"24","verses":"25"}]},{"abbr":"1Kgs","book":"1 Kings","chapters":[{"chapter":"1","verses":"53"},{"chapter":"2","verses":"46"},{"chapter":"3","verses":"28"},{"chapter":"4","verses":"34"},{"chapter":"5","verses":"18"},{"chapter":"6","verses":"38"},{"chapter":"7","verses":"51"},{"chapter":"8","verses":"66"},{"chapter":"9","verses":"28"},{"chapter":"10","verses":"29"},{"chapter":"11","verses":"43"},{"chapter":"12","verses":"33"},{"chapter":"13","verses":"34"},{"chapter":"14","verses":"31"},{"chapter":"15","verses":"34"},{"chapter":"16","verses":"34"},{"chapter":"17","verses":"24"},{"chapter":"18","verses":"46"},{"chapter":"19","verses":"21"},{"chapter":"20","verses":"43"},{"chapter":"21","verses":"29"},{"chapter":"22","verses":"53"}]},{"abbr":"2Kgs","book":"2 Kings","chapters":[{"chapter":"1","verses":"18"},{"chapter":"2","verses":"25"},{"chapter":"3","verses":"27"},{"chapter":"4","verses":"44"},{"chapter":"5","verses":"27"},{"chapter":"6","verses":"33"},{"chapter":"7","verses":"20"},{"chapter":"8","verses":"29"},{"chapter":"9","verses":"37"},{"chapter":"10","verses":"36"},{"chapter":"11","verses":"21"},{"chapter":"12","verses":"21"},{"chapter":"13","verses":"25"},{"chapter":"14","verses":"29"},{"chapter":"15","verses":"38"},{"chapter":"16","verses":"20"},{"chapter":"17","verses":"41"},{"chapter":"18","verses":"37"},{"chapter":"19","verses":"37"},{"chapter":"20","verses":"21"},{"chapter":"21","verses":"26"},{"chapter":"22","verses":"20"},{"chapter":"23","verses":"37"},{"chapter":"24","verses":"20"},{"chapter":"25","verses":"30"}]},{"abbr":"1Chr","book":"1 Chronicles","chapters":[{"chapter":"1","verses":"54"},{"chapter":"2","verses":"55"},{"chapter":"3","verses":"24"},{"chapter":"4","verses":"43"},{"chapter":"5","verses":"26"},{"chapter":"6","verses":"81"},{"chapter":"7","verses":"40"},{"chapter":"8","verses":"40"},{"chapter":"9","verses":"44"},{"chapter":"10","verses":"14"},{"chapter":"11","verses":"47"},{"chapter":"12","verses":"40"},{"chapter":"13","verses":"14"},{"chapter":"14","verses":"17"},{"chapter":"15","verses":"29"},{"chapter":"16","verses":"43"},{"chapter":"17","verses":"27"},{"chapter":"18","verses":"17"},{"chapter":"19","verses":"19"},{"chapter":"20","verses":"8"},{"chapter":"21","verses":"30"},{"chapter":"22","verses":"19"},{"chapter":"23","verses":"32"},{"chapter":"24","verses":"31"},{"chapter":"25","verses":"31"},{"chapter":"26","verses":"32"},{"chapter":"27","verses":"34"},{"chapter":"28","verses":"21"},{"chapter":"29","verses":"30"}]},{"abbr":"2Chr","book":"2 Chronicles","chapters":[{"chapter":"1","verses":"17"},{"chapter":"2","verses":"18"},{"chapter":"3","verses":"17"},{"chapter":"4","verses":"22"},{"chapter":"5","verses":"14"},{"chapter":"6","verses":"42"},{"chapter":"7","verses":"22"},{"chapter":"8","verses":"18"},{"chapter":"9","verses":"31"},{"chapter":"10","verses":"19"},{"chapter":"11","verses":"23"},{"chapter":"12","verses":"16"},{"chapter":"13","verses":"22"},{"chapter":"14","verses":"15"},{"chapter":"15","verses":"19"},{"chapter":"16","verses":"14"},{"chapter":"17","verses":"19"},{"chapter":"18","verses":"34"},{"chapter":"19","verses":"11"},{"chapter":"20","verses":"37"},{"chapter":"21","verses":"20"},{"chapter":"22","verses":"12"},{"chapter":"23","verses":"21"},{"chapter":"24","verses":"27"},{"chapter":"25","verses":"28"},{"chapter":"26","verses":"23"},{"chapter":"27","verses":"9"},{"chapter":"28","verses":"27"},{"chapter":"29","verses":"36"},{"chapter":"30","verses":"27"},{"chapter":"31","verses":"21"},{"chapter":"32","verses":"33"},{"chapter":"33","verses":"25"},{"chapter":"34","verses":"33"},{"chapter":"35","verses":"27"},{"chapter":"36","verses":"23"}]},{"abbr":"Ezra","book":"Ezra","chapters":[{"chapter":"1","verses":"11"},{"chapter":"2","verses":"70"},{"chapter":"3","verses":"13"},{"chapter":"4","verses":"24"},{"chapter":"5","verses":"17"},{"chapter":"6","verses":"22"},{"chapter":"7","verses":"28"},{"chapter":"8","verses":"36"},{"chapter":"9","verses":"15"},{"chapter":"10","verses":"44"}]},{"abbr":"Neh","book":"Nehemiah","chapters":[{"chapter":"1","verses":"11"},{"chapter":"2","verses":"20"},{"chapter":"3","verses":"32"},{"chapter":"4","verses":"23"},{"chapter":"5","verses":"19"},{"chapter":"6","verses":"19"},{"chapter":"7","verses":"73"},{"chapter":"8","verses":"18"},{"chapter":"9","verses":"38"},{"chapter":"10","verses":"39"},{"chapter":"11","verses":"36"},{"chapter":"12","verses":"47"},{"chapter":"13","verses":"31"}]},{"abbr":"Esth","book":"Esther","chapters":[{"chapter":"1","verses":"22"},{"chapter":"2","verses":"23"},{"chapter":"3","verses":"15"},{"chapter":"4","verses":"17"},{"chapter":"5","verses":"14"},{"chapter":"6","verses":"14"},{"chapter":"7","verses":"10"},{"chapter":"8","verses":"17"},{"chapter":"9","verses":"32"},{"chapter":"10","verses":"3"}]},{"abbr":"Job","book":"Job","chapters":[{"chapter":"1","verses":"22"},{"chapter":"2","verses":"13"},{"chapter":"3","verses":"26"},{"chapter":"4","verses":"21"},{"chapter":"5","verses":"27"},{"chapter":"6","verses":"30"},{"chapter":"7","verses":"21"},{"chapter":"8","verses":"22"},{"chapter":"9","verses":"35"},{"chapter":"10","verses":"22"},{"chapter":"11","verses":"20"},{"chapter":"12","verses":"25"},{"chapter":"13","verses":"28"},{"chapter":"14","verses":"22"},{"chapter":"15","verses":"35"},{"chapter":"16","verses":"22"},{"chapter":"17","verses":"16"},{"chapter":"18","verses":"21"},{"chapter":"19","verses":"29"},{"chapter":"20","verses":"29"},{"chapter":"21","verses":"34"},{"chapter":"22","verses":"30"},{"chapter":"23","verses":"17"},{"chapter":"24","verses":"25"},{"chapter":"25","verses":"6"},{"chapter":"26","verses":"14"},{"chapter":"27","verses":"23"},{"chapter":"28","verses":"28"},{"chapter":"29","verses":"25"},{"chapter":"30","verses":"31"},{"chapter":"31","verses":"40"},{"chapter":"32","verses":"22"},{"chapter":"33","verses":"33"},{"chapter":"34","verses":"37"},{"chapter":"35","verses":"16"},{"chapter":"36","verses":"33"},{"chapter":"37","verses":"24"},{"chapter":"38","verses":"41"},{"chapter":"39","verses":"30"},{"chapter":"40","verses":"24"},{"chapter":"41","verses":"34"},{"chapter":"42","verses":"17"}]},{"abbr":"Ps","book":"Psalms","chapters":[{"chapter":"1","verses":"6"},{"chapter":"2","verses":"12"},{"chapter":"3","verses":"8"},{"chapter":"4","verses":"8"},{"chapter":"5","verses":"12"},{"chapter":"6","verses":"10"},{"chapter":"7","verses":"17"},{"chapter":"8","verses":"9"},{"chapter":"9","verses":"20"},{"chapter":"10","verses":"18"},{"chapter":"11","verses":"7"},{"chapter":"12","verses":"8"},{"chapter":"13","verses":"6"},{"chapter":"14","verses":"7"},{"chapter":"15","verses":"5"},{"chapter":"16","verses":"11"},{"chapter":"17","verses":"15"},{"chapter":"18","verses":"50"},{"chapter":"19","verses":"14"},{"chapter":"20","verses":"9"},{"chapter":"21","verses":"13"},{"chapter":"22","verses":"31"},{"chapter":"23","verses":"6"},{"chapter":"24","verses":"10"},{"chapter":"25","verses":"22"},{"chapter":"26","verses":"12"},{"chapter":"27","verses":"14"},{"chapter":"28","verses":"9"},{"chapter":"29","verses":"11"},{"chapter":"30","verses":"12"},{"chapter":"31","verses":"24"},{"chapter":"32","verses":"11"},{"chapter":"33","verses":"22"},{"chapter":"34","verses":"22"},{"chapter":"35","verses":"28"},{"chapter":"36","verses":"12"},{"chapter":"37","verses":"40"},{"chapter":"38","verses":"22"},{"chapter":"39","verses":"13"},{"chapter":"40","verses":"17"},{"chapter":"41","verses":"13"},{"chapter":"42","verses":"11"},{"chapter":"43","verses":"5"},{"chapter":"44","verses":"26"},{"chapter":"45","verses":"17"},{"chapter":"46","verses":"11"},{"chapter":"47","verses":"9"},{"chapter":"48","verses":"14"},{"chapter":"49","verses":"20"},{"chapter":"50","verses":"23"},{"chapter":"51","verses":"19"},{"chapter":"52","verses":"9"},{"chapter":"53","verses":"6"},{"chapter":"54","verses":"7"},{"chapter":"55","verses":"23"},{"chapter":"56","verses":"13"},{"chapter":"57","verses":"11"},{"chapter":"58","verses":"11"},{"chapter":"59","verses":"17"},{"chapter":"60","verses":"12"},{"chapter":"61","verses":"8"},{"chapter":"62","verses":"12"},{"chapter":"63","verses":"11"},{"chapter":"64","verses":"10"},{"chapter":"65","verses":"13"},{"chapter":"66","verses":"20"},{"chapter":"67","verses":"7"},{"chapter":"68","verses":"35"},{"chapter":"69","verses":"36"},{"chapter":"70","verses":"5"},{"chapter":"71","verses":"24"},{"chapter":"72","verses":"20"},{"chapter":"73","verses":"28"},{"chapter":"74","verses":"23"},{"chapter":"75","verses":"10"},{"chapter":"76","verses":"12"},{"chapter":"77","verses":"20"},{"chapter":"78","verses":"72"},{"chapter":"79","verses":"13"},{"chapter":"80","verses":"19"},{"chapter":"81","verses":"16"},{"chapter":"82","verses":"8"},{"chapter":"83","verses":"18"},{"chapter":"84","verses":"12"},{"chapter":"85","verses":"13"},{"chapter":"86","verses":"17"},{"chapter":"87","verses":"7"},{"chapter":"88","verses":"18"},{"chapter":"89","verses":"52"},{"chapter":"90","verses":"17"},{"chapter":"91","verses":"16"},{"chapter":"92","verses":"15"},{"chapter":"93","verses":"5"},{"chapter":"94","verses":"23"},{"chapter":"95","verses":"11"},{"chapter":"96","verses":"13"},{"chapter":"97","verses":"12"},{"chapter":"98","verses":"9"},{"chapter":"99","verses":"9"},{"chapter":"100","verses":"5"},{"chapter":"101","verses":"8"},{"chapter":"102","verses":"28"},{"chapter":"103","verses":"22"},{"chapter":"104","verses":"35"},{"chapter":"105","verses":"45"},{"chapter":"106","verses":"48"},{"chapter":"107","verses":"43"},{"chapter":"108","verses":"13"},{"chapter":"109","verses":"31"},{"chapter":"110","verses":"7"},{"chapter":"111","verses":"10"},{"chapter":"112","verses":"10"},{"chapter":"113","verses":"9"},{"chapter":"114","verses":"8"},{"chapter":"115","verses":"18"},{"chapter":"116","verses":"19"},{"chapter":"117","verses":"2"},{"chapter":"118","verses":"29"},{"chapter":"119","verses":"176"},{"chapter":"120","verses":"7"},{"chapter":"121","verses":"8"},{"chapter":"122","verses":"9"},{"chapter":"123","verses":"4"},{"chapter":"124","verses":"8"},{"chapter":"125","verses":"5"},{"chapter":"126","verses":"6"},{"chapter":"127","verses":"5"},{"chapter":"128","verses":"6"},{"chapter":"129","verses":"8"},{"chapter":"130","verses":"8"},{"chapter":"131","verses":"3"},{"chapter":"132","verses":"18"},{"chapter":"133","verses":"3"},{"chapter":"134","verses":"3"},{"chapter":"135","verses":"21"},{"chapter":"136","verses":"26"},{"chapter":"137","verses":"9"},{"chapter":"138","verses":"8"},{"chapter":"139","verses":"24"},{"chapter":"140","verses":"13"},{"chapter":"141","verses":"10"},{"chapter":"142","verses":"7"},{"chapter":"143","verses":"12"},{"chapter":"144","verses":"15"},{"chapter":"145","verses":"21"},{"chapter":"146","verses":"10"},{"chapter":"147","verses":"20"},{"chapter":"148","verses":"14"},{"chapter":"149","verses":"9"},{"chapter":"150","verses":"6"}]},{"abbr":"Prov","book":"Proverbs","chapters":[{"chapter":"1","verses":"33"},{"chapter":"2","verses":"22"},{"chapter":"3","verses":"35"},{"chapter":"4","verses":"27"},{"chapter":"5","verses":"23"},{"chapter":"6","verses":"35"},{"chapter":"7","verses":"27"},{"chapter":"8","verses":"36"},{"chapter":"9","verses":"18"},{"chapter":"10","verses":"32"},{"chapter":"11","verses":"31"},{"chapter":"12","verses":"28"},{"chapter":"13","verses":"25"},{"chapter":"14","verses":"35"},{"chapter":"15","verses":"33"},{"chapter":"16","verses":"33"},{"chapter":"17","verses":"28"},{"chapter":"18","verses":"24"},{"chapter":"19","verses":"29"},{"chapter":"20","verses":"30"},{"chapter":"21","verses":"31"},{"chapter":"22","verses":"29"},{"chapter":"23","verses":"35"},{"chapter":"24","verses":"34"},{"chapter":"25","verses":"28"},{"chapter":"26","verses":"28"},{"chapter":"27","verses":"27"},{"chapter":"28","verses":"28"},{"chapter":"29","verses":"27"},{"chapter":"30","verses":"33"},{"chapter":"31","verses":"31"}]},{"abbr":"Eccl","book":"Ecclesiastes","chapters":[{"chapter":"1","verses":"18"},{"chapter":"2","verses":"26"},{"chapter":"3","verses":"22"},{"chapter":"4","verses":"16"},{"chapter":"5","verses":"20"},{"chapter":"6","verses":"12"},{"chapter":"7","verses":"29"},{"chapter":"8","verses":"17"},{"chapter":"9","verses":"18"},{"chapter":"10","verses":"20"},{"chapter":"11","verses":"10"},{"chapter":"12","verses":"14"}]},{"abbr":"Song","book":"Song of Solomon","chapters":[{"chapter":"1","verses":"17"},{"chapter":"2","verses":"17"},{"chapter":"3","verses":"11"},{"chapter":"4","verses":"16"},{"chapter":"5","verses":"16"},{"chapter":"6","verses":"13"},{"chapter":"7","verses":"13"},{"chapter":"8","verses":"14"}]},{"abbr":"Isa","book":"Isaiah","chapters":[{"chapter":"1","verses":"31"},{"chapter":"2","verses":"22"},{"chapter":"3","verses":"26"},{"chapter":"4","verses":"6"},{"chapter":"5","verses":"30"},{"chapter":"6","verses":"13"},{"chapter":"7","verses":"25"},{"chapter":"8","verses":"22"},{"chapter":"9","verses":"21"},{"chapter":"10","verses":"34"},{"chapter":"11","verses":"16"},{"chapter":"12","verses":"6"},{"chapter":"13","verses":"22"},{"chapter":"14","verses":"32"},{"chapter":"15","verses":"9"},{"chapter":"16","verses":"14"},{"chapter":"17","verses":"14"},{"chapter":"18","verses":"7"},{"chapter":"19","verses":"25"},{"chapter":"20","verses":"6"},{"chapter":"21","verses":"17"},{"chapter":"22","verses":"25"},{"chapter":"23","verses":"18"},{"chapter":"24","verses":"23"},{"chapter":"25","verses":"12"},{"chapter":"26","verses":"21"},{"chapter":"27","verses":"13"},{"chapter":"28","verses":"29"},{"chapter":"29","verses":"24"},{"chapter":"30","verses":"33"},{"chapter":"31","verses":"9"},{"chapter":"32","verses":"20"},{"chapter":"33","verses":"24"},{"chapter":"34","verses":"17"},{"chapter":"35","verses":"10"},{"chapter":"36","verses":"22"},{"chapter":"37","verses":"38"},{"chapter":"38","verses":"22"},{"chapter":"39","verses":"8"},{"chapter":"40","verses":"31"},{"chapter":"41","verses":"29"},{"chapter":"42","verses":"25"},{"chapter":"43","verses":"28"},{"chapter":"44","verses":"28"},{"chapter":"45","verses":"25"},{"chapter":"46","verses":"13"},{"chapter":"47","verses":"15"},{"chapter":"48","verses":"22"},{"chapter":"49","verses":"26"},{"chapter":"50","verses":"11"},{"chapter":"51","verses":"23"},{"chapter":"52","verses":"15"},{"chapter":"53","verses":"12"},{"chapter":"54","verses":"17"},{"chapter":"55","verses":"13"},{"chapter":"56","verses":"12"},{"chapter":"57","verses":"21"},{"chapter":"58","verses":"14"},{"chapter":"59","verses":"21"},{"chapter":"60","verses":"22"},{"chapter":"61","verses":"11"},{"chapter":"62","verses":"12"},{"chapter":"63","verses":"19"},{"chapter":"64","verses":"12"},{"chapter":"65","verses":"25"},{"chapter":"66","verses":"24"}]},{"abbr":"Jer","book":"Jeremiah","chapters":[{"chapter":"1","verses":"19"},{"chapter":"2","verses":"37"},{"chapter":"3","verses":"25"},{"chapter":"4","verses":"31"},{"chapter":"5","verses":"31"},{"chapter":"6","verses":"30"},{"chapter":"7","verses":"34"},{"chapter":"8","verses":"22"},{"chapter":"9","verses":"26"},{"chapter":"10","verses":"25"},{"chapter":"11","verses":"23"},{"chapter":"12","verses":"17"},{"chapter":"13","verses":"27"},{"chapter":"14","verses":"22"},{"chapter":"15","verses":"21"},{"chapter":"16","verses":"21"},{"chapter":"17","verses":"27"},{"chapter":"18","verses":"23"},{"chapter":"19","verses":"15"},{"chapter":"20","verses":"18"},{"chapter":"21","verses":"14"},{"chapter":"22","verses":"30"},{"chapter":"23","verses":"40"},{"chapter":"24","verses":"10"},{"chapter":"25","verses":"38"},{"chapter":"26","verses":"24"},{"chapter":"27","verses":"22"},{"chapter":"28","verses":"17"},{"chapter":"29","verses":"32"},{"chapter":"30","verses":"24"},{"chapter":"31","verses":"40"},{"chapter":"32","verses":"44"},{"chapter":"33","verses":"26"},{"chapter":"34","verses":"22"},{"chapter":"35","verses":"19"},{"chapter":"36","verses":"32"},{"chapter":"37","verses":"21"},{"chapter":"38","verses":"28"},{"chapter":"39","verses":"18"},{"chapter":"40","verses":"16"},{"chapter":"41","verses":"18"},{"chapter":"42","verses":"22"},{"chapter":"43","verses":"13"},{"chapter":"44","verses":"30"},{"chapter":"45","verses":"5"},{"chapter":"46","verses":"28"},{"chapter":"47","verses":"7"},{"chapter":"48","verses":"47"},{"chapter":"49","verses":"39"},{"chapter":"50","verses":"46"},{"chapter":"51","verses":"64"},{"chapter":"52","verses":"34"}]},{"abbr":"Lam","book":"Lamentations","chapters":[{"chapter":"1","verses":"22"},{"chapter":"2","verses":"22"},{"chapter":"3","verses":"66"},{"chapter":"4","verses":"22"},{"chapter":"5","verses":"22"}]},{"abbr":"Ezek","book":"Ezekiel","chapters":[{"chapter":"1","verses":"28"},{"chapter":"2","verses":"10"},{"chapter":"3","verses":"27"},{"chapter":"4","verses":"17"},{"chapter":"5","verses":"17"},{"chapter":"6","verses":"14"},{"chapter":"7","verses":"27"},{"chapter":"8","verses":"18"},{"chapter":"9","verses":"11"},{"chapter":"10","verses":"22"},{"chapter":"11","verses":"25"},{"chapter":"12","verses":"28"},{"chapter":"13","verses":"23"},{"chapter":"14","verses":"23"},{"chapter":"15","verses":"8"},{"chapter":"16","verses":"63"},{"chapter":"17","verses":"24"},{"chapter":"18","verses":"32"},{"chapter":"19","verses":"14"},{"chapter":"20","verses":"49"},{"chapter":"21","verses":"32"},{"chapter":"22","verses":"31"},{"chapter":"23","verses":"49"},{"chapter":"24","verses":"27"},{"chapter":"25","verses":"17"},{"chapter":"26","verses":"21"},{"chapter":"27","verses":"36"},{"chapter":"28","verses":"26"},{"chapter":"29","verses":"21"},{"chapter":"30","verses":"26"},{"chapter":"31","verses":"18"},{"chapter":"32","verses":"32"},{"chapter":"33","verses":"33"},{"chapter":"34","verses":"31"},{"chapter":"35","verses":"15"},{"chapter":"36","verses":"38"},{"chapter":"37","verses":"28"},{"chapter":"38","verses":"23"},{"chapter":"39","verses":"29"},{"chapter":"40","verses":"49"},{"chapter":"41","verses":"26"},{"chapter":"42","verses":"20"},{"chapter":"43","verses":"27"},{"chapter":"44","verses":"31"},{"chapter":"45","verses":"25"},{"chapter":"46","verses":"24"},{"chapter":"47","verses":"23"},{"chapter":"48","verses":"35"}]},{"abbr":"Dan","book":"Daniel","chapters":[{"chapter":"1","verses":"21"},{"chapter":"2","verses":"49"},{"chapter":"3","verses":"30"},{"chapter":"4","verses":"37"},{"chapter":"5","verses":"31"},{"chapter":"6","verses":"28"},{"chapter":"7","verses":"28"},{"chapter":"8","verses":"27"},{"chapter":"9","verses":"27"},{"chapter":"10","verses":"21"},{"chapter":"11","verses":"45"},{"chapter":"12","verses":"13"}]},{"abbr":"Hos","book":"Hosea","chapters":[{"chapter":"1","verses":"11"},{"chapter":"2","verses":"23"},{"chapter":"3","verses":"5"},{"chapter":"4","verses":"19"},{"chapter":"5","verses":"15"},{"chapter":"6","verses":"11"},{"chapter":"7","verses":"16"},{"chapter":"8","verses":"14"},{"chapter":"9","verses":"17"},{"chapter":"10","verses":"15"},{"chapter":"11","verses":"12"},{"chapter":"12","verses":"14"},{"chapter":"13","verses":"16"},{"chapter":"14","verses":"9"}]},{"abbr":"Joel","book":"Joel","chapters":[{"chapter":"1","verses":"20"},{"chapter":"2","verses":"32"},{"chapter":"3","verses":"21"}]},{"abbr":"Amos","book":"Amos","chapters":[{"chapter":"1","verses":"15"},{"chapter":"2","verses":"16"},{"chapter":"3","verses":"15"},{"chapter":"4","verses":"13"},{"chapter":"5","verses":"27"},{"chapter":"6","verses":"14"},{"chapter":"7","verses":"17"},{"chapter":"8","verses":"14"},{"chapter":"9","verses":"15"}]},{"abbr":"Obad","book":"Obadiah","chapters":[{"chapter":"1","verses":"21"}]},{"abbr":"Jonah","book":"Jonah","chapters":[{"chapter":"1","verses":"17"},{"chapter":"2","verses":"10"},{"chapter":"3","verses":"10"},{"chapter":"4","verses":"11"}]},{"abbr":"Mic","book":"Micah","chapters":[{"chapter":"1","verses":"16"},{"chapter":"2","verses":"13"},{"chapter":"3","verses":"12"},{"chapter":"4","verses":"13"},{"chapter":"5","verses":"15"},{"chapter":"6","verses":"16"},{"chapter":"7","verses":"20"}]},{"abbr":"Nah","book":"Nahum","chapters":[{"chapter":"1","verses":"15"},{"chapter":"2","verses":"13"},{"chapter":"3","verses":"19"}]},{"abbr":"Hab","book":"Habakkuk","chapters":[{"chapter":"1","verses":"17"},{"chapter":"2","verses":"20"},{"chapter":"3","verses":"19"}]},{"abbr":"Zeph","book":"Zephaniah","chapters":[{"chapter":"1","verses":"18"},{"chapter":"2","verses":"15"},{"chapter":"3","verses":"20"}]},{"abbr":"Hag","book":"Haggai","chapters":[{"chapter":"1","verses":"15"},{"chapter":"2","verses":"23"}]},{"abbr":"Zech","book":"Zechariah","chapters":[{"chapter":"1","verses":"21"},{"chapter":"2","verses":"13"},{"chapter":"3","verses":"10"},{"chapter":"4","verses":"14"},{"chapter":"5","verses":"11"},{"chapter":"6","verses":"15"},{"chapter":"7","verses":"14"},{"chapter":"8","verses":"23"},{"chapter":"9","verses":"17"},{"chapter":"10","verses":"12"},{"chapter":"11","verses":"17"},{"chapter":"12","verses":"14"},{"chapter":"13","verses":"9"},{"chapter":"14","verses":"21"}]},{"abbr":"Mal","book":"Malachi","chapters":[{"chapter":"1","verses":"14"},{"chapter":"2","verses":"17"},{"chapter":"3","verses":"18"},{"chapter":"4","verses":"6"}]},{"abbr":"Matt","book":"Matthew","chapters":[{"chapter":"1","verses":"25"},{"chapter":"2","verses":"23"},{"chapter":"3","verses":"17"},{"chapter":"4","verses":"25"},{"chapter":"5","verses":"48"},{"chapter":"6","verses":"34"},{"chapter":"7","verses":"29"},{"chapter":"8","verses":"34"},{"chapter":"9","verses":"38"},{"chapter":"10","verses":"42"},{"chapter":"11","verses":"30"},{"chapter":"12","verses":"50"},{"chapter":"13","verses":"58"},{"chapter":"14","verses":"36"},{"chapter":"15","verses":"39"},{"chapter":"16","verses":"28"},{"chapter":"17","verses":"27"},{"chapter":"18","verses":"35"},{"chapter":"19","verses":"30"},{"chapter":"20","verses":"34"},{"chapter":"21","verses":"46"},{"chapter":"22","verses":"46"},{"chapter":"23","verses":"39"},{"chapter":"24","verses":"51"},{"chapter":"25","verses":"46"},{"chapter":"26","verses":"75"},{"chapter":"27","verses":"66"},{"chapter":"28","verses":"20"}]},{"abbr":"Mark","book":"Mark","chapters":[{"chapter":"1","verses":"45"},{"chapter":"2","verses":"28"},{"chapter":"3","verses":"35"},{"chapter":"4","verses":"41"},{"chapter":"5","verses":"43"},{"chapter":"6","verses":"56"},{"chapter":"7","verses":"37"},{"chapter":"8","verses":"38"},{"chapter":"9","verses":"50"},{"chapter":"10","verses":"52"},{"chapter":"11","verses":"33"},{"chapter":"12","verses":"44"},{"chapter":"13","verses":"37"},{"chapter":"14","verses":"72"},{"chapter":"15","verses":"47"},{"chapter":"16","verses":"20"}]},{"abbr":"Luke","book":"Luke","chapters":[{"chapter":"1","verses":"80"},{"chapter":"2","verses":"52"},{"chapter":"3","verses":"38"},{"chapter":"4","verses":"44"},{"chapter":"5","verses":"39"},{"chapter":"6","verses":"49"},{"chapter":"7","verses":"50"},{"chapter":"8","verses":"56"},{"chapter":"9","verses":"62"},{"chapter":"10","verses":"42"},{"chapter":"11","verses":"54"},{"chapter":"12","verses":"59"},{"chapter":"13","verses":"35"},{"chapter":"14","verses":"35"},{"chapter":"15","verses":"32"},{"chapter":"16","verses":"31"},{"chapter":"17","verses":"37"},{"chapter":"18","verses":"43"},{"chapter":"19","verses":"48"},{"chapter":"20","verses":"47"},{"chapter":"21","verses":"38"},{"chapter":"22","verses":"71"},{"chapter":"23","verses":"56"},{"chapter":"24","verses":"53"}]},{"abbr":"John","book":"John","chapters":[{"chapter":"1","verses":"51"},{"chapter":"2","verses":"25"},{"chapter":"3","verses":"36"},{"chapter":"4","verses":"54"},{"chapter":"5","verses":"47"},{"chapter":"6","verses":"71"},{"chapter":"7","verses":"53"},{"chapter":"8","verses":"59"},{"chapter":"9","verses":"41"},{"chapter":"10","verses":"42"},{"chapter":"11","verses":"57"},{"chapter":"12","verses":"50"},{"chapter":"13","verses":"38"},{"chapter":"14","verses":"31"},{"chapter":"15","verses":"27"},{"chapter":"16","verses":"33"},{"chapter":"17","verses":"26"},{"chapter":"18","verses":"40"},{"chapter":"19","verses":"42"},{"chapter":"20","verses":"31"},{"chapter":"21","verses":"25"}]},{"abbr":"Acts","book":"Acts","chapters":[{"chapter":"1","verses":"26"},{"chapter":"2","verses":"47"},{"chapter":"3","verses":"26"},{"chapter":"4","verses":"37"},{"chapter":"5","verses":"42"},{"chapter":"6","verses":"15"},{"chapter":"7","verses":"60"},{"chapter":"8","verses":"40"},{"chapter":"9","verses":"43"},{"chapter":"10","verses":"48"},{"chapter":"11","verses":"30"},{"chapter":"12","verses":"25"},{"chapter":"13","verses":"52"},{"chapter":"14","verses":"28"},{"chapter":"15","verses":"41"},{"chapter":"16","verses":"40"},{"chapter":"17","verses":"34"},{"chapter":"18","verses":"28"},{"chapter":"19","verses":"41"},{"chapter":"20","verses":"38"},{"chapter":"21","verses":"40"},{"chapter":"22","verses":"30"},{"chapter":"23","verses":"35"},{"chapter":"24","verses":"27"},{"chapter":"25","verses":"27"},{"chapter":"26","verses":"32"},{"chapter":"27","verses":"44"},{"chapter":"28","verses":"31"}]},{"abbr":"Rom","book":"Romans","chapters":[{"chapter":"1","verses":"32"},{"chapter":"2","verses":"29"},{"chapter":"3","verses":"31"},{"chapter":"4","verses":"25"},{"chapter":"5","verses":"21"},{"chapter":"6","verses":"23"},{"chapter":"7","verses":"25"},{"chapter":"8","verses":"39"},{"chapter":"9","verses":"33"},{"chapter":"10","verses":"21"},{"chapter":"11","verses":"36"},{"chapter":"12","verses":"21"},{"chapter":"13","verses":"14"},{"chapter":"14","verses":"23"},{"chapter":"15","verses":"33"},{"chapter":"16","verses":"27"}]},{"abbr":"1Cor","book":"1 Corinthians","chapters":[{"chapter":"1","verses":"31"},{"chapter":"2","verses":"16"},{"chapter":"3","verses":"23"},{"chapter":"4","verses":"21"},{"chapter":"5","verses":"13"},{"chapter":"6","verses":"20"},{"chapter":"7","verses":"40"},{"chapter":"8","verses":"13"},{"chapter":"9","verses":"27"},{"chapter":"10","verses":"33"},{"chapter":"11","verses":"34"},{"chapter":"12","verses":"31"},{"chapter":"13","verses":"13"},{"chapter":"14","verses":"40"},{"chapter":"15","verses":"58"},{"chapter":"16","verses":"24"}]},{"abbr":"2Cor","book":"2 Corinthians","chapters":[{"chapter":"1","verses":"24"},{"chapter":"2","verses":"17"},{"chapter":"3","verses":"18"},{"chapter":"4","verses":"18"},{"chapter":"5","verses":"21"},{"chapter":"6","verses":"18"},{"chapter":"7","verses":"16"},{"chapter":"8","verses":"24"},{"chapter":"9","verses":"15"},{"chapter":"10","verses":"18"},{"chapter":"11","verses":"33"},{"chapter":"12","verses":"21"},{"chapter":"13","verses":"14"}]},{"abbr":"Gal","book":"Galatians","chapters":[{"chapter":"1","verses":"24"},{"chapter":"2","verses":"21"},{"chapter":"3","verses":"29"},{"chapter":"4","verses":"31"},{"chapter":"5","verses":"26"},{"chapter":"6","verses":"18"}]},{"abbr":"Eph","book":"Ephesians","chapters":[{"chapter":"1","verses":"23"},{"chapter":"2","verses":"22"},{"chapter":"3","verses":"21"},{"chapter":"4","verses":"32"},{"chapter":"5","verses":"33"},{"chapter":"6","verses":"24"}]},{"abbr":"Phil","book":"Philippians","chapters":[{"chapter":"1","verses":"30"},{"chapter":"2","verses":"30"},{"chapter":"3","verses":"21"},{"chapter":"4","verses":"23"}]},{"abbr":"Col","book":"Colossians","chapters":[{"chapter":"1","verses":"29"},{"chapter":"2","verses":"23"},{"chapter":"3","verses":"25"},{"chapter":"4","verses":"18"}]},{"abbr":"1Thess","book":"1 Thessalonians","chapters":[{"chapter":"1","verses":"10"},{"chapter":"2","verses":"20"},{"chapter":"3","verses":"13"},{"chapter":"4","verses":"18"},{"chapter":"5","verses":"28"}]},{"abbr":"2Thess","book":"2 Thessalonians","chapters":[{"chapter":"1","verses":"12"},{"chapter":"2","verses":"17"},{"chapter":"3","verses":"18"}]},{"abbr":"1Tim","book":"1 Timothy","chapters":[{"chapter":"1","verses":"20"},{"chapter":"2","verses":"15"},{"chapter":"3","verses":"16"},{"chapter":"4","verses":"16"},{"chapter":"5","verses":"25"},{"chapter":"6","verses":"21"}]},{"abbr":"2Tim","book":"2 Timothy","chapters":[{"chapter":"1","verses":"18"},{"chapter":"2","verses":"26"},{"chapter":"3","verses":"17"},{"chapter":"4","verses":"22"}]},{"abbr":"Titus","book":"Titus","chapters":[{"chapter":"1","verses":"16"},{"chapter":"2","verses":"15"},{"chapter":"3","verses":"15"}]},{"abbr":"Phlm","book":"Philemon","chapters":[{"chapter":"1","verses":"25"}]},{"abbr":"Heb","book":"Hebrews","chapters":[{"chapter":"1","verses":"14"},{"chapter":"2","verses":"18"},{"chapter":"3","verses":"19"},{"chapter":"4","verses":"16"},{"chapter":"5","verses":"14"},{"chapter":"6","verses":"20"},{"chapter":"7","verses":"28"},{"chapter":"8","verses":"13"},{"chapter":"9","verses":"28"},{"chapter":"10","verses":"39"},{"chapter":"11","verses":"40"},{"chapter":"12","verses":"29"},{"chapter":"13","verses":"25"}]},{"abbr":"Jas","book":"James","chapters":[{"chapter":"1","verses":"27"},{"chapter":"2","verses":"26"},{"chapter":"3","verses":"18"},{"chapter":"4","verses":"17"},{"chapter":"5","verses":"20"}]},{"abbr":"1Pet","book":"1 Peter","chapters":[{"chapter":"1","verses":"25"},{"chapter":"2","verses":"25"},{"chapter":"3","verses":"22"},{"chapter":"4","verses":"19"},{"chapter":"5","verses":"14"}]},{"abbr":"2Pet","book":"2 Peter","chapters":[{"chapter":"1","verses":"21"},{"chapter":"2","verses":"22"},{"chapter":"3","verses":"18"}]},{"abbr":"1John","book":"1 John","chapters":[{"chapter":"1","verses":"10"},{"chapter":"2","verses":"29"},{"chapter":"3","verses":"24"},{"chapter":"4","verses":"21"},{"chapter":"5","verses":"21"}]},{"abbr":"2John","book":"2 John","chapters":[{"chapter":"1","verses":"13"}]},{"abbr":"3John","book":"3 John","chapters":[{"chapter":"1","verses":"14"}]},{"abbr":"Jude","book":"Jude","chapters":[{"chapter":"1","verses":"25"}]},{"abbr":"Rev","book":"Revelation","chapters":[{"chapter":"1","verses":"20"},{"chapter":"2","verses":"29"},{"chapter":"3","verses":"22"},{"chapter":"4","verses":"11"},{"chapter":"5","verses":"14"},{"chapter":"6","verses":"17"},{"chapter":"7","verses":"17"},{"chapter":"8","verses":"13"},{"chapter":"9","verses":"21"},{"chapter":"10","verses":"11"},{"chapter":"11","verses":"19"},{"chapter":"12","verses":"17"},{"chapter":"13","verses":"18"},{"chapter":"14","verses":"20"},{"chapter":"15","verses":"8"},{"chapter":"16","verses":"21"},{"chapter":"17","verses":"18"},{"chapter":"18","verses":"24"},{"chapter":"19","verses":"21"},{"chapter":"20","verses":"15"},{"chapter":"21","verses":"27"},{"chapter":"22","verses":"21"}]}];
+const OLD_TESTAMENT = ["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel", "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi"];
+const NEW_TESTAMENT = ["Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", "1 Peter", "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"];
+const BOOK_CATEGORY = {"Genesis":"Pentateuch","Exodus":"Pentateuch","Leviticus":"Pentateuch","Numbers":"Pentateuch","Deuteronomy":"Pentateuch","Joshua":"Historical","Judges":"Historical","Ruth":"Historical","1 Samuel":"Historical","2 Samuel":"Historical","1 Kings":"Historical","2 Kings":"Historical","1 Chronicles":"Historical","2 Chronicles":"Historical","Ezra":"Historical","Nehemiah":"Historical","Esther":"Historical","Job":"Wisdom","Psalms":"Wisdom","Proverbs":"Wisdom","Ecclesiastes":"Wisdom","Song of Solomon":"Wisdom","Isaiah":"Major Prophets","Jeremiah":"Major Prophets","Lamentations":"Major Prophets","Ezekiel":"Major Prophets","Daniel":"Major Prophets","Hosea":"Minor Prophets","Joel":"Minor Prophets","Amos":"Minor Prophets","Obadiah":"Minor Prophets","Jonah":"Minor Prophets","Micah":"Minor Prophets","Nahum":"Minor Prophets","Habakkuk":"Minor Prophets","Zephaniah":"Minor Prophets","Haggai":"Minor Prophets","Zechariah":"Minor Prophets","Malachi":"Minor Prophets","Matthew":"Gospels","Mark":"Gospels","Luke":"Gospels","John":"Gospels","Acts":"Acts","Romans":"Pauline Epistles","1 Corinthians":"Pauline Epistles","2 Corinthians":"Pauline Epistles","Galatians":"Pauline Epistles","Ephesians":"Pauline Epistles","Philippians":"Pauline Epistles","Colossians":"Pauline Epistles","1 Thessalonians":"Pauline Epistles","2 Thessalonians":"Pauline Epistles","1 Timothy":"Pauline Epistles","2 Timothy":"Pauline Epistles","Titus":"Pauline Epistles","Philemon":"Pauline Epistles","Hebrews":"General Epistles","James":"General Epistles","1 Peter":"General Epistles","2 Peter":"General Epistles","1 John":"General Epistles","2 John":"General Epistles","3 John":"General Epistles","Jude":"General Epistles","Revelation":"Apocalypse"};
+const OT_SET = new Set(OLD_TESTAMENT);
+const NT_SET = new Set(NEW_TESTAMENT);
+const byName = new Map(bibleData.map(b => [b.book, b]));
+const canonicalIndex = new Map(bibleData.map((b,i) => [b.book,i]));
+
+// Precompute integer chapter/verse metadata and verse ordinals for fast live redraws.
+for (const book of bibleData) {
+  let ordinal = 0;
+  book._chapters = book.chapters.map(ch => {
+    const chapter = parseInt(ch.chapter, 10);
+    const verses = parseInt(ch.verses, 10);
+    const startOrdinal = ordinal + 1;
+    ordinal += verses;
+    return { chapter, verses, startOrdinal, endOrdinal: ordinal };
+  });
+  book._totalVerses = Math.max(ordinal, 1);
+}
+
+function getBookTestament(book) {
+  if (OT_SET.has(book)) return 'OT';
+  if (NT_SET.has(book)) return 'NT';
+  return 'Unknown';
+}
+function getBookCategory(book) { return BOOK_CATEGORY[book] || 'Unknown'; }
+function clampScore(score) { return Math.min(100, Math.max(0, score)); }
+function getChapterMeta(bookData, chapter) { return bookData._chapters[Math.max(0, Math.min(bookData._chapters.length - 1, chapter - 1))]; }
+
+// Faithful JavaScript port of lib/scoring.ts getBookVerseOrdinal().
+function getBookVerseOrdinal(bookData, chapter, verse) {
+  let ordinal = 0;
+  for (const chapterData of bookData.chapters) {
+    const chapterNumber = parseInt(chapterData.chapter, 10);
+    const verseCount = parseInt(chapterData.verses, 10);
+    if (!Number.isInteger(chapterNumber) || chapterNumber < 1 || !Number.isInteger(verseCount) || verseCount < 1) continue;
+    if (chapterNumber < chapter) { ordinal += verseCount; continue; }
+    if (chapterNumber === chapter) {
+      const clampedVerse = Math.min(Math.max(verse, 1), verseCount);
+      return ordinal + clampedVerse;
+    }
+    break;
+  }
+  const totalVersesInBook = bookData.chapters.reduce((sum, chapterData) => {
+    const verseCount = parseInt(chapterData.verses, 10);
+    return Number.isInteger(verseCount) && verseCount > 0 ? sum + verseCount : sum;
+  }, 0);
+  return Math.max(totalVersesInBook, 1);
+}
+function getTotalVersesInBook(bookData) {
+  const total = bookData.chapters.reduce((sum, chapterData) => {
+    const verseCount = parseInt(chapterData.verses, 10);
+    return Number.isInteger(verseCount) && verseCount > 0 ? sum + verseCount : sum;
+  }, 0);
+  return Math.max(total, 1);
+}
+function ordinalToReference(bookData, ordinal) {
+  const o = Math.min(Math.max(Math.round(ordinal), 1), bookData._totalVerses);
+  let lo = 0, hi = bookData._chapters.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const ch = bookData._chapters[mid];
+    if (o < ch.startOrdinal) hi = mid - 1;
+    else if (o > ch.endOrdinal) lo = mid + 1;
+    else return { book:bookData.book, chapter:ch.chapter, verse:o - ch.startOrdinal + 1 };
+  }
+  const last = bookData._chapters[bookData._chapters.length - 1];
+  return { book:bookData.book, chapter:last.chapter, verse:last.verses };
+}
+
+// Hybrid scoring system, v11.
+//
+// Wrong-book scoring is unchanged from the original BibleGuessr logic.
+// Correct-book scoring is intentionally simple:
+//   1) exact reference = 100;
+//   2) non-exact references top out at 99.4;
+//   3) the correct-book floor depends ONLY on the number of active books;
+//   4) within the correct book, score is a fixed blend of:
+//        - 70% numerical-chapter proximity
+//        - 30% absolute-verse proximity
+//   5) both proximity curves are normalized against the FULL book span, so
+//      moving the correct answer only slides the same curve left/right;
+//   6) chapter proximity is almost linear (x^0.90), preserving meaningful
+//      differences even far away in long books;
+//   7) the verse curve is deliberately wider than v10 so nearby guesses in
+//      long books do not lose points too quickly.
+function calculateScoreTotal(correct, guess, activeBooks) {
+  const normalizedActiveBooks = activeBooks.length > 0 ? activeBooks : [];
+  const N = normalizedActiveBooks.length;
+  const activeTestaments = new Set(normalizedActiveBooks.map(book => getBookTestament(book.book)));
+  const activeCategories = new Set(normalizedActiveBooks.map(book => getBookCategory(book.book)));
+  const testamentGuaranteed = activeTestaments.size <= 1;
+  const categoryGuaranteed = activeCategories.size <= 1;
+
+  // Original book-value calculation is retained only for wrong-book
+  // Testament/category partial credit.
+  const B = N <= 1 ? 0 : 20 + (20 * Math.log(N)) / Math.log(66);
+  const g = B / 40;
+
+  if (guess.book !== correct.book) {
+    let testamentPoints = 0;
+    let categoryPoints = 0;
+    if (!testamentGuaranteed && getBookTestament(guess.book) === getBookTestament(correct.book)) testamentPoints = 15 * g;
+    if (!categoryGuaranteed && getBookCategory(guess.book) === getBookCategory(correct.book)) categoryPoints = 15 * g;
+    return clampScore(testamentPoints + categoryPoints);
+  }
+
+  const correctBookData = normalizedActiveBooks.find(book => book.book === correct.book);
+  if (!correctBookData) return 0;
+
+  const correctOrdinal = getBookVerseOrdinal(correctBookData, correct.chapter, correct.verse);
+  const guessOrdinal = getBookVerseOrdinal(correctBookData, guess.chapter, guess.verse);
+  const verseDistance = Math.abs(correctOrdinal - guessOrdinal);
+  const chapterDistance = Math.abs(correct.chapter - guess.chapter);
+
+  if (verseDistance === 0) return 100;
+
+  const nonExactCeiling = 99.4;
+
+  // Correct-book floor depends ONLY on the number of books in the active pool.
+  // Approximate anchors:
+  //   2 books  -> 30.4
+  //   10 books -> 40.0
+  //   66 books -> 50.0
+  // A one-book mode has no guaranteed book credit because the book is already known.
+  const correctBookFloor = (() => {
+    if (N <= 1) return 0;
+    const poolDifficulty = Math.log(N) / Math.log(66);
+    return 25 + 25 * Math.pow(poolDifficulty, 0.85);
+  })();
+
+  const totalVerses = Math.max(1, correctBookData._totalVerses);
+  const totalChapters = Math.max(1, correctBookData._chapters.length);
+
+  // Wider, heavy-tailed verse curve. The scale grows gently with book length,
+  // but is capped so very long books do not become excessively forgiving.
+  const verseScale = Math.max(30, Math.min(55, 30 + 0.01 * totalVerses));
+  const maxVerseSpan = Math.max(1, totalVerses - 1);
+  const verseRaw = 1 / (1 + Math.pow(verseDistance / verseScale, 2));
+  const verseRawAtFullSpan = 1 / (1 + Math.pow(maxVerseSpan / verseScale, 2));
+  const verseProximity = Math.max(
+    0,
+    Math.min(1, (verseRaw - verseRawAtFullSpan) / (1 - verseRawAtFullSpan))
+  );
+
+  // Single-chapter books have no meaningful chapter-distance signal.
+  // Otherwise, chapter proximity is almost linear, with only a slight curve so
+  // nearby chapter errors matter a little more than equally sized distant ones.
+  let combinedProximity;
+  if (totalChapters <= 1) {
+    combinedProximity = verseProximity;
+  } else {
+    const maxChapterSpan = totalChapters - 1;
+    const chapterFraction = Math.max(0, Math.min(1, chapterDistance / maxChapterSpan));
+    const chapterProximity = Math.max(0, Math.min(1, 1 - Math.pow(chapterFraction, 0.90)));
+
+    // Fixed weights make the behavior easier to reason about and guarantee a
+    // strong same-chapter floor. In whole-Bible mode, even an extremely distant
+    // verse inside the correct chapter bottoms out around 85 rather than falling
+    // toward the 50-point correct-book floor.
+    combinedProximity = 0.30 * verseProximity + 0.70 * chapterProximity;
+  }
+
+  const score = correctBookFloor + (nonExactCeiling - correctBookFloor) * combinedProximity;
+  return clampScore(score);
+}
+
+const selected = new Set(bibleData.map(b => b.book));
+let correct = { book:'1 Corinthians', chapter:3, verse:11 };
+let drag1 = false, drag2 = false;
+let rafPending = false;
+let lastRenderBook = correct.book;
+let graph2Layout = null;
+let graph2DragWindow = null;
+
+const answerBox = document.getElementById('answerBox');
+const poolText = document.getElementById('poolText');
+const graph1 = document.getElementById('graph1');
+const graph2 = document.getElementById('graph2');
+const graph1Scroll = document.getElementById('graph1Scroll');
+const graph2Scroll = document.getElementById('graph2Scroll');
+const graph2Title = document.getElementById('graph2Title');
+const tooltip = document.getElementById('tooltip');
+const drawerToggle = document.getElementById('drawerToggle');
+const drawerCount = document.getElementById('drawerCount');
+const bookDrawer = document.getElementById('bookDrawer');
+const drawerClose = document.getElementById('drawerClose');
+const drawerBackdrop = document.getElementById('drawerBackdrop');
+const G1_SLOT = 9;
+function graph2Books() {
+  const active = activeBooks();
+  if (!active.length) return [];
+  if (drag2 && graph2DragWindow && graph2DragWindow.length) {
+    const pinned = graph2DragWindow.map(name => byName.get(name)).filter(book => book && selected.has(book.book));
+    if (pinned.length) return pinned;
+  }
+  let idx = active.findIndex(book => book.book === correct.book);
+  if (idx < 0) idx = 0;
+  if (active.length === 1) return [active[idx]];
+  if (idx === 0) return active.slice(0, 2);
+  if (idx === active.length - 1) return active.slice(-2);
+  return active.slice(idx - 1, idx + 2);
+}
+function versePixelsPerVerseWindow(books) {
+  const total = books.reduce((sum, book) => sum + book._totalVerses, 0);
+  if (total > 3600) return 1.00;
+  if (total > 2800) return 1.15;
+  if (total > 2000) return 1.35;
+  if (total > 1400) return 1.60;
+  if (total > 900) return 1.90;
+  if (total > 550) return 2.25;
+  if (total > 300) return 2.65;
+  return 3.10;
+}
+function graphHeights() {
+  const viewport = Math.max(520, window.innerHeight || 800);
+  const bodyStyle = getComputedStyle(document.body);
+  const padTop = parseFloat(bodyStyle.paddingTop) || 0;
+  const padBottom = parseFloat(bodyStyle.paddingBottom) || 0;
+  const topbar = document.querySelector('.topbar');
+  const topbarH = topbar ? topbar.getBoundingClientRect().height : 42;
+  const headH = [...document.querySelectorAll('.panel-head')].reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
+  const fixed = padTop + padBottom + topbarH + headH + 20;
+  const available = Math.max(430, viewport - fixed);
+  let graph1H = Math.round(available * 0.60);
+  let graph2H = available - graph1H;
+  graph1H = Math.max(285, Math.min(520, graph1H));
+  graph2H = Math.max(175, Math.min(380, graph2H));
+  return { graph1H, graph2H };
+}
+function setDrawer(open) {
+  bookDrawer.classList.toggle('open', open);
+  drawerBackdrop.classList.toggle('open', open);
+  bookDrawer.setAttribute('aria-hidden', String(!open));
+  drawerToggle.setAttribute('aria-expanded', String(open));
+}
+drawerToggle.addEventListener('click', () => setDrawer(!bookDrawer.classList.contains('open')));
+drawerClose.addEventListener('click', () => setDrawer(false));
+drawerBackdrop.addEventListener('click', () => setDrawer(false));
+window.addEventListener('keydown', e => { if (e.key === 'Escape') setDrawer(false); });
+
+function activeBooks() { return bibleData.filter(b => selected.has(b.book)); }
+function activeChapters() {
+  const out = [];
+  for (const book of activeBooks()) for (const ch of book._chapters) out.push({book, ch});
+  return out;
+}
+function formatScore(v) { return v.toFixed(1).replace(/\.0$/, ''); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function scheduleRender(opts={}) {
+  if (opts.center1) scheduleRender.center1 = true;
+  if (opts.center2) scheduleRender.center2 = true;
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => {
+    rafPending = false;
+    renderAll();
+    if (scheduleRender.center1) { ensureFirstMarkerVisible(true); scheduleRender.center1 = false; }
+    if (scheduleRender.center2) { ensureSecondMarkerVisible(true); scheduleRender.center2 = false; }
+  });
+}
+
+function chapterScoreRange(book, ch, active) {
+  if (book.book !== correct.book) {
+    const score = calculateScoreTotal(correct, {book:book.book, chapter:ch.chapter, verse:1}, active);
+    return [score, score];
+  }
+  let min = Infinity, max = -Infinity;
+  for (let v=1; v<=ch.verses; v++) {
+    const s = calculateScoreTotal(correct, {book:book.book, chapter:ch.chapter, verse:v}, active);
+    if (s < min) min = s;
+    if (s > max) max = s;
+  }
+  return [min, max];
+}
+
+function renderGraph1() {
+  const active = activeBooks();
+  const chapters = activeChapters();
+  const { graph1H } = graphHeights();
+  const slot = G1_SLOT;
+  const marginL = 43, marginR = 12, marginT = 9;
+  const height = graph1H;
+  const labelSpace = 138;
+  const plotH = Math.max(140, height - marginT - labelSpace);
+  const axisY = marginT + plotH;
+  const chapterLabelY = axisY + 11;
+  const bookLabelY = axisY + 18;
+  const markerBottom = height - 4;
+  const width = Math.max(graph1Scroll.clientWidth || 900, marginL + Math.max(chapters.length, 1) * slot + marginR);
+  graph1.setAttribute('width', width);
+  graph1.setAttribute('height', height);
+  graph1.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+  if (!active.length || !chapters.length) {
+    graph1.innerHTML = `<rect x="0" y="0" width="${width}" height="${height}" fill="#fff"/>`;
+    return;
+  }
+
+  const y = score => marginT + plotH - (score/100)*plotH;
+  let s = `<rect x="0" y="0" width="${width}" height="${height}" fill="#fff"/>`;
+  for (let score=0; score<=100; score+=10) {
+    const yy = y(score);
+    s += `<line x1="${marginL}" x2="${width-marginR}" y1="${yy}" y2="${yy}" stroke="${score%20===0?'#dfe4ec':'#f0f2f6'}" stroke-width="1"/>`;
+    s += `<text x="${marginL-6}" y="${yy+3}" text-anchor="end" font-size="8" fill="#657084">${score}</text>`;
+  }
+  s += `<line x1="${marginL}" x2="${marginL}" y1="${marginT}" y2="${axisY}" stroke="#596273"/>`;
+  s += `<line x1="${marginL}" x2="${width-marginR}" y1="${axisY}" y2="${axisY}" stroke="#596273"/>`;
+  s += `<text x="10" y="${marginT+plotH/2}" font-size="9" fill="#4f596b" transform="rotate(-90 10 ${marginT+plotH/2})" text-anchor="middle">Score</text>`;
+
+  let idx = 0;
+  let markerX = marginL + slot/2;
+  const bookSpans = [];
+  for (const book of active) {
+    const start = idx;
+    for (const ch of book._chapters) {
+      const [min,max] = chapterScoreRange(book,ch,active);
+      const x = marginL + idx*slot + slot/2;
+      const yMax = y(max), yMin = y(min);
+      const h = Math.max(2, yMin-yMax);
+      const yy = h===2 ? yMax-1 : yMax;
+      s += `<rect class="range-bar" data-book="${esc(book.book)}" data-chapter="${ch.chapter}" data-min="${min}" data-max="${max}" x="${x-2.2}" y="${yy}" width="4.4" height="${h}" rx="1" fill="#8fb9e7" stroke="#3375c4" stroke-width="0.65"/>`;
+      s += `<text x="${x}" y="${chapterLabelY}" text-anchor="middle" font-size="6.2" fill="#758093">${ch.chapter}</text>`;
+      if (book.book===correct.book && ch.chapter===correct.chapter) markerX=x;
+      idx++;
+    }
+    const end = idx-1;
+    const center = marginL + ((start+end)/2)*slot + slot/2;
+    bookSpans.push({book:book.book, center});
+    if (idx < chapters.length) {
+      const sepX = marginL + idx*slot;
+      s += `<line x1="${sepX}" x2="${sepX}" y1="${marginT}" y2="${axisY+5}" stroke="#cfd5df" stroke-width="1"/>`;
+    }
+  }
+  for (const b of bookSpans) {
+    s += `<text x="${b.center}" y="${bookLabelY}" font-size="8.5" font-weight="650" fill="#404a5a" text-anchor="start" transform="rotate(90 ${b.center} ${bookLabelY})">${esc(b.book)}</text>`;
+  }
+
+  s += `<line id="marker1" x1="${markerX}" x2="${markerX}" y1="${marginT}" y2="${markerBottom}" stroke="#d62929" stroke-width="2" pointer-events="none"/>`;
+  graph1.innerHTML = s;
+}
+function renderGraph2() {
+  const active = activeBooks();
+  const books = graph2Books();
+  const { graph2H } = graphHeights();
+  const marginL=43, marginR=12, marginT=9;
+  const height=graph2H;
+  const plotH=Math.max(100,height-marginT-45);
+  const axisY=marginT+plotH;
+  const chapterLabelY=axisY+13;
+  const bookLabelY=axisY+29;
+  const markerBottom=height-4;
+  const minWidth=Math.max(graph2Scroll.clientWidth || 900, 900);
+
+  if (!active.length || !books.length) {
+    graph2Layout = null;
+    graph2Title.textContent = 'Verse scores';
+    graph2.setAttribute('width', minWidth);
+    graph2.setAttribute('height', height);
+    graph2.setAttribute('viewBox', `0 0 ${minWidth} ${height}`);
+    graph2.innerHTML = `<rect x="0" y="0" width="${minWidth}" height="${height}" fill="#fff"/>`;
+    return;
+  }
+
+  graph2Title.textContent = `Verse scores — ${books.map(book => book.book).join(' · ')}`;
+  const pxPerVerse = versePixelsPerVerseWindow(books);
+  const bookGap = 18;
+  let cursorX = marginL;
+  const segments = books.map(book => {
+    const startX = cursorX;
+    const endX = startX + book._totalVerses * pxPerVerse;
+    cursorX = endX + bookGap;
+    return { book, startX, endX };
+  });
+  const width=Math.max(minWidth, cursorX - bookGap + marginR);
+  graph2Layout = { segments, pxPerVerse, marginL, marginR, bookGap, width };
+  graph2.setAttribute('width',width); graph2.setAttribute('height',height); graph2.setAttribute('viewBox',`0 0 ${width} ${height}`);
+  const y = score => marginT + plotH - (score/100)*plotH;
+  let s=`<rect x="0" y="0" width="${width}" height="${height}" fill="#fff"/>`;
+  for(let score=0;score<=100;score+=10){const yy=y(score);s+=`<line x1="${marginL}" x2="${width-marginR}" y1="${yy}" y2="${yy}" stroke="${score%20===0?'#dfe4ec':'#eef1f5'}"/><text x="${marginL-8}" y="${yy+4}" text-anchor="end" font-size="8" fill="#657084">${score}</text>`;}
+  s+=`<line x1="${marginL}" x2="${marginL}" y1="${marginT}" y2="${axisY}" stroke="#596273"/><line x1="${marginL}" x2="${width-marginR}" y1="${axisY}" y2="${axisY}" stroke="#596273"/>`;
+  s+=`<text x="13" y="${marginT+plotH/2}" font-size="9" fill="#4f596b" transform="rotate(-90 13 ${marginT+plotH/2})" text-anchor="middle">Score</text>`;
+
+  for (let bi=0; bi<segments.length; bi++) {
+    const seg = segments[bi];
+    const book = seg.book;
+    const xForOrd = ord => seg.startX + (ord-0.5)*pxPerVerse;
+    const points=[];
+
+    if (bi > 0) {
+      const dividerX = seg.startX - bookGap/2;
+      s += `<line x1="${dividerX}" x2="${dividerX}" y1="${marginT}" y2="${height-2}" stroke="#aeb7c5" stroke-width="1.2"/>`;
+    }
+
+    for(const ch of book._chapters){
+      const centerOrd=(ch.startOrdinal+ch.endOrdinal)/2;
+      const cx=xForOrd(centerOrd);
+      s+=`<text x="${cx}" y="${chapterLabelY}" text-anchor="middle" font-size="7.5" fill="#556173">${ch.chapter}</text>`;
+      if(ch.chapter>1){const sx=xForOrd(ch.startOrdinal)-pxPerVerse/2;s+=`<line x1="${sx}" x2="${sx}" y1="${marginT}" y2="${axisY+5}" stroke="#e0e4eb"/>`;}
+      for(let v=1;v<=ch.verses;v++){
+        const ord=ch.startOrdinal+v-1;
+        const score=calculateScoreTotal(correct,{book:book.book,chapter:ch.chapter,verse:v},active);
+        points.push([xForOrd(ord),y(score),ch.chapter,v,score]);
+      }
+    }
+
+    const bookCenter = (seg.startX + seg.endX) / 2;
+    s += `<text x="${bookCenter}" y="${bookLabelY}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#2e394b">${esc(book.book)}</text>`;
+    s += `<polyline fill="none" stroke="#3375c4" stroke-width="1.25" pointer-events="none" points="${points.map(p=>`${p[0]},${p[1]}`).join(' ')}"/>`;
+    for(const p of points){
+      s += `<circle class="verse-point" data-book="${esc(book.book)}" data-chapter="${p[2]}" data-verse="${p[3]}" data-score="${p[4]}" cx="${p[0]}" cy="${p[1]}" r="${books.reduce((sum,b)=>sum+b._totalVerses,0)>2500?0.9:1.25}" fill="#3375c4"/>`;
+    }
+  }
+
+  const correctSeg = segments.find(seg => seg.book.book === correct.book);
+  if (correctSeg) {
+    const correctBook = correctSeg.book;
+    const correctOrd=getBookVerseOrdinal(correctBook,correct.chapter,correct.verse);
+    const markerX=correctSeg.startX+(correctOrd-0.5)*pxPerVerse;
+    s+=`<line id="marker2" x1="${markerX}" x2="${markerX}" y1="${marginT}" y2="${markerBottom}" stroke="#d62929" stroke-width="2.2" pointer-events="none"/>`;
+  }
+  graph2.innerHTML=s;
+}
+function moveTooltip(e){
+  const pad=12;
+  tooltip.style.left=(e.clientX+pad)+'px';
+  tooltip.style.top=(e.clientY+pad)+'px';
+}
+function hideTooltip(){tooltip.style.display='none';}
+function showGraph1Tooltip(e, target){
+  if (!target) return;
+  const active=activeBooks();
+  const [min,max]=chapterScoreRange(target.book,target.ch,active);
+  tooltip.style.display='block';
+  tooltip.innerHTML=`<b>${esc(target.book.book)} ${target.ch.chapter}</b><br>Min ${formatScore(min)} · Max ${formatScore(max)}`;
+  moveTooltip(e);
+}
+function showGraph2Tooltip(e, ref){
+  if (!ref || !activeBooks().length) return;
+  const score=calculateScoreTotal(correct,ref,activeBooks());
+  tooltip.style.display='block';
+  tooltip.innerHTML=`<b>${esc(ref.book)} ${ref.chapter}:${ref.verse}</b><br>Score ${formatScore(score)}`;
+  moveTooltip(e);
+}
+
+// Hovering directly over a rendered mark shows its data. During a press-drag,
+// the nearest chapter/verse is scrubbed continuously and its data follows the pointer.
+graph1.addEventListener('pointermove', e => {
+  if (drag1) return;
+  const el = e.target.closest?.('.range-bar');
+  if (!el) { hideTooltip(); return; }
+  tooltip.style.display='block';
+  tooltip.innerHTML=`<b>${esc(el.dataset.book)} ${el.dataset.chapter}</b><br>Min ${formatScore(+el.dataset.min)} · Max ${formatScore(+el.dataset.max)}`;
+  moveTooltip(e);
+});
+graph1.addEventListener('pointerleave', () => { if(!drag1) hideTooltip(); });
+graph2.addEventListener('pointermove', e => {
+  if (drag2) return;
+  const el = e.target.closest?.('.verse-point');
+  if (!el) { hideTooltip(); return; }
+  tooltip.style.display='block';
+  tooltip.innerHTML=`<b>${esc(el.dataset.book)} ${el.dataset.chapter}:${el.dataset.verse}</b><br>Score ${formatScore(+el.dataset.score)}`;
+  moveTooltip(e);
+});
+graph2.addEventListener('pointerleave', () => { if(!drag2) hideTooltip(); });
+
+graph1.addEventListener('pointerdown', e => {
+  if (e.button !== undefined && e.button !== 0) return;
+  if (!activeBooks().length) return;
+  e.preventDefault();
+  drag1=true; drag2=false;
+  updateCorrectFromGraph1Pointer(e,true);
+});
+graph2.addEventListener('pointerdown', e => {
+  if (e.button !== undefined && e.button !== 0) return;
+  if (!activeBooks().length) return;
+  e.preventDefault();
+  graph2DragWindow = graph2Books().map(book => book.book);
+  drag2=true; drag1=false;
+  updateCorrectFromGraph2Pointer(e,true);
+});
+
+window.addEventListener('pointermove', e => {
+  if (drag1) { e.preventDefault(); updateCorrectFromGraph1Pointer(e,true); }
+  else if (drag2) { e.preventDefault(); updateCorrectFromGraph2Pointer(e,true); }
+}, {passive:false});
+window.addEventListener('pointerup', () => {
+  const wasDragging2 = drag2;
+  drag1=false; drag2=false;
+  if (wasDragging2) {
+    graph2DragWindow=null;
+    scheduleRender({center2:true});
+  }
+});
+window.addEventListener('pointercancel', () => {
+  const wasDragging2 = drag2;
+  drag1=false; drag2=false;
+  if (wasDragging2) {
+    graph2DragWindow=null;
+    scheduleRender({center2:true});
+  }
+});
+
+function updateCorrectFromGraph1Pointer(e,showData=false){
+  const chapters=activeChapters(); if(!chapters.length)return;
+  maybeAutoScroll(graph1Scroll,e.clientX);
+  const rect=graph1.getBoundingClientRect();
+  const scaleX=graph1.viewBox.baseVal.width/rect.width;
+  const svgX=(e.clientX-rect.left)*scaleX;
+  const marginL=43,slot=G1_SLOT;
+  let idx=Math.round((svgX-marginL-slot/2)/slot);
+  idx=Math.max(0,Math.min(chapters.length-1,idx));
+  const target=chapters[idx];
+  const changed=target.book.book!==correct.book || target.ch.chapter!==correct.chapter;
+  if(changed){
+    correct.book=target.book.book;
+    correct.chapter=target.ch.chapter;
+    correct.verse=Math.min(correct.verse,target.ch.verses);
+    scheduleRender({center2:true});
+  }
+  if(showData) showGraph1Tooltip(e,target);
+}
+function updateCorrectFromGraph2Pointer(e,showData=false){
+  if(!activeBooks().length || !graph2Layout || !graph2Layout.segments.length)return;
+  maybeAutoScroll(graph2Scroll,e.clientX);
+  const rect=graph2.getBoundingClientRect();
+  const scaleX=graph2.viewBox.baseVal.width/rect.width;
+  const svgX=(e.clientX-rect.left)*scaleX;
+  const { segments, pxPerVerse } = graph2Layout;
+
+  let bestSeg = segments[0];
+  let bestDistance = Infinity;
+  for (const seg of segments) {
+    const clampedX = Math.max(seg.startX, Math.min(seg.endX, svgX));
+    const distance = Math.abs(svgX - clampedX);
+    if (distance < bestDistance) { bestDistance = distance; bestSeg = seg; }
+  }
+
+  let ordinal=Math.round((svgX-bestSeg.startX)/pxPerVerse + 0.5);
+  ordinal=Math.max(1,Math.min(bestSeg.book._totalVerses,ordinal));
+  const ref=ordinalToReference(bestSeg.book,ordinal);
+  const changed=ref.book!==correct.book || ref.chapter!==correct.chapter || ref.verse!==correct.verse;
+  if(changed){
+    correct=ref;
+    scheduleRender({center1:false, center2:false});
+  }
+  if(showData) showGraph2Tooltip(e,ref);
+}
+function maybeAutoScroll(container,clientX){
+  const r=container.getBoundingClientRect(); const edge=40; const amount=24;
+  if(clientX<r.left+edge)container.scrollLeft-=amount;
+  else if(clientX>r.right-edge)container.scrollLeft+=amount;
+}
+
+function ensureFirstMarkerVisible(center=false){
+  const chapters=activeChapters();
+  const idx=chapters.findIndex(x=>x.book.book===correct.book&&x.ch.chapter===correct.chapter);
+  if(idx<0)return;
+  const x=43+idx*G1_SLOT+G1_SLOT/2;
+  scrollXIntoView(graph1Scroll,x,center);
+}
+function ensureSecondMarkerVisible(center=false){
+  if(!activeBooks().length || !graph2Layout)return;
+  const seg=graph2Layout.segments.find(item=>item.book.book===correct.book);
+  if(!seg)return;
+  const ord=getBookVerseOrdinal(seg.book,correct.chapter,correct.verse);
+  const x=seg.startX+(ord-0.5)*graph2Layout.pxPerVerse;
+  scrollXIntoView(graph2Scroll,x,center);
+}
+function scrollXIntoView(container,x,center){
+  const left=container.scrollLeft,right=left+container.clientWidth;
+  if(center){container.scrollLeft=Math.max(0,x-container.clientWidth/2);return;}
+  if(x<left+40)container.scrollLeft=Math.max(0,x-40);
+  else if(x>right-40)container.scrollLeft=x-container.clientWidth+40;
+}
+
+function renderChecklist(){
+  const host=document.getElementById('bookChecklist');
+  host.innerHTML='';
+  host.appendChild(makeTestamentGroup('Old Testament',OLD_TESTAMENT,'otParent'));
+  host.appendChild(makeTestamentGroup('New Testament',NEW_TESTAMENT,'ntParent'));
+  updateParentStates();
+}
+function makeTestamentGroup(title,names,parentId){
+  const wrap=document.createElement('div');wrap.className='testament';
+  const parentLabel=document.createElement('label');parentLabel.className='parent-check';
+  const parent=document.createElement('input');parent.type='checkbox';parent.id=parentId;parent.dataset.group=title;
+  parentLabel.append(parent,document.createTextNode(title));wrap.appendChild(parentLabel);
+  parent.addEventListener('change',()=>{
+    for(const name of names){if(parent.checked)selected.add(name);else selected.delete(name);}
+    normalizeCorrectAfterSelection();syncChildCheckboxes();updateParentStates();hideTooltip();scheduleRender({center1:true,center2:true});
+  });
+  for(const name of names){
+    const label=document.createElement('label');label.className='book-check';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;cb.dataset.book=name;
+    cb.addEventListener('change',()=>{
+      if(cb.checked)selected.add(name);else selected.delete(name);
+      normalizeCorrectAfterSelection();updateParentStates();hideTooltip();scheduleRender({center1:true,center2:true});
+    });
+    label.append(cb,document.createTextNode(name));wrap.appendChild(label);
+  }
+  return wrap;
+}
+function syncChildCheckboxes(){document.querySelectorAll('input[data-book]').forEach(cb=>cb.checked=selected.has(cb.dataset.book));}
+function updateParentStates(){
+  for(const [id,names] of [['otParent',OLD_TESTAMENT],['ntParent',NEW_TESTAMENT]]){
+    const el=document.getElementById(id); if(!el)continue;
+    const count=names.filter(n=>selected.has(n)).length; el.checked=count===names.length; el.indeterminate=count>0&&count<names.length;
+  }
+}
+function normalizeCorrectAfterSelection(){
+  const active=activeBooks();
+  if(!active.length)return;
+  if(selected.has(correct.book))return;
+  const oldIdx=canonicalIndex.get(correct.book)??0;
+  let best=active[0]; let bestDist=Infinity;
+  for(const b of active){const d=Math.abs((canonicalIndex.get(b.book)??0)-oldIdx);if(d<bestDist){best=b;bestDist=d;}}
+  correct.book=best.book;
+  correct.chapter=Math.min(correct.chapter,best._chapters.length);
+  correct.verse=Math.min(correct.verse,getChapterMeta(best,correct.chapter).verses);
+}
+
+function renderAll(){
+  const active=activeBooks();
+  answerBox.value=active.length ? `${correct.book} ${correct.chapter}:${correct.verse}` : '';
+  poolText.textContent=`${active.length} book${active.length===1?'':'s'} selected`;
+  drawerCount.textContent=active.length;
+  renderGraph1(); renderGraph2(); updateParentStates();
+  if(!active.length){graph1Scroll.scrollLeft=0;graph2Scroll.scrollLeft=0;graph2Layout=null;return;}
+  if(lastRenderBook!==correct.book){
+    lastRenderBook=correct.book;
+    if(!drag2) ensureSecondMarkerVisible(true);
+  }
+}
+
+window.addEventListener('resize',()=>scheduleRender());
+renderChecklist();
+renderAll();
+ensureFirstMarkerVisible(true);
+ensureSecondMarkerVisible(true);
+</script>
+</body>
+</html>

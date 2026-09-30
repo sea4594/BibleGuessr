@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { X, Settings } from 'lucide-react';
+import { ArrowLeft, X, Settings } from 'lucide-react';
 import { useAccountSync } from '@/lib/accountSync';
 import { themePresets, useUiSettings } from '@/lib/uiSettingsContext';
 
@@ -18,20 +18,29 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
   const { settings, setThemePreset } = useUiSettings();
   const { firebaseEnabled, login, loginPending, logout, syncError, syncStatus, user } = useAccountSync();
   const [isOpen, setIsOpen] = useState(false);
+  const [showScoringVisualizer, setShowScoringVisualizer] = useState(false);
 
   const openSettings = useCallback(() => setIsOpen(true), []);
-  const closeSettings = useCallback(() => setIsOpen(false), []);
+  const closeSettings = useCallback(() => {
+    setShowScoringVisualizer(false);
+    setIsOpen(false);
+  }, []);
+  const scoringVisualizerSrc = process.env.NEXT_PUBLIC_IS_GITHUB_PAGES === 'true'
+    ? '/BibleGuessr/bibleguessr-score-visualizer-hybrid-v11.html'
+    : '/bibleguessr-score-visualizer-hybrid-v11.html';
 
   useEffect(() => {
     if (!isOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeSettings();
+      if (event.key !== 'Escape') return;
+      if (showScoringVisualizer) setShowScoringVisualizer(false);
+      else closeSettings();
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, closeSettings]);
+  }, [isOpen, showScoringVisualizer, closeSettings]);
 
   return (
     <SettingsModalContext.Provider value={{ openSettings, closeSettings }}>
@@ -108,8 +117,37 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                   ))}
                 </select>
               </section>
+
+              <section className="settings-section">
+                <p className="eyebrow mb-2">Scoring</p>
+                <button
+                  onClick={() => setShowScoringVisualizer(true)}
+                  className="btn-outline w-full py-2"
+                >
+                  Scoring Visualizer
+                </button>
+              </section>
             </div>
           </div>
+        </div>
+      )}
+      {isOpen && showScoringVisualizer && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-[var(--bg)]">
+          <div className="flex h-12 shrink-0 items-center border-b border-[var(--line)] bg-[var(--panel)] px-2">
+            <button
+              onClick={() => setShowScoringVisualizer(false)}
+              className="btn-outline inline-flex items-center gap-1.5 px-3 py-1.5 text-sm"
+              aria-label="Exit scoring visualizer"
+            >
+              <ArrowLeft size={15} />
+              Exit
+            </button>
+          </div>
+          <iframe
+            title="BibleGuessr Scoring Visualizer"
+            src={scoringVisualizerSrc}
+            className="min-h-0 flex-1 w-full border-0 bg-white"
+          />
         </div>
       )}
     </SettingsModalContext.Provider>
