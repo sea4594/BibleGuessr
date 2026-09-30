@@ -15,7 +15,7 @@ execSync(
   { cwd: repoRoot, stdio: 'pipe' }
 );
 
-const { calculateScore } = require(path.join(outDir, 'scoring.js'));
+const { applyContextPenalty, calculateScore } = require(path.join(outDir, 'scoring.js'));
 const { bibleData } = require(path.join(outDir, 'bibleData.js'));
 const { NEW_TESTAMENT_BOOK_NAMES } = require(path.join(outDir, 'gameModes.js'));
 
@@ -148,6 +148,48 @@ runTest('wrong-chapter scoring uses normalized closeness and keeps long-book nea
   assert.equal(shortBook.feedback.book, 'correct');
   assert.ok(longBook.total >= 80, `Expected long-book near miss to be >= 80, got ${longBook.total}`);
   assert.ok(longBook.total > shortBook.total, `Expected long-book near miss (${longBook.total}) > short-book near miss (${shortBook.total})`);
+});
+
+
+runTest('hybrid v11 exact reference scores 100', () => {
+  const breakdown = score(
+    { book: 'John', chapter: 3, verse: 16 },
+    { book: 'John', chapter: 3, verse: 16 },
+    fullBible
+  );
+
+  assert.equal(breakdown.total, 100);
+  assert.ok(approxEqual(breakdown.bookPoints + breakdown.chapterPoints + breakdown.versePoints, 100));
+});
+
+runTest('hybrid v11 correct-book floor depends only on active book count', () => {
+  const correct = { book: 'Genesis', chapter: 1, verse: 1 };
+  const oppositeEnd = { book: 'Genesis', chapter: 50, verse: 26 };
+  const twoBooks = books(['Genesis', 'Exodus']);
+  const tenBooks = fullBible.slice(0, 10);
+
+  assert.ok(approxEqual(score(correct, oppositeEnd, twoBooks).total, 30.417390607627198));
+  assert.ok(approxEqual(score(correct, oppositeEnd, tenBooks).total, 40.03044518025827));
+  assert.ok(approxEqual(score(correct, oppositeEnd, fullBible).total, 50));
+});
+
+runTest('hybrid v11 uses the 70 percent chapter and 30 percent verse blend', () => {
+  const breakdown = score(
+    { book: 'John', chapter: 3, verse: 16 },
+    { book: 'John', chapter: 3, verse: 15 },
+    fullBible
+  );
+
+  assert.ok(approxEqual(breakdown.total, 99.39013795527879));
+  assert.ok(approxEqual(breakdown.bookPoints, 50));
+  assert.ok(approxEqual(breakdown.chapterPoints, 34.58));
+  assert.ok(approxEqual(breakdown.versePoints, 14.810137955278796));
+});
+
+runTest('context verses subtract 10 points each after base scoring', () => {
+  assert.ok(approxEqual(applyContextPenalty(99.4, 2), 79.4));
+  assert.equal(applyContextPenalty(12, 2), 0);
+  assert.equal(applyContextPenalty(100, 0), 100);
 });
 
 console.log('All scoring tests passed.');

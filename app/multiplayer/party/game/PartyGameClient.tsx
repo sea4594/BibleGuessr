@@ -19,7 +19,7 @@ import { ensureFirebaseSession, getFirebaseAuth } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { gameModes } from '@/lib/gameModes';
 import { bibleData, BookData } from '@/lib/bibleData';
-import { calculateScore } from '@/lib/scoring';
+import { applyContextPenalty, calculateScore } from '@/lib/scoring';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 import {
   buildVerseReferencePool,
@@ -371,7 +371,7 @@ export default function PartyGameClient() {
 
           const contextVersesAdded = previousVerses.length + nextVerses.length;
           const penalty = contextVersesAdded * 10;
-          const adjustedTotal = Math.max(0, breakdown.total - penalty);
+          const adjustedTotal = applyContextPenalty(breakdown.total, contextVersesAdded);
           submitted = await submitRoundScore(adjustedTotal, breakdown.total, false, timeoutGuess, breakdown.feedback);
         } else {
           submitted = await submitRoundScore(0, 0, true);
@@ -428,7 +428,7 @@ export default function PartyGameClient() {
 
     const contextVersesAdded = previousVerses.length + nextVerses.length;
     const penalty = contextVersesAdded * 10;
-    const adjustedTotal = Math.max(0, breakdown.total - penalty);
+    const adjustedTotal = applyContextPenalty(breakdown.total, contextVersesAdded);
 
     await submitRoundScore(adjustedTotal, breakdown.total, false, guess, breakdown.feedback);
   }, [game, modeConfig, myMember, nextVerses.length, previousVerses.length, submitRoundScore, verse]);

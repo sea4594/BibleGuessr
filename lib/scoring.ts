@@ -33,20 +33,15 @@ function getBookVerseOrdinal(bookData: BookData, chapter: number, verse: number)
   for (const chapterData of bookData.chapters) {
     const chapterNumber = parseInt(chapterData.chapter, 10);
     const verseCount = parseInt(chapterData.verses, 10);
-    if (!Number.isInteger(chapterNumber) || chapterNumber < 1 || !Number.isInteger(verseCount) || verseCount < 1) {
-      continue;
-    }
-
+    if (!Number.isInteger(chapterNumber) || chapterNumber < 1 || !Number.isInteger(verseCount) || verseCount < 1) continue;
     if (chapterNumber < chapter) {
       ordinal += verseCount;
       continue;
     }
-
     if (chapterNumber === chapter) {
       const clampedVerse = Math.min(Math.max(verse, 1), verseCount);
       return ordinal + clampedVerse;
     }
-
     break;
   }
 
@@ -69,6 +64,10 @@ function clampScore(score: number): number {
   return Math.min(100, Math.max(0, score));
 }
 
+export function applyContextPenalty(baseScore: number, contextVersesAdded: number): number {
+  return Math.max(0, baseScore - Math.max(0, contextVersesAdded) * 10);
+}
+
 export function calculateScore(
   correct: { book: string; chapter: number; verse: number },
   guess: { book: string; chapter: number; verse: number },
@@ -82,153 +81,111 @@ export function calculateScore(
   const categoryGuaranteed = activeCategories.size <= 1;
   const bookGuaranteed = N <= 1;
 
-  const correctBookData = normalizedActiveBooks.find(book => book.book === correct.book);
-  const chaptersInCorrectBook = correctBookData?.chapters.length ?? 1;
-  const totalVersesInCorrectBook = correctBookData ? getTotalVersesInBook(correctBookData) : 1;
-  const chapterGuaranteed = chaptersInCorrectBook <= 1;
-
-  const guessBookIsCorrect = guess.book === correct.book;
-  const chapterDiff = guessBookIsCorrect ? Math.abs(correct.chapter - guess.chapter) : 0;
-
-  const correctOrdinal = correctBookData ? getBookVerseOrdinal(correctBookData, correct.chapter, correct.verse) : 1;
-  const guessOrdinal = guessBookIsCorrect && correctBookData
-    ? getBookVerseOrdinal(correctBookData, guess.chapter, guess.verse)
-    : correctOrdinal;
-  const textualVerseDistance = Math.abs(correctOrdinal - guessOrdinal);
-  const versesOff = guessBookIsCorrect && guess.chapter === correct.chapter ? Math.abs(correct.verse - guess.verse) : 0;
-
+  // Hybrid scoring v11: retain the original wrong-book partial-credit scaling.
   const B = N <= 1 ? 0 : 20 + (20 * Math.log(N)) / Math.log(66);
   const g = B / 40;
-
+  const guessBookIsCorrect = guess.book === correct.book;
   const correctTestament = getBookTestament(correct.book);
   const guessTestament = getBookTestament(guess.book);
   const correctCategory = getBookCategory(correct.book);
   const guessCategory = getBookCategory(guess.book);
 
-  let testamentPoints = 0;
-  let categoryPoints = 0;
-  let bookPoints = 0;
-  let chapterPoints = 0;
-  let versePoints = 0;
-  let total = 0;
-
   if (!guessBookIsCorrect) {
-    if (!testamentGuaranteed && guessTestament === correctTestament) {
-      testamentPoints = 15 * g;
-    }
-
-    if (!categoryGuaranteed && guessCategory === correctCategory) {
-      categoryPoints = 15 * g;
-    }
-
-    total = clampScore(testamentPoints + categoryPoints);
-
+    const testamentPoints = !testamentGuaranteed && guessTestament === correctTestament ? 15 * g : 0;
+    const categoryPoints = !categoryGuaranteed && guessCategory === correctCategory ? 15 * g : 0;
     return {
       testamentPoints: testamentGuaranteed ? undefined : testamentPoints,
       categoryPoints: categoryGuaranteed ? undefined : categoryPoints,
-      bookPoints,
-      chapterPoints,
-      versePoints,
-      possiblePoints: {
-        testament: !testamentGuaranteed,
-        category: !categoryGuaranteed,
-        book: false,
-        chapter: false,
-        verse: false,
-      },
-      total,
-      feedback: {
-        book: 'wrong',
-        chapter: 'wrong',
-        verse: 'wrong',
-        chaptersOff: 0,
-        versesOff: 0,
-      },
+      bookPoints: 0,
+      chapterPoints: 0,
+      versePoints: 0,
+      possiblePoints: { testament: !testamentGuaranteed, category: !categoryGuaranteed, book: false, chapter: false, verse: false },
+      total: clampScore(testamentPoints + categoryPoints),
+      feedback: { book: 'wrong', chapter: 'wrong', verse: 'wrong', chaptersOff: 0, versesOff: 0 },
     };
   }
 
-  if (guess.chapter === correct.chapter && guess.verse === correct.verse) {
+  const correctBookData = normalizedActiveBooks.find(book => book.book === correct.book);
+  if (!correctBookData) {
     return {
-      bookPoints: B,
-      chapterPoints: chapterGuaranteed ? 0 : 30,
-      versePoints: 100 - B - (chapterGuaranteed ? 0 : 30),
-      possiblePoints: {
-        testament: false,
-        category: false,
-        book: !bookGuaranteed,
-        chapter: !chapterGuaranteed,
-        verse: true,
-      },
+      bookPoints: 0,
+      chapterPoints: 0,
+      versePoints: 0,
+      possiblePoints: { testament: false, category: false, book: false, chapter: false, verse: false },
+      total: 0,
+      feedback: { book: 'correct', chapter: 'wrong', verse: 'wrong', chaptersOff: 0, versesOff: 0 },
+    };
+  }
+
+  const correctOrdinal = getBookVerseOrdinal(correctBookData, correct.chapter, correct.verse);
+  const guessOrdinal = getBookVerseOrdinal(correctBookData, guess.chapter, guess.verse);
+  const verseDistance = Math.abs(correctOrdinal - guessOrdinal);
+  const chapterDistance = Math.abs(correct.chapter - guess.chapter);
+  const totalVerses = getTotalVersesInBook(correctBookData);
+  const totalChapters = Math.max(1, correctBookData.chapters.length);
+  const chapterGuaranteed = totalChapters <= 1;
+  const versesOff = guess.chapter === correct.chapter ? Math.abs(correct.verse - guess.verse) : 0;
+
+  const correctBookFloor = (() => {
+    if (N <= 1) return 0;
+    const poolDifficulty = Math.log(N) / Math.log(66);
+    return 25 + 25 * Math.pow(poolDifficulty, 0.85);
+  })();
+
+  const possiblePoints = {
+    testament: false,
+    category: false,
+    book: !bookGuaranteed,
+    chapter: !chapterGuaranteed,
+    verse: true,
+  };
+
+  if (verseDistance === 0) {
+    const remaining = 100 - correctBookFloor;
+    const chapterPoints = chapterGuaranteed ? 0 : 0.70 * remaining;
+    const versePoints = chapterGuaranteed ? remaining : 0.30 * remaining;
+    return {
+      bookPoints: correctBookFloor,
+      chapterPoints,
+      versePoints,
+      possiblePoints,
       total: 100,
-      feedback: {
-        book: 'correct',
-        chapter: 'correct',
-        verse: 'correct',
-        chaptersOff: 0,
-        versesOff: 0,
-      },
+      feedback: { book: 'correct', chapter: 'correct', verse: 'correct', chaptersOff: 0, versesOff: 0 },
     };
   }
 
-  const C = chapterGuaranteed ? 0 : 30;
-  const V = 97 - B - C;
-  const verseDecay = 1 + Math.pow(textualVerseDistance / 12, 1.5);
+  const nonExactCeiling = 99.4;
+  const verseScale = Math.max(30, Math.min(55, 30 + 0.01 * totalVerses));
+  const maxVerseSpan = Math.max(1, totalVerses - 1);
+  const verseRaw = 1 / (1 + Math.pow(verseDistance / verseScale, 2));
+  const verseRawAtFullSpan = 1 / (1 + Math.pow(maxVerseSpan / verseScale, 2));
+  const verseProximity = Math.max(0, Math.min(1, (verseRaw - verseRawAtFullSpan) / (1 - verseRawAtFullSpan)));
+  const availablePoints = nonExactCeiling - correctBookFloor;
 
-  if (guess.chapter === correct.chapter) {
-    bookPoints = B;
-    chapterPoints = C;
-    versePoints = V / verseDecay;
-    total = clampScore(bookPoints + chapterPoints + versePoints);
-
-    return {
-      bookPoints,
-      chapterPoints,
-      versePoints,
-      possiblePoints: {
-        testament: false,
-        category: false,
-        book: !bookGuaranteed,
-        chapter: !chapterGuaranteed,
-        verse: true,
-      },
-      total,
-      feedback: {
-        book: 'correct',
-        chapter: 'correct',
-        verse: versesOff <= 3 ? 'close' : 'wrong',
-        chaptersOff: 0,
-        versesOff,
-      },
-    };
+  let chapterPoints = 0;
+  let versePoints = 0;
+  if (chapterGuaranteed) {
+    versePoints = availablePoints * verseProximity;
+  } else {
+    const maxChapterSpan = totalChapters - 1;
+    const chapterFraction = Math.max(0, Math.min(1, chapterDistance / maxChapterSpan));
+    const chapterProximity = Math.max(0, Math.min(1, 1 - Math.pow(chapterFraction, 0.90)));
+    chapterPoints = availablePoints * 0.70 * chapterProximity;
+    versePoints = availablePoints * 0.30 * verseProximity;
   }
 
-  const maxChapterDistance = Math.max(chaptersInCorrectBook - 1, 1);
-  const chapterCloseness = Math.max(0, 1 - chapterDiff / maxChapterDistance);
-  const maxVerseDistance = Math.max(totalVersesInCorrectBook - 1, 1);
-  const positionCloseness = Math.max(0, 1 - textualVerseDistance / maxVerseDistance);
-
-  bookPoints = B;
-  chapterPoints = 0.6 * C * Math.pow(chapterCloseness, 1.5);
-  versePoints = (V + 5) * Math.pow(positionCloseness, 1.5);
-  total = clampScore(bookPoints + chapterPoints + versePoints);
-
+  const total = clampScore(correctBookFloor + chapterPoints + versePoints);
   return {
-    bookPoints,
+    bookPoints: correctBookFloor,
     chapterPoints,
     versePoints,
-    possiblePoints: {
-      testament: false,
-      category: false,
-      book: !bookGuaranteed,
-      chapter: !chapterGuaranteed,
-      verse: true,
-    },
+    possiblePoints,
     total,
     feedback: {
       book: 'correct',
-      chapter: chapterDiff <= 3 ? 'close' : 'wrong',
-      verse: 'wrong',
-      chaptersOff: chapterDiff,
+      chapter: guess.chapter === correct.chapter ? 'correct' : chapterDistance <= 3 ? 'close' : 'wrong',
+      verse: guess.chapter === correct.chapter && versesOff <= 3 ? 'close' : 'wrong',
+      chaptersOff: chapterDistance,
       versesOff,
     },
   };

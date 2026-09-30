@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGame } from '@/lib/gameContext';
 import { GameModeId } from '@/lib/gameModes';
-import { calculateScore } from '@/lib/scoring';
+import { applyContextPenalty, calculateScore } from '@/lib/scoring';
 import { bibleData, BookData } from '@/lib/bibleData';
 import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
@@ -248,7 +248,7 @@ export default function GamePage() {
 
     const contextVersesAdded = previousVerses.length + nextVerses.length;
     const contextPenalty = contextVersesAdded * 10;
-    const adjustedTotal = Math.max(0, breakdown.total - contextPenalty);
+    const adjustedTotal = applyContextPenalty(breakdown.total, contextVersesAdded);
 
     submitGuess(
       guess,
