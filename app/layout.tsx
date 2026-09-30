@@ -14,6 +14,10 @@ const bodyFont = Barlow({
   variable: '--font-body',
 });
 
+const isGitHubPages =
+  process.env.GITHUB_PAGES === 'true' || process.env.GITHUB_ACTIONS === 'true';
+const base = isGitHubPages ? '/BibleGuessr' : '';
+
 const THEME_BOOTSTRAP_SCRIPT = `
 (() => {
   const fallback = { color: 'ocean', mode: 'light' };
@@ -44,16 +48,16 @@ const THEME_BOOTSTRAP_SCRIPT = `
 export const metadata: Metadata = {
   title: 'BibleGuessr',
   description: 'A GeoGuessr-style Bible verse guessing game',
-  manifest: '/manifest.webmanifest',
+  manifest: `${base}/manifest.webmanifest`,
   icons: {
     icon: [
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: `${base}/favicon-32x32.png`, sizes: '32x32', type: 'image/png' },
+      { url: `${base}/favicon-16x16.png`, sizes: '16x16', type: 'image/png' },
+      { url: `${base}/icon-192.png`, sizes: '192x192', type: 'image/png' },
+      { url: `${base}/icon-512.png`, sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: ['/favicon-32x32.png'],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '512x512', type: 'image/png' }],
+    shortcut: [`${base}/favicon-32x32.png`],
+    apple: [{ url: `${base}/apple-touch-icon.png`, sizes: '180x180', type: 'image/png' }],
   },
   appleWebApp: {
     capable: true,
@@ -68,6 +72,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   maximumScale: 1,
   userScalable: false,
+  themeColor: '#191c22',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
