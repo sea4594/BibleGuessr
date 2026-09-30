@@ -132,8 +132,8 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
         </div>
       )}
       {isOpen && showScoringVisualizer && (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-[var(--bg)]">
-          <div className="flex h-12 shrink-0 items-center border-b border-[var(--line)] bg-[var(--panel)] px-2">
+        <div className="scoring-visualizer-overlay">
+          <div className="scoring-visualizer-toolbar">
             <button
               onClick={() => setShowScoringVisualizer(false)}
               className="btn-outline inline-flex items-center gap-1.5 px-3 py-1.5 text-sm"
@@ -146,7 +146,7 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
           <iframe
             title="BibleGuessr Scoring Visualizer"
             src={scoringVisualizerSrc}
-            className="min-h-0 flex-1 w-full border-0 bg-white"
+            className="scoring-visualizer-frame"
           />
         </div>
       )}

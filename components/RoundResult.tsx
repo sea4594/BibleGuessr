@@ -62,12 +62,13 @@ export default function RoundResult({
       rows.push({ label: 'Book', points: scoreBreakdown.bookPoints });
     }
 
-    if (scoreBreakdown.possiblePoints.chapter) {
-      rows.push({ label: 'Chapter', points: scoreBreakdown.chapterPoints });
-    }
-
-    if (scoreBreakdown.possiblePoints.verse) {
-      rows.push({ label: 'Verse', points: scoreBreakdown.versePoints });
+    if (scoreBreakdown.possiblePoints.chapter || scoreBreakdown.possiblePoints.verse) {
+      rows.push({
+        label: 'Chapter & Verse',
+        points:
+          (scoreBreakdown.possiblePoints.chapter ? scoreBreakdown.chapterPoints : 0) +
+          (scoreBreakdown.possiblePoints.verse ? scoreBreakdown.versePoints : 0),
+      });
     }
 
     return rows;

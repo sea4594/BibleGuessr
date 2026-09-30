@@ -45,6 +45,21 @@ const THEME_BOOTSTRAP_SCRIPT = `
 })();
 `;
 
+const THEME_COLOR_SYNC_SCRIPT = `
+(() => {
+  const sync = () => requestAnimationFrame(() => {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta && bg) meta.setAttribute('content', bg);
+  });
+  sync();
+  new MutationObserver(sync).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'data-mode'],
+  });
+})();
+`;
+
 export const metadata: Metadata = {
   title: 'BibleGuessr',
   description: 'A GeoGuessr-style Bible verse guessing game',
@@ -72,7 +87,7 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#191c22',
+  themeColor: '#edf2f7',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -82,8 +97,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script id="theme-bootstrap" strategy="beforeInteractive">
           {THEME_BOOTSTRAP_SCRIPT}
         </Script>
+        <Script id="theme-color-sync" strategy="beforeInteractive">
+          {THEME_COLOR_SYNC_SCRIPT}
+        </Script>
       </head>
-      <body className={`${bodyFont.variable} min-h-screen font-[var(--font-body)] antialiased`}>
+      <body className={`${bodyFont.variable} font-[var(--font-body)] antialiased`}>
         <AccountSyncProvider>
           <UiSettingsProvider>
             <GameProvider>

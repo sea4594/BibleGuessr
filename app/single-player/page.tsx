@@ -11,8 +11,6 @@ export default function SinglePlayerPage() {
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-3xl">
-          <h1 className="headline-serif text-3xl mb-1">Single Player</h1>
-
           <section className="menu-grid">
             <Link href="/single-player/whole-bible" className="surface-card mode-card">
               <h2 className="headline-serif text-2xl mb-1">Whole Bible</h2>

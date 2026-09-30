@@ -26,7 +26,7 @@ export default function VerticalDragSlider({
   const [dragging, setDragging] = useState(false);
   const [hoveringMouse, setHoveringMouse] = useState(false);
   const [hoverIdx, setHoverIdx] = useState(selectedIndex ?? 0);
-  const [rawPx, setRawPx] = useState(0); // calibrated px from top of track
+  const [popupPosition, setPopupPosition] = useState({ top: 4, left: 72 });
 
   const compute = useCallback((clientY: number) => {
     if (items.length === 0) return { idx: 0, px: 0 };
@@ -39,12 +39,24 @@ export default function VerticalDragSlider({
     return { idx, px };
   }, [items.length]);
 
+  const positionPopup = useCallback((clientY: number) => {
+    const rect = trackRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const halfPopupWidth = 66;
+    const left = Math.min(
+      window.innerWidth - halfPopupWidth - 4,
+      Math.max(halfPopupWidth + 4, rect.left + rect.width / 2)
+    );
+    const top = Math.max(4, clientY - POPUP_H - 10);
+    setPopupPosition({ top, left });
+  }, []);
+
   const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (disabled || items.length === 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    const { idx, px } = compute(e.clientY);
+    const { idx } = compute(e.clientY);
     setHoverIdx(idx);
-    setRawPx(px);
+    positionPopup(e.clientY);
     if (e.pointerType === 'mouse') {
       setHoveringMouse(true);
     }
@@ -55,9 +67,9 @@ export default function VerticalDragSlider({
     if (disabled) return;
     if (!dragging && e.pointerType !== 'mouse') return;
 
-    const { idx, px } = compute(e.clientY);
+    const { idx } = compute(e.clientY);
     setHoverIdx(idx);
-    setRawPx(px);
+    positionPopup(e.clientY);
 
     if (!dragging && e.pointerType === 'mouse') {
       setHoveringMouse(true);
@@ -66,9 +78,9 @@ export default function VerticalDragSlider({
 
   const onEnter = (e: React.PointerEvent<HTMLDivElement>) => {
     if (disabled || items.length === 0 || e.pointerType !== 'mouse') return;
-    const { idx, px } = compute(e.clientY);
+    const { idx } = compute(e.clientY);
     setHoverIdx(idx);
-    setRawPx(px);
+    positionPopup(e.clientY);
     setHoveringMouse(true);
   };
 
@@ -96,9 +108,6 @@ export default function VerticalDragSlider({
     const i = hoverIdx + off;
     return i < 0 || i >= items.length ? null : { label: items[i], isCenter: off === 0 };
   });
-
-  // Popup top: position so popup bottom sits just above the calibrated touch point
-  const popupTopPx = rawPx - POPUP_H - 10;
 
   return (
     <div className={`vslider-col${disabled ? ' opacity-40' : ''}`}>
@@ -137,7 +146,7 @@ export default function VerticalDragSlider({
         </div>
 
         {showPopup && (
-          <div className="vslider-popup vslider-popup-above" style={{ top: `${popupTopPx}px` }}>
+          <div className="vslider-popup vslider-popup-above" style={{ top: `${popupPosition.top}px`, left: `${popupPosition.left}px` }}>
             {contextItems.map((item, i) =>
               item === null ? (
                 <div key={i} className="vslider-popup-item empty" />
