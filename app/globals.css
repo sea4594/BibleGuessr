@@ -2166,3 +2166,290 @@ input[type='range']::-moz-range-thumb {
   z-index: 200;
   transform: translateX(-50%);
 }
+
+
+/* ====== 2026-09-30 mobile controls + compact party lobby hotfix ====== */
+/* Use the iPhone bottom safe area visually instead of leaving an empty strip. */
+.app-content-scroll,
+.app-content-fixed,
+.game-shell .app-content-fixed,
+.game-content,
+.scoring-visualizer-overlay {
+  padding-bottom: 0 !important;
+}
+.app-screen:has(> .main-bottom-nav) > .app-content-scroll {
+  padding-bottom: calc(74px + env(safe-area-inset-bottom)) !important;
+}
+.main-bottom-nav {
+  padding: 8px 8px 0 !important;
+}
+.main-nav-item {
+  min-height: calc(64px + env(safe-area-inset-bottom));
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+}
+
+/* One consistent native-control treatment throughout the app. */
+.settings-input,
+select,
+input[type='text'],
+input[type='number'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='tel'] {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--panel-soft) 90%, var(--panel));
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.2;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--line) 65%, transparent);
+}
+select {
+  padding-right: 32px;
+}
+.settings-input:focus,
+select:focus,
+input[type='text']:focus,
+input[type='number']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
+input[type='search']:focus,
+input[type='tel']:focus {
+  border-color: color-mix(in oklab, var(--accent) 78%, var(--line-strong));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+}
+.settings-input:disabled,
+select:disabled,
+input:disabled {
+  opacity: 0.55;
+}
+.party-gamemode-select,
+.party-book-select,
+.settings-modal select {
+  width: 100% !important;
+}
+.timer-inline-select {
+  width: min(100%, 9rem) !important;
+  min-width: 7.5rem !important;
+  min-height: 42px;
+}
+.party-join-slot-input {
+  box-shadow: none !important;
+}
+
+/* Party lobby: fixed viewport, no outer card, compact panels, internal member scrolling. */
+.multiplayer-party-content {
+  overflow: hidden !important;
+  padding-bottom: calc(74px + env(safe-area-inset-bottom)) !important;
+}
+.multiplayer-party-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  padding-bottom: 4px;
+}
+.multiplayer-tab-row {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.multiplayer-tab-row > button {
+  min-height: 38px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.party-lobby-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  overflow: hidden;
+  padding: 0 0 50px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.party-header-row {
+  flex: 0 0 auto;
+  gap: 7px;
+}
+.party-header-half {
+  padding: 5px 8px;
+  border-radius: 10px;
+}
+.party-code-value {
+  font-size: clamp(1.4rem, 4vw, 1.85rem);
+  line-height: 1;
+}
+.party-join-slot-row {
+  gap: 5px;
+  margin-top: 2px;
+}
+.party-join-slot-input {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 0 2px;
+  font-size: 0.92rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--line-strong);
+  border-radius: 0;
+}
+.party-join-action-btn {
+  min-height: 30px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+}
+.party-header-actions {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+.party-header-actions .btn-outline {
+  min-height: 32px;
+  padding: 5px 9px !important;
+}
+.party-lobby-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px;
+  overflow: hidden;
+}
+.party-members-block,
+.party-host-controls {
+  min-height: 0;
+  border-radius: 10px;
+  padding: 8px;
+}
+.party-members-block {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.party-members-block > p {
+  flex: 0 0 auto;
+  margin-bottom: 5px !important;
+  font-size: 0.88rem;
+}
+.party-members-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+.party-member-row {
+  min-height: 42px;
+  padding: 5px 7px;
+  gap: 7px;
+}
+.party-member-row p {
+  line-height: 1.05;
+}
+.party-host-controls {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.party-host-controls .eyebrow {
+  margin-bottom: 5px !important;
+}
+.party-host-controls label {
+  margin-bottom: 3px !important;
+}
+.party-host-controls .party-gamemode-row,
+.party-host-controls > select,
+.party-host-controls > .settings-input {
+  margin-bottom: 6px !important;
+}
+.party-host-controls .settings-input,
+.party-host-controls select {
+  min-height: 38px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 0.9rem;
+}
+.party-start-error {
+  position: fixed;
+  left: 50%;
+  bottom: calc(124px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(860px, calc(100% - 24px));
+  z-index: 34;
+  margin: 0;
+  text-align: center;
+}
+.party-start-dock {
+  position: fixed;
+  left: 50%;
+  bottom: calc(74px + env(safe-area-inset-bottom) + 8px);
+  transform: translateX(-50%);
+  width: min(860px, calc(100% - 24px));
+  z-index: 34;
+}
+.party-start-btn {
+  min-height: 42px;
+  padding: 8px 12px !important;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .party-gamemode-row.has-book {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .party-lobby-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(74px, 0.55fr) minmax(190px, 1.45fr);
+    gap: 7px;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 1000px) and (max-height: 600px) {
+  .game-content.app-content-fixed {
+    padding-bottom: 2px !important;
+  }
+  .multiplayer-party-page {
+    padding-top: 4px;
+    padding-bottom: 2px;
+    gap: 4px;
+  }
+  .multiplayer-tab-row > button {
+    min-height: 30px;
+    padding: 4px 7px;
+  }
+  .party-lobby-shell {
+    gap: 4px;
+    padding-bottom: 44px;
+  }
+  .party-header-half {
+    padding: 3px 6px;
+  }
+  .party-lobby-main {
+    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 5px;
+  }
+  .party-members-block,
+  .party-host-controls {
+    padding: 5px;
+  }
+  .party-start-dock {
+    bottom: calc(74px + env(safe-area-inset-bottom) + 4px);
+  }
+}

@@ -156,9 +156,7 @@ export default function ProfilePage() {
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
 
-          {/* Identity */}
           <section className="surface-card p-5">
-            <p className="eyebrow mb-2">Identity</p>
             <div className="flex flex-col items-center gap-3 mb-4">
               <Image
                 src={avatarToDataUri(profile.avatar)}
@@ -192,14 +190,14 @@ export default function ProfilePage() {
                     : 'Using guest profile (device only)'}
             </p>
 
-            {firebaseEnabled && (
+            {firebaseEnabled && (!user || syncStatus === 'syncing' || Boolean(syncError)) && (
               <p className="content-muted text-xs mb-4">
                 {syncStatus === 'syncing'
                   ? 'Syncing your profile and app data...'
                   : syncError
                     ? syncError
                     : user
-                      ? 'Your profile, history, settings, and hot-seat config sync to this Google account.'
+                      ? ''
                       : 'Sign in with Google to sync everything across devices.'}
               </p>
             )}

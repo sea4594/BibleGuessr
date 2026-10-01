@@ -511,9 +511,9 @@ export default function MultiplayerPage() {
     <main className="app-screen">
       <AppTopBar title="Multiplayer" />
 
-      <div className="app-content app-content-scroll">
-        <div className="page max-w-4xl min-w-0">
-          <div className="grid grid-cols-2 gap-2 mb-3">
+      <div className={tab === 'party' ? 'app-content app-content-fixed multiplayer-party-content' : 'app-content app-content-scroll'}>
+        <div className={tab === 'party' ? 'page max-w-4xl min-w-0 multiplayer-party-page' : 'page max-w-4xl min-w-0'}>
+          <div className="multiplayer-tab-row grid grid-cols-2 gap-2">
             <button onClick={() => void switchTab('party')} className={tab === 'party' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Party</button>
             <button onClick={() => void switchTab('hot-seat')} className={tab === 'hot-seat' ? 'btn-primary py-2.5' : 'btn-outline py-2.5'}>Hot Seat</button>
           </div>
@@ -564,8 +564,8 @@ export default function MultiplayerPage() {
           )}
 
           {tab === 'party' && (
-            <section className="surface-card p-4">
-              <div className="party-header-row mb-3">
+            <section className="party-lobby-shell">
+              <div className="party-header-row">
                 <div className="party-header-half party-host-half">
                   <p className="content-muted text-xs">Host</p>
                   <p className="headline-serif party-code-value">{firebaseConfigured && room ? room.code : '....'}</p>
@@ -605,7 +605,7 @@ export default function MultiplayerPage() {
               </div>
 
               {showPartyLobbyAction && (
-                <div className="party-header-actions mb-4">
+                <div className="party-header-actions">
                   {isHost && (room?.members.length ?? 0) > 1 ? (
                     <button
                       onClick={() => void handleEndLobby()}
@@ -638,18 +638,19 @@ export default function MultiplayerPage() {
               )}
               {firebaseConfigured && room && (
                 <>
-                  <div className="party-members-block mb-3">
+                  <div className="party-lobby-main">
+                    <div className="party-members-block">
                     <p className="font-semibold mb-2">Party Members</p>
-                    <div className="grid gap-2">
+                    <div className="party-members-list grid gap-1.5">
                       {room.members.map(member => (
                         <div key={member.id} className="party-member-row">
                           <Image
                             src={avatarToDataUri(member.avatar)}
                             alt={`${member.name} avatar`}
-                            width={48}
-                            height={48}
+                            width={36}
+                            height={36}
                             unoptimized
-                            className="w-12 h-12 border border-[var(--line)]"
+                            className="w-9 h-9 border border-[var(--line)]"
                           />
                           <div className="flex-1">
                             <p className="text-sm font-semibold">{member.name}</p>
@@ -660,7 +661,7 @@ export default function MultiplayerPage() {
                     </div>
                   </div>
 
-                  <div className="party-host-controls mb-3">
+                    <div className="party-host-controls">
                     <p className="eyebrow mb-2">Party Settings</p>
 
                     <label className="text-sm font-semibold block mb-1">Game Mode</label>
@@ -755,20 +756,21 @@ export default function MultiplayerPage() {
                     {!isHost && (
                       <p className="text-xs content-muted mt-3">Only the host can edit these settings.</p>
                     )}
+                    </div>
                   </div>
 
-                  {partyStartError && <p className="text-xs text-[var(--danger)] mb-3">{partyStartError}</p>}
+                  {partyStartError && <p className="party-start-error text-xs text-[var(--danger)]">{partyStartError}</p>}
 
-                  <div className="text-center">
+                  <div className="party-start-dock">
                     <button
                       onClick={() => void startParty()}
-                      className="btn-primary w-full py-2.5"
+                      className="btn-primary w-full party-start-btn"
                       disabled={!isHost || !lobbyComplete || partyStartPending}
                     >
                       {isHost
                         ? partyStartPending
                           ? 'Starting...'
-                          : 'Start Party Game'
+                          : 'Start'
                         : 'Waiting for host to start'}
                     </button>
                   </div>
