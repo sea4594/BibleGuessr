@@ -356,11 +356,13 @@ export default function GamePage() {
 
   const handleExitToHome = () => {
     const destination = session?.returnPath ?? '/';
+    suppressEmptySessionRedirectRef.current = true;
     resetGame();
     router.push(destination);
   };
 
   const handleExitSummaryToHome = () => {
+    suppressEmptySessionRedirectRef.current = true;
     resetGame();
     router.push('/');
   };

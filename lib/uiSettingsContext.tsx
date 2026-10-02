@@ -54,7 +54,7 @@ const DEFAULT_SETTINGS: UiSettings = {
   preferredGameMode: 'full-bible',
   preferredBook: bibleData[0]?.book ?? 'Genesis',
   preferredCustomBooks: bibleData.map(book => book.book),
-  quickPlayTimerSeconds: 60,
+  quickPlayTimerSeconds: 30,
 };
 
 function normalizePreferredCustomBooks(raw: unknown) {
@@ -77,7 +77,7 @@ function normalizePreferredCustomBooks(raw: unknown) {
 function clampQuickPlayTimerSeconds(value: number) {
   if (value === NO_TIMER_SECONDS) return NO_TIMER_SECONDS;
   const normalized = Number.isFinite(value) ? Math.round(value / 5) * 5 : DEFAULT_SETTINGS.quickPlayTimerSeconds;
-  return Math.min(90, Math.max(5, normalized));
+  return Math.min(60, Math.max(5, normalized));
 }
 
 const UiSettingsContext = createContext<UiSettingsContextType | null>(null);

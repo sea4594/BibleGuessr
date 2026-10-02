@@ -479,11 +479,16 @@ export default function PartyGameClient() {
     const shouldLeave = window.confirm('Are you sure you want to leave the lobby?');
     if (!shouldLeave) return;
 
-    await leaveParty(room.code, partyMemberId);
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(PARTY_CODE_STORAGE_KEY);
     }
-    router.push('/multiplayer?tab=party');
+    try {
+      await leaveParty(room.code, partyMemberId);
+    } catch (error) {
+      console.error('Unable to leave party cleanly before navigation:', error);
+    } finally {
+      router.push('/multiplayer?tab=party');
+    }
   };
 
   useEffect(() => {

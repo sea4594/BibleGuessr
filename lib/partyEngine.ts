@@ -101,7 +101,7 @@ export interface PartyGameState {
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const PARTY_CODE_TTL_MS = 1000 * 60 * 60 * 6;
 const PARTY_TIMER_MIN_SECONDS = 5;
-const PARTY_TIMER_MAX_SECONDS = 90;
+const PARTY_TIMER_MAX_SECONDS = 60;
 export const PARTY_ROUND_START_DELAY_MS = 2000;
 
 function sanitizeAvatarForStorage(avatar: AvatarSpec): AvatarSpec {
@@ -187,7 +187,7 @@ function makeDefaultLobbySettings(): PartyLobbySettings {
     selectedBook: null,
     selectedBooks: null,
     roundsPerPlayer: null,
-    timerDurationSeconds: null,
+    timerDurationSeconds: 30,
   };
 }
 
