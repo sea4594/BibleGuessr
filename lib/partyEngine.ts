@@ -960,6 +960,14 @@ export async function leaveParty(code: string, memberId: string) {
       const nextRoundScores = { ...game.roundScores };
       delete nextRoundScores[actorId];
 
+      const nextRoundHistory = (game.roundHistory ?? []).map(entry => {
+        const submissions = { ...entry.submissions };
+        const roundScores = { ...entry.roundScores };
+        delete submissions[actorId];
+        delete roundScores[actorId];
+        return { ...entry, submissions, roundScores };
+      });
+
       const activeMemberIds = normalizedMembers.map(member => member.id);
       const allSubmitted =
         game.status === 'in-round' &&
@@ -971,6 +979,7 @@ export async function leaveParty(code: string, memberId: string) {
         submissions: nextSubmissions,
         scores: nextScores,
         roundScores: nextRoundScores,
+        roundHistory: nextRoundHistory,
         status: allSubmitted ? 'round-complete' : game.status,
         updatedAt: Date.now(),
       };

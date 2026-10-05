@@ -658,8 +658,6 @@ export default function MultiplayerPage() {
                   </div>
 
                     <div className="party-host-controls">
-                    <p className="eyebrow mb-2">Party Settings</p>
-
                     <label className="text-sm font-semibold block mb-1">Game Mode</label>
                     <div className={`party-gamemode-row mb-3 ${lobbySettings?.modeId === 'book-selection' ? 'has-book' : ''}`}>
                       <select

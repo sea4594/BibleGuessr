@@ -22,7 +22,7 @@ import { ensureFirebaseSession, getFirebaseAuth } from '@/lib/firebaseClient';
 import { readClientId, readLocalProfile } from '@/lib/userProfile';
 import { gameModes } from '@/lib/gameModes';
 import { bibleData, BookData } from '@/lib/bibleData';
-import { applyContextPenalty, calculateScore } from '@/lib/scoring';
+import { calculateScore } from '@/lib/scoring';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 import {
   buildVerseReferencePool,
@@ -430,7 +430,7 @@ export default function PartyGameClient() {
 
           const contextVersesAdded = previousVerses.length + nextVerses.length;
           const penalty = contextVersesAdded * 10;
-          const adjustedTotal = applyContextPenalty(breakdown.total, contextVersesAdded);
+          const adjustedTotal = Math.max(0, breakdown.total - penalty);
           submitted = await submitRoundScore(adjustedTotal, breakdown.total, false, timeoutGuess, breakdown.feedback);
         } else {
           submitted = await submitRoundScore(0, 0, true);
@@ -500,7 +500,7 @@ export default function PartyGameClient() {
 
     const contextVersesAdded = previousVerses.length + nextVerses.length;
     const penalty = contextVersesAdded * 10;
-    const adjustedTotal = applyContextPenalty(breakdown.total, contextVersesAdded);
+    const adjustedTotal = Math.max(0, breakdown.total - penalty);
 
     await submitRoundScore(adjustedTotal, breakdown.total, false, guess, breakdown.feedback);
   }, [game, modeConfig, myMember, nextVerses.length, previousVerses.length, submitRoundScore, verse]);
@@ -666,7 +666,12 @@ export default function PartyGameClient() {
     <main className="app-screen game-shell">
       <header className="game-topbar">
         <div className="game-topbar-exit">
-          <button onClick={() => void handleExitParty()} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
+          <button
+            onClick={() => void (isHost ? handleHostReturnToLobby() : handleExitParty())}
+            className="btn-outline px-3 py-1.5 text-sm"
+          >
+            {isHost ? 'End Game' : 'Exit'}
+          </button>
         </div>
         <p className="game-topbar-round">
           {game.status === 'finished' ? (
@@ -680,7 +685,7 @@ export default function PartyGameClient() {
         </div>
       </header>
 
-      <div className={`app-content ${game.status === 'in-round' ? 'app-content-fixed' : 'app-content-scroll'} game-content`}>
+      <div className={`app-content ${game.status === 'finished' ? 'app-content-scroll' : 'app-content-fixed'} game-content`}>
         <div className="page !max-w-6xl w-full">
           {error && (
             <section className="surface-card p-3">
@@ -746,58 +751,53 @@ export default function PartyGameClient() {
           )}
 
           {game.status === 'round-complete' && (
-            <section className="surface-card p-5 party-round-summary">
-              <h2 className="headline-serif text-3xl mb-2">Round {game.currentRound}</h2>
-              <section className="surface-card p-4 sm:p-5 mb-4 w-full party-correct-answer-sticky">
-                <p className="text-center text-[2rem] sm:text-[2.7rem] lg:text-[3rem] font-black leading-[0.98]">
-                  {verse?.book} {verse?.chapter}:{verse?.verse}
-                </p>
-              </section>
-              <section className="surface-card p-4 sm:p-5 mb-4 text-left w-full">
-                <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Round Verse</p>
-                <p className="text-base sm:text-lg leading-relaxed italic">&ldquo;{verse?.text}&rdquo;</p>
-              </section>
-
-
-
-              <div className="surface-card p-4 sm:p-5 mb-4 w-full">
-                <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Round Scores</h3>
-                <div className="grid gap-2">
-                  {roundRows.map(({ member, submission, roundScore, totalScore }) => (
-                    <div key={member.id} className="party-round-table-row">
-                      <div className="party-round-table-meta">
-                        <p className="text-sm font-semibold">{member.name}</p>
-                        <p className="text-sm whitespace-nowrap overflow-x-auto">
-                          <span className="content-muted">Guess:&nbsp;</span>
-                          {submission ? renderSubmissionGuess(submission, true) : <span style={{ color: '#ef4444' }}>No guess</span>}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="party-round-table-score">{clampPercent(roundScore)}%</p>
-                        <p className="text-xs content-muted">
-                          total {toOverallPercent(totalScore, game.currentRound)}%
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <section className="party-round-summary-fixed">
+              <div className="party-round-summary-header">
+                <section className="surface-card party-round-verse-card">
+                  <p className="text-base sm:text-lg leading-relaxed italic">&ldquo;{verse?.text}&rdquo;</p>
+                </section>
+                <section className="surface-card party-round-answer-card">
+                  <p className="text-center text-[2rem] sm:text-[2.7rem] lg:text-[3rem] font-black leading-[0.98]">
+                    {verse?.book} {verse?.chapter}:{verse?.verse}
+                  </p>
+                </section>
               </div>
 
-              {isHost ? (
-                <button
-                  onClick={() => void handleHostAdvance()}
-                  disabled={isAdvancing}
-                  className="btn-primary w-full py-3 text-lg"
-                >
-                  {isAdvancing
-                    ? 'Preparing...'
-                    : game.currentRound >= game.totalRounds
-                      ? 'Finish Game'
-                      : 'Start Next Round'}
-                </button>
-              ) : (
-                <p className="content-muted text-sm">Waiting for host to start the next round…</p>
-              )}
+              <div className="party-round-scores-scroll">
+                {roundRows.map(({ member, submission, roundScore, totalScore }) => (
+                  <div key={member.id} className="party-round-table-row">
+                    <div className="party-round-table-meta">
+                      <p className="text-sm font-semibold">{member.name}</p>
+                      <p className="text-sm whitespace-nowrap overflow-x-auto">
+                        <span className="content-muted">Guess:&nbsp;</span>
+                        {submission ? renderSubmissionGuess(submission, true) : <span style={{ color: '#ef4444' }}>No guess</span>}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="party-round-table-score">{clampPercent(roundScore)}%</p>
+                      <p className="text-xs content-muted">total {toOverallPercent(totalScore, game.currentRound)}%</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="party-round-summary-footer">
+                {isHost ? (
+                  <button
+                    onClick={() => void handleHostAdvance()}
+                    disabled={isAdvancing}
+                    className="btn-primary w-full py-3 text-lg"
+                  >
+                    {isAdvancing
+                      ? 'Preparing...'
+                      : game.currentRound >= game.totalRounds
+                        ? 'Game Summary'
+                        : 'Start Next Round'}
+                  </button>
+                ) : (
+                  <p className="content-muted text-sm text-center">Waiting for host to continue...</p>
+                )}
+              </div>
             </section>
           )}
 

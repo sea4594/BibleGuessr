@@ -9,11 +9,24 @@ import { readHotSeatSettings } from '@/lib/hotSeatSettings';
 import { toTimerDurationSeconds } from '@/lib/timerOptions';
 
 type ModeChoice = 'full-bible' | 'sections' | 'book' | 'custom';
+const HOTSEAT_MODE_STORAGE_KEY = 'bg-hotseat-mode-v1';
+
+function readHotSeatMode(): ModeChoice {
+  if (typeof window === 'undefined') return 'full-bible';
+  const stored = localStorage.getItem(HOTSEAT_MODE_STORAGE_KEY);
+  return stored === 'sections' || stored === 'book' || stored === 'custom' || stored === 'full-bible'
+    ? stored
+    : 'full-bible';
+}
+
+function writeHotSeatMode(mode: ModeChoice) {
+  if (typeof window !== 'undefined') localStorage.setItem(HOTSEAT_MODE_STORAGE_KEY, mode);
+}
 
 export default function HotSeatGamemodePage() {
   const router = useRouter();
   const { startGame } = useGame();
-  const [selectedMode, setSelectedMode] = useState<ModeChoice | null>(null);
+  const [selectedMode, setSelectedMode] = useState<ModeChoice>(() => readHotSeatMode());
 
   const modeCards = useMemo(() => [
     {
@@ -89,7 +102,7 @@ export default function HotSeatGamemodePage() {
             {modeCards.map(mode => (
               <button
                 key={mode.id}
-                onClick={() => setSelectedMode(mode.id)}
+                onClick={() => { setSelectedMode(mode.id); writeHotSeatMode(mode.id); }}
                 className={`surface-card mode-card text-left w-full ${selectedMode === mode.id ? 'mode-card-selected' : ''}`}
               >
                 <h2 className="headline-serif text-2xl mb-1">{mode.title}</h2>

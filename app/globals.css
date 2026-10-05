@@ -2590,3 +2590,208 @@ input:disabled {
   max-width: 32rem;
   margin: 0 auto;
 }
+
+/* ===== 2026-10-05 party round summary, multiplayer summary, and mobile setup fixes ===== */
+/* Give Party Members all remaining lobby height; settings stays compact and scrolls early. */
+.party-lobby-main {
+  align-items: stretch !important;
+}
+.party-members-block {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+.party-host-controls {
+  align-self: start !important;
+  height: auto !important;
+  max-height: 180px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+@media (max-width: 640px) {
+  .party-lobby-main {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+  }
+  .party-members-block {
+    min-height: 0 !important;
+  }
+  .party-host-controls {
+    max-height: 142px !important;
+  }
+}
+
+/* Party round summary: verse + answer fixed at top, only scores scroll, action fixed at bottom. */
+.party-round-summary-fixed {
+  width: min(100%, 46rem);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+.party-round-summary-header,
+.party-round-summary-footer {
+  flex: 0 0 auto;
+}
+.party-round-summary-header {
+  display: grid;
+  gap: 8px;
+}
+.party-round-verse-card,
+.party-round-answer-card {
+  margin: 0 !important;
+  padding: 10px 12px !important;
+}
+.party-round-scores-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 1px;
+}
+.party-round-summary-footer {
+  padding-top: 1px;
+}
+
+/* Same post-game structure for Hot Seat and Party. */
+.multiplayer-summary {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.multiplayer-summary-leaderboard {
+  padding: 8px 12px !important;
+}
+.multiplayer-summary-player {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.multiplayer-summary-player:first-child {
+  border-top: 0;
+}
+.multiplayer-summary-avatar {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.multiplayer-summary-player-name {
+  min-width: 0;
+  font-weight: 750;
+}
+.multiplayer-summary-final-score {
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+.multiplayer-summary-title {
+  margin: 4px 0 0;
+  font-size: clamp(1.6rem, 7vw, 2.25rem);
+}
+.multiplayer-summary-rounds {
+  display: grid;
+  gap: 8px;
+}
+.multiplayer-summary-round-card {
+  padding: 12px !important;
+}
+.multiplayer-summary-answer {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: clamp(1.55rem, 7vw, 2.3rem);
+  line-height: 1;
+  font-weight: 900;
+}
+.multiplayer-summary-round-entries {
+  display: grid;
+}
+.multiplayer-summary-entry {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 0.8fr) minmax(0, 1.4fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.multiplayer-summary-entry-name,
+.multiplayer-summary-entry-score {
+  font-weight: 750;
+}
+.multiplayer-summary-entry-guess {
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.multiplayer-summary-entry-score {
+  text-align: right;
+}
+
+/* Quick Play: keep Timer and Seconds together, with a real gap after Rounds. */
+.home-page .timer-inline-row {
+  margin-top: 8px !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+.home-page .timer-inline-controls,
+.home-page .timer-inline-label {
+  flex-wrap: nowrap !important;
+}
+.home-page .timer-inline-label {
+  white-space: nowrap !important;
+}
+.home-page .timer-inline-select {
+  width: 7.5rem !important;
+  min-width: 7.5rem !important;
+  max-width: 7.5rem !important;
+  flex: 0 0 7.5rem !important;
+}
+
+/* Single Player setup controls must stay inside the iPhone viewport. */
+.setup-page,
+.setup-panel,
+.setup-panel-section,
+.setup-panel-section > *,
+.setup-panel-section .h-wheel-wrap,
+.setup-panel-section .h-wheel-viewport,
+.setup-panel-section .h-wheel-track,
+.setup-panel-section .timer-inline-row,
+.setup-panel-section .timer-inline-controls,
+.setup-panel-section .timer-inline-label {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+.setup-panel-section {
+  overflow-x: hidden !important;
+}
+.setup-panel-section .timer-inline-row {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+.setup-panel-section .timer-inline-controls {
+  justify-content: start !important;
+  overflow: hidden;
+}
+.setup-panel-section .timer-inline-label {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+}
+.setup-panel-section select,
+.setup-panel-section .settings-input {
+  max-width: 100% !important;
+}

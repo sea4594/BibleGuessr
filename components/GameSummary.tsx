@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { GameSession } from '@/lib/gameContext';
 import { addGameRecord } from '@/lib/gameStats';
+import MultiplayerGameSummary from '@/components/MultiplayerGameSummary';
+import { avatarToDataUri, defaultAvatarSpec } from '@/lib/avatarSystem';
 
 interface Props {
   session: GameSession;
@@ -175,6 +177,59 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
       rounds: session.totalRounds,
     });
   }, [session.mode, session.modeConfig.name, session.totalRounds, totalScore, accuracy]);
+
+  if (isHotSeat && session.multiplayer?.enabled && hotSeatGuessesByRound) {
+    const hotSeatPlayers = playerTotals.map((entry, idx) => ({
+      id: entry.player,
+      name: entry.player,
+      avatarSrc: avatarToDataUri(defaultAvatarSpec(idx)),
+      score: entry.percent,
+    }));
+    const hotSeatRounds = hotSeatGuessesByRound.map(entry => ({
+      id: String(entry.logicalRound),
+      correctAnswer: `${entry.verse.book} ${entry.verse.chapter}:${entry.verse.verse}`,
+      entries: session.multiplayer!.players.map(player => {
+        const playerRound = entry.byPlayer.get(player);
+        return {
+          playerId: player,
+          name: player,
+          guess: !playerRound || playerRound.wasBlankGuess
+            ? 'No guess'
+            : `${playerRound.guess.book} ${playerRound.guess.chapter}:${playerRound.guess.verse}`,
+          score: playerRound?.score ?? 0,
+        };
+      }),
+    }));
+
+    return (
+      <main className="app-screen">
+        <header className="topbar">
+          <button onClick={onHome} className="btn-outline px-3 py-2 text-sm">Exit</button>
+          <div className="font-semibold">Game Summary</div>
+          <span className="topbar-placeholder" aria-hidden="true" />
+        </header>
+
+        <div className="app-content app-content-scroll">
+          <div className="page max-w-lg">
+            <MultiplayerGameSummary players={hotSeatPlayers} rounds={hotSeatRounds} />
+          </div>
+        </div>
+
+        <div className="round-screen-footer">
+          <div className="footer-inner">
+            {onSelectGameMode ? (
+              <div className="grid gap-2">
+                <button onClick={onSelectGameMode} className="btn-outline w-full py-3 text-base">Select Game Mode</button>
+                <button onClick={onPlayAgain} className="btn-primary w-full py-4 text-lg">Play Again</button>
+              </div>
+            ) : (
+              <button onClick={onPlayAgain} className="btn-primary w-full py-4 text-lg">Play Again</button>
+            )}
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="app-screen">
