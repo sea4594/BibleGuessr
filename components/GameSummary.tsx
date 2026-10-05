@@ -188,6 +188,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
         <div className="page max-w-lg">
           <p className="content-muted mb-3">{session.modeConfig.name}</p>
 
+          {!isHotSeat && (
           <div className="surface-card p-4 sm:p-5 mb-4 w-full">
             <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Round Breakdown</h3>
             {roundBreakdownRows.map(row => (
@@ -202,6 +203,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
               </button>
             ))}
           </div>
+          )}
 
           {multiplayerByRound && (
             <div className="surface-card p-4 sm:p-5 mb-4 w-full">

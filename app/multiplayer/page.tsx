@@ -131,9 +131,6 @@ export default function MultiplayerPage() {
   const isCurrentMember = Boolean(
     room?.members.some(member => member.id === partyMemberId || member.id === clientId)
   );
-  const showPartyLobbyAction = Boolean(
-    room && isCurrentMember && ((isHost && room.members.length > 1) || !isHost)
-  );
   const lobbySettings = room?.lobbySettings;
   const lobbyComplete = Boolean(
     lobbySettings?.modeId &&
@@ -401,17 +398,18 @@ export default function MultiplayerPage() {
     setActiveRoomCode(null);
   };
 
-  const handleLeaveLobby = async () => {
-    if (!activeRoomCode || !room || isHost || partyActionPending) return;
-
-    setPartyActionPending(true);
-    await leaveParty(activeRoomCode, partyMemberId);
+  const handleLeaveLobby = () => {
+    if (!activeRoomCode || !room || isHost) return;
+    const codeToLeave = activeRoomCode;
     setRoom(null);
     setActiveRoomCode(null);
     setPartyLobbyError('');
     setPartyStartError('');
     setPartyActionPending(false);
-  };
+    void leaveParty(codeToLeave, partyMemberId).catch(error => {
+      console.warn('Unable to leave lobby cleanly after local exit:', error);
+    });
+  }
 
   const handleEndLobby = async () => {
     if (!activeRoomCode || !room || !isHost || partyActionPending) return;
@@ -565,6 +563,25 @@ export default function MultiplayerPage() {
 
           {tab === 'party' && (
             <section className="party-lobby-shell">
+              {room && isCurrentMember && !isHost ? (
+                <div className="party-lobby-status-card mb-3">
+                  <p className="content-muted text-xs">Joined Lobby:</p>
+                  <p className="headline-serif party-code-value">{room.code}</p>
+                  <button onClick={handleLeaveLobby} className="btn-outline party-lobby-corner-action">Leave Lobby</button>
+                </div>
+              ) : room && isHost && room.members.length > 1 ? (
+                <div className="party-lobby-status-card mb-3">
+                  <p className="content-muted text-xs">Hosting:</p>
+                  <p className="headline-serif party-code-value">{room.code}</p>
+                  <button
+                    onClick={() => void handleEndLobby()}
+                    disabled={partyActionPending}
+                    className="btn-outline party-lobby-corner-action"
+                  >
+                    {partyActionPending ? 'Ending...' : 'End Lobby'}
+                  </button>
+                </div>
+              ) : (
               <div className="party-header-row">
                 <div className="party-header-half party-host-half">
                   <p className="content-muted text-xs">Host</p>
@@ -603,27 +620,6 @@ export default function MultiplayerPage() {
                   </button>
                 </div>
               </div>
-
-              {showPartyLobbyAction && (
-                <div className="party-header-actions">
-                  {isHost && (room?.members.length ?? 0) > 1 ? (
-                    <button
-                      onClick={() => void handleEndLobby()}
-                      disabled={partyActionPending}
-                      className="btn-outline px-3 py-2 text-sm"
-                    >
-                      {partyActionPending ? 'Ending...' : 'End Lobby'}
-                    </button>
-                  ) : !isHost ? (
-                    <button
-                      onClick={() => void handleLeaveLobby()}
-                      disabled={partyActionPending}
-                      className="btn-outline px-3 py-2 text-sm"
-                    >
-                      {partyActionPending ? 'Leaving...' : 'Leave Lobby'}
-                    </button>
-                  ) : null}
-                </div>
               )}
 
               {!firebaseConfigured && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}

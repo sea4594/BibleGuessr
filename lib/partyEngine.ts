@@ -68,6 +68,13 @@ export interface PartySubmission {
   };
 }
 
+export interface PartyRoundHistoryEntry {
+  round: number;
+  verse: PartyVerse;
+  submissions: Record<string, PartySubmission>;
+  roundScores: Record<string, number>;
+}
+
 export interface StartPartyGameConfig {
   modeId: GameModeId;
   roundsPerPlayer: number;
@@ -93,6 +100,7 @@ export interface PartyGameState {
   submissions: Record<string, PartySubmission>;
   roundScores: Record<string, number>;
   scores: Record<string, number>;
+  roundHistory?: PartyRoundHistoryEntry[];
   startedBy: string;
   startedAt: number;
   updatedAt: number;
@@ -101,6 +109,7 @@ export interface PartyGameState {
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const PARTY_CODE_TTL_MS = 1000 * 60 * 60 * 6;
 const PARTY_TIMER_MIN_SECONDS = 5;
+const PARTY_HOST_SETTINGS_STORAGE_KEY = 'bg-party-host-settings-v1';
 const PARTY_TIMER_MAX_SECONDS = 60;
 export const PARTY_ROUND_START_DELAY_MS = 2000;
 
@@ -183,12 +192,33 @@ function clampPartyTimerDurationSeconds(value: number | null): number | null {
 
 function makeDefaultLobbySettings(): PartyLobbySettings {
   return {
-    modeId: null,
+    modeId: 'full-bible',
     selectedBook: null,
     selectedBooks: null,
-    roundsPerPlayer: null,
+    roundsPerPlayer: 3,
     timerDurationSeconds: 30,
   };
+}
+
+function readStoredPartyHostSettings(): Partial<PartyLobbySettings> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(PARTY_HOST_SETTINGS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Partial<PartyLobbySettings>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function storePartyHostSettings(settings: PartyLobbySettings) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PARTY_HOST_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // Local storage is best-effort only.
+  }
 }
 
 function normalizeSelectedBooks(raw: unknown) {
@@ -208,7 +238,8 @@ function normalizeSelectedBooks(raw: unknown) {
 }
 
 function normalizeLobbySettings(raw: unknown): PartyLobbySettings {
-  if (!raw || typeof raw !== 'object') return makeDefaultLobbySettings();
+  const defaults = makeDefaultLobbySettings();
+  if (!raw || typeof raw !== 'object') return defaults;
   const value = raw as {
     modeId?: unknown;
     selectedBook?: unknown;
@@ -217,7 +248,9 @@ function normalizeLobbySettings(raw: unknown): PartyLobbySettings {
     timerDurationSeconds?: unknown;
   };
 
-  const modeId = typeof value.modeId === 'string' && isSelectablePartyMode(value.modeId) ? value.modeId : null;
+  const modeId = typeof value.modeId === 'string' && isSelectablePartyMode(value.modeId)
+    ? value.modeId
+    : defaults.modeId;
   const normalizedSelectedBooks = normalizeSelectedBooks(value.selectedBooks);
 
   return {
@@ -226,10 +259,10 @@ function normalizeLobbySettings(raw: unknown): PartyLobbySettings {
     selectedBooks: modeId === 'custom' ? normalizedSelectedBooks : null,
     roundsPerPlayer: clampRoundsPerPlayer(
       typeof value.roundsPerPlayer === 'number' ? value.roundsPerPlayer : null
-    ),
+    ) ?? defaults.roundsPerPlayer,
     timerDurationSeconds: clampPartyTimerDurationSeconds(
       typeof value.timerDurationSeconds === 'number' ? value.timerDurationSeconds : null
-    ),
+    ) ?? defaults.timerDurationSeconds,
   };
 }
 
@@ -291,10 +324,15 @@ export async function createUniquePartyCode(): Promise<string | null> {
   return null;
 }
 
-export async function hostParty(host: PartyMember): Promise<PartyRoom | null> {
+export async function hostParty(
+  host: PartyMember,
+  initialLobbySettings: Partial<PartyLobbySettings> = readStoredPartyHostSettings()
+): Promise<PartyRoom | null> {
   const db = getFirebaseDb();
   if (!db) return null;
   await ensureFirebaseSession();
+
+  const startingSettings = mergeLobbySettings(makeDefaultLobbySettings(), initialLobbySettings);
 
   for (let attempt = 0; attempt < 30; attempt++) {
     const code = generateCode();
@@ -308,36 +346,22 @@ export async function hostParty(host: PartyMember): Promise<PartyRoom | null> {
       createdAt: now,
       updatedAt: now,
       expiresAt: expiresAtFromNow(now),
-      lobbySettings: makeDefaultLobbySettings(),
+      lobbySettings: startingSettings,
     };
 
     try {
       await runTransaction(db, async tx => {
         const snapshot = await tx.get(ref);
-        if (snapshot.exists() && !isRoomExpired(snapshot.data())) {
-          throw new Error('party-code-in-use');
-        }
-
-        tx.set(ref, {
-          ...room,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        if (snapshot.exists() && !isRoomExpired(snapshot.data())) throw new Error('party-code-in-use');
+        tx.set(ref, { ...room, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       });
-
+      storePartyHostSettings(startingSettings);
       return room;
     } catch (error) {
-      if (error instanceof Error && error.message === 'party-code-in-use') {
-        continue;
-      }
-
+      if (error instanceof Error && error.message === 'party-code-in-use') continue;
       try {
-        // Fallback for rule sets that disallow reads inside transactions.
-        await setDoc(ref, {
-          ...room,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        await setDoc(ref, { ...room, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        storePartyHostSettings(startingSettings);
         return room;
       } catch {
         return null;
@@ -428,6 +452,34 @@ export async function upsertPartyMember(code: string, member: PartyMember): Prom
   }
 }
 
+function partyTimestampToMillis(value: unknown): number | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as { toMillis?: () => number; seconds?: unknown; nanoseconds?: unknown };
+  if (typeof candidate.toMillis === 'function') {
+    const result = candidate.toMillis();
+    return Number.isFinite(result) ? result : null;
+  }
+  if (typeof candidate.seconds === 'number') {
+    const nanos = typeof candidate.nanoseconds === 'number' ? candidate.nanoseconds : 0;
+    return candidate.seconds * 1000 + Math.floor(nanos / 1_000_000);
+  }
+  return null;
+}
+
+function appendCompletedRoundHistory(game: PartyGameState): PartyRoundHistoryEntry[] {
+  const history = Array.isArray(game.roundHistory) ? game.roundHistory : [];
+  if (history.some(entry => entry.round === game.currentRound)) return history;
+  return [
+    ...history,
+    {
+      round: game.currentRound,
+      verse: game.roundVerse,
+      submissions: { ...game.submissions },
+      roundScores: { ...game.roundScores },
+    },
+  ];
+}
+
 function initialScoresByMember(members: PartyMember[]) {
   const scores: Record<string, number> = {};
   for (const member of members) scores[member.id] = 0;
@@ -471,23 +523,27 @@ export async function startPartyGame(code: string, hostId: string, config: Start
         submissions: {},
         roundScores: {},
         scores: initialScoresByMember(members),
+        roundHistory: [],
         startedBy: actorId,
         startedAt: now,
         updatedAt: now,
       };
 
+      const nextLobbySettings: PartyLobbySettings = {
+        modeId: config.modeId,
+        selectedBook: config.modeId === 'book-selection' ? (config.selectedBook ?? null) : null,
+        selectedBooks: config.modeId === 'custom' ? (normalizeSelectedBooks(config.selectedBooks) ?? null) : null,
+        roundsPerPlayer: safeRounds,
+        timerDurationSeconds: safeTimer,
+      };
+
       tx.update(ref, {
         game: gameState,
-        lobbySettings: {
-          modeId: config.modeId,
-          selectedBook: config.modeId === 'book-selection' ? (config.selectedBook ?? null) : null,
-          selectedBooks: config.modeId === 'custom' ? (normalizeSelectedBooks(config.selectedBooks) ?? null) : null,
-          roundsPerPlayer: safeRounds,
-          timerDurationSeconds: safeTimer,
-        },
+        lobbySettings: nextLobbySettings,
         updatedAt: serverTimestamp(),
         expiresAt: expiresAtFromNow(now),
       });
+      storePartyHostSettings(nextLobbySettings);
     });
 
     return true;
@@ -499,6 +555,7 @@ export async function startPartyGame(code: string, hostId: string, config: Start
 export async function submitPartyRound(
   code: string,
   memberId: string,
+  expectedRound: number,
   submission: Omit<PartySubmission, 'memberId' | 'submittedAt'>
 ): Promise<boolean> {
   const db = getFirebaseDb();
@@ -509,19 +566,19 @@ export async function submitPartyRound(
   const actorId = resolveActorId(memberId);
 
   try {
-    await runTransaction(db, async tx => {
+    return await runTransaction(db, async tx => {
       const snapshot = await tx.get(ref);
-      if (!snapshot.exists()) throw new Error('Party not found');
-      if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
+      if (!snapshot.exists() || isRoomExpired(snapshot.data())) return false;
 
       const room = snapshot.data() as PartyRoom;
       const game = room.game;
-      if (!game || game.status !== 'in-round') throw new Error('Round is not active');
+      if (!game) return false;
+      if (game.currentRound !== expectedRound) return true;
+      if (game.submissions?.[actorId]) return true;
+      if (game.status !== 'in-round') return game.status === 'round-complete' || game.status === 'finished';
 
       const memberExists = (room.members ?? []).some(m => m.id === actorId);
-      if (!memberExists) throw new Error('Member not found');
-
-      if (game.submissions[actorId]) return;
+      if (!memberExists) return false;
 
       const nextSubmissions: Record<string, PartySubmission> = {
         ...game.submissions,
@@ -539,15 +596,12 @@ export async function submitPartyRound(
 
       const nextScores: Record<string, number> = { ...game.scores };
       nextScores[actorId] = (nextScores[actorId] ?? 0) + submission.score;
-
       const activeMemberIds = (room.members ?? []).map(m => m.id);
       const allSubmitted = activeMemberIds.every(id => Boolean(nextSubmissions[id]));
-
       const nextRoundScores: Record<string, number> = {};
-      for (const id of activeMemberIds) {
-        nextRoundScores[id] = nextSubmissions[id]?.score ?? 0;
-      }
+      for (const id of activeMemberIds) nextRoundScores[id] = nextSubmissions[id]?.score ?? 0;
 
+      const now = Date.now();
       tx.update(ref, {
         game: {
           ...game,
@@ -555,15 +609,96 @@ export async function submitPartyRound(
           scores: nextScores,
           roundScores: nextRoundScores,
           status: allSubmitted ? 'round-complete' : 'in-round',
-          updatedAt: Date.now(),
+          updatedAt: now,
         },
         updatedAt: serverTimestamp(),
-        expiresAt: expiresAtFromNow(Date.now()),
+        expiresAt: expiresAtFromNow(now),
       });
+      return true;
     });
+  } catch (error) {
+    console.warn('Party round submission failed:', error);
+    return false;
+  }
+}
 
-    return true;
-  } catch {
+export async function getPartyRoom(code: string): Promise<PartyRoom | null> {
+  const db = getFirebaseDb();
+  if (!db) return null;
+  await ensureFirebaseSession();
+  try {
+    const snapshot = await getDoc(doc(db, 'parties', code));
+    if (!snapshot.exists() || isRoomExpired(snapshot.data())) return null;
+    const data = snapshot.data() as PartyRoom;
+    return { ...data, lobbySettings: normalizeLobbySettings(data.lobbySettings) };
+  } catch (error) {
+    console.warn('Party room refresh failed:', error);
+    return null;
+  }
+}
+
+export async function finalizeExpiredPartyRound(
+  code: string,
+  memberId: string,
+  expectedRound: number
+): Promise<boolean> {
+  const db = getFirebaseDb();
+  if (!db) return false;
+  await ensureFirebaseSession();
+
+  const ref = doc(db, 'parties', code);
+  const actorId = resolveActorId(memberId);
+  try {
+    return await runTransaction(db, async tx => {
+      const snapshot = await tx.get(ref);
+      if (!snapshot.exists() || isRoomExpired(snapshot.data())) return false;
+      const room = snapshot.data() as PartyRoom;
+      const game = room.game;
+      if (!game) return false;
+      if (!(room.members ?? []).some(member => member.id === actorId)) return false;
+      if (game.currentRound !== expectedRound) return true;
+      if (game.status === 'round-complete' || game.status === 'finished') return true;
+      if (game.status !== 'in-round' || game.timerDurationSeconds <= 0) return false;
+
+      const serverStart = partyTimestampToMillis(game.roundServerStartedAt);
+      const roundStart = serverStart === null ? game.roundStartedAt : serverStart + PARTY_ROUND_START_DELAY_MS;
+      const now = Date.now();
+      if (now < roundStart + game.timerDurationSeconds * 1000) return false;
+
+      const nextSubmissions: Record<string, PartySubmission> = { ...game.submissions };
+      const nextRoundScores: Record<string, number> = {};
+      const nextScores: Record<string, number> = { ...game.scores };
+      for (const member of room.members ?? []) {
+        if (!nextSubmissions[member.id]) {
+          nextSubmissions[member.id] = {
+            memberId: member.id,
+            playerName: member.name,
+            score: 0,
+            baseScore: 0,
+            wasBlankGuess: true,
+            submittedAt: now,
+          };
+        }
+        nextRoundScores[member.id] = nextSubmissions[member.id]?.score ?? 0;
+        if (typeof nextScores[member.id] !== 'number') nextScores[member.id] = 0;
+      }
+
+      tx.update(ref, {
+        game: {
+          ...game,
+          submissions: nextSubmissions,
+          roundScores: nextRoundScores,
+          scores: nextScores,
+          status: 'round-complete',
+          updatedAt: now,
+        },
+        updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(now),
+      });
+      return true;
+    });
+  } catch (error) {
+    console.warn('Party round timeout finalization failed:', error);
     return false;
   }
 }
@@ -592,14 +727,11 @@ export async function hostAdvancePartyRound(
       if (room.hostId !== actorId) throw new Error('Only host can advance');
       if (game.status !== 'round-complete') throw new Error('Round not complete');
 
+      const roundHistory = appendCompletedRoundHistory(game);
       if (game.currentRound >= game.totalRounds) {
         const now = Date.now();
         tx.update(ref, {
-          game: {
-            ...game,
-            status: 'finished',
-            updatedAt: now,
-          },
+          game: { ...game, roundHistory, status: 'finished', updatedAt: now },
           updatedAt: serverTimestamp(),
           expiresAt: expiresAtFromNow(now),
         });
@@ -607,7 +739,6 @@ export async function hostAdvancePartyRound(
       }
 
       if (!nextVerse) throw new Error('Next verse required');
-
       const usedVerseKeys = new Set<string>(Array.isArray(game.usedVerseKeys) ? game.usedVerseKeys : []);
       usedVerseKeys.add(verseReferenceKey(game.roundVerse));
       const nextVerseKey = verseReferenceKey(nextVerse);
@@ -618,6 +749,7 @@ export async function hostAdvancePartyRound(
       tx.update(ref, {
         game: {
           ...game,
+          roundHistory,
           status: 'in-round',
           currentRound: game.currentRound + 1,
           roundStartedAt: now,
@@ -632,9 +764,9 @@ export async function hostAdvancePartyRound(
         expiresAt: expiresAtFromNow(now),
       });
     });
-
     return true;
-  } catch {
+  } catch (error) {
+    console.warn('Party advance failed:', error);
     return false;
   }
 }
@@ -707,26 +839,25 @@ export async function updatePartyLobbySettings(
 
   const ref = doc(db, 'parties', code);
   const actorId = resolveActorId(hostId);
+  let savedSettings: PartyLobbySettings | null = null;
 
   try {
     await runTransaction(db, async tx => {
       const snapshot = await tx.get(ref);
       if (!snapshot.exists()) throw new Error('Party not found');
       if (isRoomExpired(snapshot.data())) throw new Error('Party expired');
-
       const room = snapshot.data() as PartyRoom;
       if (room.hostId !== actorId) throw new Error('Only host can edit settings');
-
       const nextLobbySettings = mergeLobbySettings(normalizeLobbySettings(room.lobbySettings), incoming);
+      savedSettings = nextLobbySettings;
       const now = Date.now();
-
       tx.update(ref, {
         lobbySettings: nextLobbySettings,
         updatedAt: serverTimestamp(),
         expiresAt: expiresAtFromNow(now),
       });
     });
-
+    if (savedSettings) storePartyHostSettings(savedSettings);
     return true;
   } catch {
     return false;

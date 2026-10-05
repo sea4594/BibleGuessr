@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
+import PartyGameSummary from '@/components/PartyGameSummary';
 import {
+  finalizeExpiredPartyRound,
+  getPartyRoom,
   hostAdvancePartyRound,
   hostReturnPartyToLobby,
   leaveParty,
@@ -179,6 +182,7 @@ export default function PartyGameClient() {
 
   const timeoutSubmittedRoundRef = useRef<number | null>(null);
   const previousRoundRef = useRef<number | null>(null);
+  const submissionInFlightRoundRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!code) return;
@@ -254,6 +258,32 @@ export default function PartyGameClient() {
   const contextPenalty = (previousVerses.length + nextVerses.length) * 10;
   const hasTimer = (game?.timerDurationSeconds ?? 0) > 0;
 
+
+  const refreshPartyRoom = useCallback(async () => {
+    if (!code) return;
+    const latest = await getPartyRoom(code);
+    if (latest) {
+      setRoom(latest);
+      setLoaded(true);
+      setError(null);
+    }
+  }, [code]);
+
+  useEffect(() => {
+    if (!code || !game) return;
+    const refresh = () => { void refreshPartyRoom(); };
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    const shouldPoll = game.status === 'round-complete' || Boolean(mySubmission);
+    const interval = shouldPoll ? window.setInterval(refresh, 1500) : null;
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (interval !== null) window.clearInterval(interval);
+    };
+  }, [code, game, mySubmission, refreshPartyRoom]);
+
   const fetchVerseByReference = useCallback(async (reference: { book: string; chapter: number; verse: number }) => {
     const text = await fetchVerseTextByReference(reference.book, reference.chapter, reference.verse);
     if (!text) return null;
@@ -324,25 +354,54 @@ export default function PartyGameClient() {
       versesOff: number;
     }
   ): Promise<boolean> => {
-    if (!code) return false;
+    if (!code || !game) return false;
+    const round = game.currentRound;
+    if (submissionInFlightRoundRef.current === round) return true;
+    submissionInFlightRoundRef.current = round;
 
-    const ok = await submitPartyRound(code, partyMemberId, {
-      playerName: myMember?.name || profile.name,
-      score,
-      baseScore,
-      wasBlankGuess,
-      guess,
-      feedback,
-    });
+    try {
+      const ok = await submitPartyRound(code, partyMemberId, round, {
+        playerName: myMember?.name || profile.name,
+        score,
+        baseScore,
+        wasBlankGuess,
+        guess,
+        feedback,
+      });
+      if (ok) {
+        setError(null);
+        return true;
+      }
 
-    if (!ok) {
-      setError('Failed to submit round score. Please try again.');
-      return false;
+      console.warn('Round score was not accepted; retrying as zero points.');
+      const zeroOk = await submitPartyRound(code, partyMemberId, round, {
+        playerName: myMember?.name || profile.name,
+        score: 0,
+        baseScore: 0,
+        wasBlankGuess: true,
+      });
+      setError(null);
+      return zeroOk;
+    } catch (submitError) {
+      console.warn('Round score submission failed; retrying as zero points.', submitError);
+      try {
+        const zeroOk = await submitPartyRound(code, partyMemberId, round, {
+          playerName: myMember?.name || profile.name,
+          score: 0,
+          baseScore: 0,
+          wasBlankGuess: true,
+        });
+        setError(null);
+        return zeroOk;
+      } catch (zeroError) {
+        console.warn('Zero-point fallback submission also failed.', zeroError);
+        setError(null);
+        return false;
+      }
+    } finally {
+      if (submissionInFlightRoundRef.current === round) submissionInFlightRoundRef.current = null;
     }
-
-    setError(null);
-    return true;
-  }, [code, myMember?.name, partyMemberId, profile.name]);
+  }, [code, game, myMember?.name, partyMemberId, profile.name])
 
   useEffect(() => {
     if (!game || !verse || !modeConfig) return;
@@ -397,6 +456,19 @@ export default function PartyGameClient() {
     submitRoundScore,
     verse,
   ]);
+
+  useEffect(() => {
+    if (!code || !game || game.status !== 'in-round') return;
+    if (game.timerDurationSeconds <= 0 || remainingSeconds > 0) return;
+    const round = game.currentRound;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        await finalizeExpiredPartyRound(code, partyMemberId, round);
+        await refreshPartyRoom();
+      })();
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [code, game, partyMemberId, refreshPartyRoom, remainingSeconds]);
 
   const handleAddNeighborVerse = useCallback(async (direction: NeighborDirection) => {
     if (!verse || loadingNeighbor || game?.status !== 'in-round') return;
@@ -597,7 +669,11 @@ export default function PartyGameClient() {
           <button onClick={() => void handleExitParty()} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
         </div>
         <p className="game-topbar-round">
-          {modeConfig.name} · Round {game.currentRound}/{game.totalRounds} <span className="text-[var(--danger)]">(-{contextPenalty})</span>
+          {game.status === 'finished' ? (
+            'Game Summary'
+          ) : (
+            <>{modeConfig.name} · Round {game.currentRound}/{game.totalRounds} <span className="text-[var(--danger)]">(-{contextPenalty})</span></>
+          )}
         </p>
         <div className="game-topbar-actions">
           <p className="game-topbar-time">{game.status === 'in-round' ? (hasTimer ? formatTime(remainingSeconds) : 'None') : '--:--'}</p>
@@ -644,7 +720,7 @@ export default function PartyGameClient() {
                       Your score for this round: <strong>{clampPercent(mySubmission.score)}%</strong>
                     </p>
                     <p className="text-sm font-semibold mb-2">Waiting for other players ({submittedCount}/{totalPlayers})</p>
-                    <div className="grid gap-2">
+                    <div className="party-waiting-player-list grid gap-2">
                       {room.members.map(member => {
                         const submission = game.submissions[member.id];
                         return (
@@ -672,16 +748,17 @@ export default function PartyGameClient() {
           {game.status === 'round-complete' && (
             <section className="surface-card p-5 party-round-summary">
               <h2 className="headline-serif text-3xl mb-2">Round {game.currentRound}</h2>
+              <section className="surface-card p-4 sm:p-5 mb-4 w-full party-correct-answer-sticky">
+                <p className="text-center text-[2rem] sm:text-[2.7rem] lg:text-[3rem] font-black leading-[0.98]">
+                  {verse?.book} {verse?.chapter}:{verse?.verse}
+                </p>
+              </section>
               <section className="surface-card p-4 sm:p-5 mb-4 text-left w-full">
                 <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Round Verse</p>
                 <p className="text-base sm:text-lg leading-relaxed italic">&ldquo;{verse?.text}&rdquo;</p>
               </section>
 
-              <section className="surface-card p-4 sm:p-5 mb-4 w-full">
-                <p className="text-center text-[2rem] sm:text-[2.7rem] lg:text-[3rem] font-black leading-[0.98]">
-                  {verse?.book} {verse?.chapter}:{verse?.verse}
-                </p>
-              </section>
+
 
               <div className="surface-card p-4 sm:p-5 mb-4 w-full">
                 <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Round Scores</h3>
@@ -725,33 +802,13 @@ export default function PartyGameClient() {
           )}
 
           {game.status === 'finished' && (
-            <section className="surface-card p-5 party-round-summary">
-              <h2 className="headline-serif text-3xl mb-2">Final Scores</h2>
-
-              <div className="grid gap-2 mb-5">
-                {room.members
-                  .slice()
-                  .sort((a, b) => (game.scores[b.id] ?? 0) - (game.scores[a.id] ?? 0))
-                  .map(member => (
-                    <div key={member.id} className="party-score-row">
-                      <span>{member.name}</span>
-                      <span className="font-semibold">{toOverallPercent(game.scores[member.id] ?? 0, game.totalRounds)}%</span>
-                    </div>
-                  ))}
-              </div>
-
-              {isHost ? (
-                <button
-                  onClick={() => void handleHostReturnToLobby()}
-                  disabled={isReturningToLobby}
-                  className="btn-primary w-full py-3 text-lg"
-                >
-                  {isReturningToLobby ? 'Returning...' : 'Back to Party Lobby'}
-                </button>
-              ) : (
-                <p className="content-muted text-sm">Waiting for host to return everyone to the party lobby.</p>
-              )}
-            </section>
+            <PartyGameSummary
+              room={room}
+              game={game}
+              isHost={isHost}
+              isReturningToLobby={isReturningToLobby}
+              onReturnToLobby={() => void handleHostReturnToLobby()}
+            />
           )}
         </div>
       </div>
