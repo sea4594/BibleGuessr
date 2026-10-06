@@ -5,14 +5,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import MainBottomNav from '@/components/MainBottomNav';
 import {
-  AvatarSpec, avatarToDataUri, AVATAR_ATTRIBUTES,
-  SKIN_OPTIONS, HAIR_COLORS, SHIRT_COLORS, PANTS_COLORS,
-  SHOE_COLORS, EYE_COLORS, defaultAvatarSpec,
+  AvatarSpec, AvatarGroup, avatarOptionLabel, avatarToDataUri, AVATAR_ATTRIBUTES,
+  defaultAvatarSpec, randomAvatarSpec,
 } from '@/lib/avatarSystem';
 import { readLocalProfile, UserProfile, writeLocalProfile } from '@/lib/userProfile';
 import { useAccountSync } from '@/lib/accountSync';
 import { useSettingsModal } from '@/components/SettingsModalProvider';
-import { Pencil, Settings, X } from 'lucide-react';
+import { Check, Pencil, Settings, Shuffle, X } from 'lucide-react';
 
 function AvatarEditor({
   avatar,
@@ -20,81 +19,111 @@ function AvatarEditor({
   onClose,
 }: { avatar: AvatarSpec; onChange: (spec: AvatarSpec) => void; onClose: () => void }) {
   const [local, setLocal] = useState<AvatarSpec>(avatar);
+  const [activeGroup, setActiveGroup] = useState<AvatarGroup>('face');
+  const groups: { key: AvatarGroup; label: string }[] = [
+    { key: 'face', label: 'Face' },
+    { key: 'hair', label: 'Hair' },
+    { key: 'outfit', label: 'Outfit' },
+    { key: 'extras', label: 'Extras' },
+  ];
 
   const update = (key: keyof AvatarSpec, value: string) => {
     setLocal(prev => ({ ...prev, [key]: value }));
   };
 
-  const colorOptions: Record<string, string[]> = {
-    skinColor: SKIN_OPTIONS,
-    hairColor: HAIR_COLORS,
-    eyeColor: EYE_COLORS,
-    shirtColor: SHIRT_COLORS,
-    pantsColor: PANTS_COLORS,
-    shoeColor: SHOE_COLORS,
-  };
-
   return (
-    <div className="avatar-editor-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }}>
-      <div className="avatar-editor-modal surface-card w-full max-h-[90dvh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-[var(--line)]">
-          <h2 className="text-lg font-bold">Edit Avatar</h2>
-          <button onClick={onClose} className="btn-ghost p-2"><X size={20} /></button>
-        </div>
-        <div className="avatar-editor-preview p-3 border-b border-[var(--line)]">
-          <div className="flex justify-center">
-            <Image
-              src={avatarToDataUri(local)}
-              alt="Preview"
-              width={96}
-              height={96}
-              unoptimized
-              className="w-24 h-auto rounded-xl border border-[var(--line)]"
-            />
+    <div className="avatar-editor-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: 'rgba(0,0,0,0.72)' }}>
+      <div className="avatar-editor-modal surface-card w-full flex flex-col overflow-hidden">
+        <div className="avatar-editor-header">
+          <div>
+            <p className="eyebrow">Avatar</p>
+            <h2 className="text-xl font-bold">Make it yours</h2>
           </div>
+          <button onClick={onClose} className="btn-ghost avatar-editor-close" aria-label="Close avatar editor"><X size={21} /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 min-w-0">
-          {AVATAR_ATTRIBUTES.map(attr => (
-            <div key={attr.key} className="min-w-0">
-              <p className="eyebrow mb-1.5">{attr.label}</p>
-              {attr.type === 'color' ? (
-                <div className="avatar-option-row">
-                  {(colorOptions[attr.key] ?? []).map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => update(attr.key, opt)}
-                      className="avatar-choice-color-btn"
-                      style={{
-                        background: opt,
-                        borderColor: local[attr.key] === opt ? 'var(--text-main)' : 'var(--line-strong)',
-                        boxShadow: local[attr.key] === opt ? '0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent)' : undefined,
-                      }}
-                      title={opt}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="avatar-option-row">
-                  {attr.options.map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => update(attr.key, opt)}
-                      className={local[attr.key] === opt ? 'btn-primary avatar-choice-pill-btn capitalize' : 'btn-outline avatar-choice-pill-btn capitalize'}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+        <div className="avatar-editor-preview">
+          <div className="avatar-editor-preview-stage" aria-label="Avatar preview">
+            <Image src={avatarToDataUri(local)} alt="Avatar preview" width={164} height={239} unoptimized priority className="avatar-editor-preview-image" />
+          </div>
+          <button onClick={() => setLocal(randomAvatarSpec())} className="btn-outline avatar-randomize-btn">
+            <Shuffle size={15} /> Randomize
+          </button>
+        </div>
+
+        <div className="avatar-editor-tabs" role="tablist" aria-label="Avatar categories">
+          {groups.map(group => (
+            <button
+              key={group.key}
+              type="button"
+              role="tab"
+              aria-selected={activeGroup === group.key}
+              onClick={() => setActiveGroup(group.key)}
+              className={activeGroup === group.key ? 'avatar-editor-tab is-active' : 'avatar-editor-tab'}
+            >
+              {group.label}
+            </button>
           ))}
         </div>
-        <div className="p-4 border-t border-[var(--line)] flex gap-2">
-          <button onClick={() => { onChange(local); onClose(); }} className="btn-primary flex-1 py-2.5">
-            Apply
-          </button>
-          <button onClick={onClose} className="btn-outline px-4 py-2.5">Cancel</button>
+
+        <div className="avatar-editor-options">
+          {AVATAR_ATTRIBUTES.filter(attr => attr.group === activeGroup).map(attr => (
+            <section key={attr.key} className="avatar-attribute-section">
+              <div className="avatar-attribute-heading">
+                <h3>{attr.label}</h3>
+                <span>{avatarOptionLabel(String(local[attr.key]))}</span>
+              </div>
+              {attr.type === 'color' ? (
+                <div className="avatar-color-grid">
+                  {attr.options.map(option => {
+                    const value = String(option);
+                    const selected = local[attr.key] === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => update(attr.key, value)}
+                        className={selected ? 'avatar-color-choice is-selected' : 'avatar-color-choice'}
+                        aria-label={`${attr.label}: ${avatarOptionLabel(value)}`}
+                        aria-pressed={selected}
+                      >
+                        <span className="avatar-color-swatch" style={{ background: value }} />
+                        {selected && <span className="avatar-color-check"><Check size={13} /></span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="avatar-style-grid">
+                  {attr.options.map(option => {
+                    const value = String(option);
+                    const selected = local[attr.key] === value;
+                    const preview = { ...local, [attr.key]: value } as AvatarSpec;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => update(attr.key, value)}
+                        className={selected ? 'avatar-style-choice is-selected' : 'avatar-style-choice'}
+                        aria-pressed={selected}
+                      >
+                        <span className="avatar-style-thumb">
+                          <Image src={avatarToDataUri(preview, attr.focus)} alt="" width={82} height={82} unoptimized />
+                        </span>
+                        <span className="avatar-style-label">{avatarOptionLabel(value)}</span>
+                        {selected && <span className="avatar-style-check"><Check size={13} /></span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
+
+        <div className="avatar-editor-actions">
+          <button onClick={onClose} className="btn-outline avatar-cancel-btn">Cancel</button>
+          <button onClick={() => { onChange(local); onClose(); }} className="btn-primary avatar-apply-btn">Save Avatar</button>
         </div>
       </div>
     </div>

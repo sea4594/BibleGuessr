@@ -42,12 +42,29 @@ function normalizeAvatar(raw: unknown, fallbackSeed: number): AvatarSpec {
     };
   }
 
-  return {
+  const normalized = {
     ...fallback,
     ...Object.fromEntries(
       Object.entries(incoming).filter(([, value]) => typeof value === 'string')
     ),
   } as AvatarSpec;
+
+  const hairAliases: Record<string, string> = {
+    short: 'short-textured', crew: 'buzz-cut', curly: 'curls', long: 'long-straight',
+    buzz: 'buzz-cut', crop: 'short-textured',
+  };
+  const eyeAliases: Record<string, string> = { dot: 'classic', sleepy: 'relaxed', wide: 'round' };
+  const mouthAliases: Record<string, string> = { flat: 'neutral', pout: 'soft-smile', tongue: 'open-smile' };
+  const shirtAliases: Record<string, string> = { tshirt: 'crew-tee', suit: 'button-up', dress: 'sweater' };
+  const accessoryAliases: Record<string, string> = { hat: 'cap', earring: 'earrings' };
+
+  normalized.hairStyle = hairAliases[normalized.hairStyle] ?? normalized.hairStyle;
+  normalized.eyeType = eyeAliases[normalized.eyeType] ?? normalized.eyeType;
+  normalized.mouthType = mouthAliases[normalized.mouthType] ?? normalized.mouthType;
+  normalized.shirtStyle = shirtAliases[normalized.shirtStyle] ?? normalized.shirtStyle;
+  normalized.accessory = accessoryAliases[normalized.accessory] ?? normalized.accessory;
+  if (incoming.shirtStyle === 'dress' && typeof incoming.bottomStyle !== 'string') normalized.bottomStyle = 'skirt';
+  return normalized;
 }
 
 function generateStableGuestName(seed: number) {
