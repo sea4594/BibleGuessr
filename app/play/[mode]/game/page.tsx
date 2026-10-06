@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useGame } from '@/lib/gameContext';
+import { useGame, type GameSession, type RoundData } from '@/lib/gameContext';
 import { GameModeId } from '@/lib/gameModes';
 import { applyContextPenalty, calculateScore } from '@/lib/scoring';
 import { bibleData, BookData } from '@/lib/bibleData';
@@ -74,6 +74,116 @@ function resolveNeighborVerse(
   return { book: bibleData[bookIndex + 1].book, chapter: 1, verse: 1 };
 }
 
+function renderHotSeatGuess(round?: RoundData) {
+  if (!round || round.wasBlankGuess) return <span style={{ color: '#ef4444' }}>No guess</span>;
+
+  const bookCorrect = round.scoreBreakdown.feedback.book === 'correct';
+  const chapterCorrect = bookCorrect && round.scoreBreakdown.feedback.chapter === 'correct';
+  const verseCorrect = chapterCorrect && round.scoreBreakdown.feedback.verse === 'correct';
+
+  return (
+    <>
+      <span style={{ color: bookCorrect ? '#22c55e' : '#ef4444' }}>{round.guess.book}</span>
+      <span>&nbsp;</span>
+      <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>{round.guess.chapter}</span>
+      <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>:</span>
+      <span style={{ color: verseCorrect ? '#22c55e' : '#ef4444' }}>{round.guess.verse}</span>
+    </>
+  );
+}
+
+function HotSeatRoundSummary({
+  session,
+  roundNumber,
+  onNext,
+  onHome,
+}: {
+  session: GameSession;
+  roundNumber: number;
+  onNext: () => void;
+  onHome: () => void;
+}) {
+  const multiplayer = session.multiplayer;
+  if (!multiplayer?.enabled) return null;
+
+  const entries = session.rounds
+    .map((round, idx) => ({
+      round,
+      logicalRound: multiplayer.turnStyle === 'alternate'
+        ? Math.floor(idx / multiplayer.players.length) + 1
+        : (idx % multiplayer.roundsPerPlayer) + 1,
+    }))
+    .filter(entry => entry.logicalRound === roundNumber);
+  const verse = entries[0]?.round.verse;
+  if (!verse) return null;
+
+  const rows = multiplayer.players.map((player, idx) => {
+    const round = entries.find(entry => entry.round.playerName === player)?.round;
+    const completed = session.rounds.filter(item => item.playerName === player);
+    const total = completed.reduce((sum, item) => sum + item.score, 0);
+    return {
+      id: `${idx}-${player}`,
+      player,
+      round,
+      roundScore: round?.score ?? 0,
+      totalPercent: completed.length > 0 ? Math.round(total / completed.length) : 0,
+    };
+  }).sort((a, b) => b.totalPercent - a.totalPercent || b.roundScore - a.roundScore || a.player.localeCompare(b.player));
+
+  return (
+    <main className="app-screen game-shell">
+      <header className="game-topbar">
+        <div className="game-topbar-exit">
+          <button onClick={onHome} className="btn-outline px-3 py-1.5 text-sm">Exit</button>
+        </div>
+        <p className="game-topbar-round">Round {roundNumber}/{multiplayer.roundsPerPlayer} Summary</p>
+        <div className="game-topbar-actions" aria-hidden="true"><span className="topbar-placeholder" /></div>
+      </header>
+
+      <div className="app-content app-content-fixed game-content">
+        <div className="page !max-w-6xl w-full">
+          <section className="party-round-summary-fixed">
+            <div className="party-round-summary-header">
+              <section className="surface-card party-round-verse-card">
+                <p className="text-base sm:text-lg leading-relaxed italic">&ldquo;{verse.text}&rdquo;</p>
+              </section>
+              <section className="surface-card party-round-answer-card">
+                <p className="text-center text-[2rem] sm:text-[2.7rem] lg:text-[3rem] font-black leading-[0.98]">
+                  {verse.book} {verse.chapter}:{verse.verse}
+                </p>
+              </section>
+            </div>
+
+            <div className="party-round-scores-scroll">
+              {rows.map(({ id, player, round, roundScore, totalPercent }) => (
+                <div key={id} className="party-round-table-row">
+                  <div className="party-round-table-meta">
+                    <p className="text-sm font-semibold">{player}</p>
+                    <p className="text-sm whitespace-nowrap overflow-x-auto">
+                      <span className="content-muted">Guess:&nbsp;</span>
+                      {renderHotSeatGuess(round)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="party-round-table-score">{Math.max(0, Math.min(100, Math.round(roundScore)))}%</p>
+                    <p className="text-xs content-muted">total {Math.max(0, Math.min(100, totalPercent))}%</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="party-round-summary-footer">
+              <button onClick={onNext} className="btn-primary w-full py-3 text-lg">
+                {session.currentRound >= session.totalRounds ? 'Game Summary' : 'Start Next Round'}
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 export default function GamePage() {
   const params = useParams();
   const router = useRouter();
@@ -94,7 +204,7 @@ export default function GamePage() {
     guess: null,
     hasInteracted: false,
   });
-  const [canStartRound, setCanStartRound] = useState(false);
+  const [unlockedHotSeatRound, setUnlockedHotSeatRound] = useState<number | null>(null);
   const suppressEmptySessionRedirectRef = useRef(false);
   const timeoutSubmittedRef = useRef(false);
   const usedVerseKeysRef = useRef<Set<string>>(new Set());
@@ -173,8 +283,18 @@ export default function GamePage() {
   }, [fetchVerseByReference, session, sharedVerseByRound]);
 
   const isHotSeatGame = Boolean(session?.multiplayer?.enabled && session?.multiplayer?.lobbyType === 'hot-seat');
-  const roundCanStart = !isHotSeatGame || canStartRound;
+  const roundCanStart = !isHotSeatGame || unlockedHotSeatRound === session?.currentRound;
   const timerDurationSeconds = session?.timerDurationSeconds ?? 0;
+
+  useEffect(() => {
+    if (!isHotSeatGame || session?.gameState !== 'playing') return;
+    setCurrentVerse(null);
+    setRemainingSeconds(timerDurationSeconds);
+    timeoutSubmittedRef.current = false;
+    setPreviousVerses([]);
+    setNextVerses([]);
+    setPendingSelection({ guess: null, hasInteracted: false });
+  }, [isHotSeatGame, session?.currentRound, session?.gameState, timerDurationSeconds]);
 
   useEffect(() => {
     if (session?.gameState === 'playing' && session.modeConfig && roundCanStart) {
@@ -321,8 +441,15 @@ export default function GamePage() {
 
   const playerCount = session.multiplayer?.players.length ?? 1;
   const isAlternate = session.multiplayer?.enabled && session.multiplayer.turnStyle === 'alternate';
-  const displayRound = isAlternate ? Math.ceil(session.currentRound / playerCount) : session.currentRound;
-  const displayTotalRounds = isAlternate ? (session.multiplayer?.roundsPerPlayer ?? session.totalRounds) : session.totalRounds;
+  const isAllAtOnce = session.multiplayer?.enabled && session.multiplayer.turnStyle === 'all-at-once';
+  const displayRound = isAlternate
+    ? Math.ceil(session.currentRound / playerCount)
+    : isAllAtOnce
+      ? ((session.currentRound - 1) % session.multiplayer!.roundsPerPlayer) + 1
+      : session.currentRound;
+  const displayTotalRounds = session.multiplayer?.enabled
+    ? session.multiplayer.roundsPerPlayer
+    : session.totalRounds;
 
   const handleAddNeighborVerse = async (direction: NeighborDirection) => {
     if (!currentVerse || loadingNeighbor) return;
@@ -350,7 +477,7 @@ export default function GamePage() {
     setPreviousVerses([]);
     setNextVerses([]);
     setPendingSelection({ guess: null, hasInteracted: false });
-    if (isHotSeatGame) setCanStartRound(false);
+    if (isHotSeatGame) setUnlockedHotSeatRound(null);
     nextRound();
   };
 
@@ -377,6 +504,7 @@ export default function GamePage() {
     usedVerseKeysRef.current = new Set();
     setSharedVerseByRound({});
     setPendingSelection({ guess: null, hasInteracted: false });
+    setUnlockedHotSeatRound(null);
     const shouldRandomizeBook = session.mode === 'book-selection' && session.randomizeBookOnReplay;
     const randomBook = shouldRandomizeBook
       ? bibleData[Math.floor(Math.random() * bibleData.length)]
@@ -408,6 +536,17 @@ export default function GamePage() {
   }
 
   if (session.gameState === 'result') {
+    if (isHotSeatGame) {
+      return (
+        <HotSeatRoundSummary
+          session={session}
+          roundNumber={displayRound}
+          onNext={handleNextRound}
+          onHome={handleExitToHome}
+        />
+      );
+    }
+
     const lastRound = session.rounds[session.rounds.length - 1];
     return (
       <RoundResult
@@ -475,7 +614,7 @@ export default function GamePage() {
               <div className="pause-card fade-up turn-gate-card">
                 <h2 className="headline-serif text-3xl mb-2">Pass device</h2>
                 <p className="content-muted mb-6">Pass the device to the next player.</p>
-                <button onClick={() => setCanStartRound(true)} className="btn-primary block w-full py-4 text-lg">
+                <button onClick={() => setUnlockedHotSeatRound(session.currentRound)} className="btn-primary block w-full py-4 text-lg">
                   I&apos;m {currentPlayerName ?? 'Player'}
                 </button>
               </div>

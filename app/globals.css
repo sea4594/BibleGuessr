@@ -2795,3 +2795,55 @@ input:disabled {
 .setup-panel-section .settings-input {
   max-width: 100% !important;
 }
+
+/* ===== 2026-10-05 flat cards + edge-to-edge iPhone bottom nav ===== */
+/* The navigation buttons themselves fill the iPhone safe area instead of leaving a strip below them. */
+.main-bottom-nav {
+  padding: 5px 0 0 !important;
+  gap: 6px !important;
+  background: var(--bg) !important;
+}
+.main-nav-item {
+  min-height: calc(40px + env(safe-area-inset-bottom)) !important;
+  padding: 3px 4px calc(3px + env(safe-area-inset-bottom)) !important;
+  border: 0 !important;
+  border-radius: 10px 10px 0 0 !important;
+  transform: none !important;
+}
+.main-nav-item:first-child {
+  border-bottom-left-radius: 24px !important;
+}
+.main-nav-item:last-child {
+  border-bottom-right-radius: 24px !important;
+}
+
+/* Flat visual language: no shadows anywhere, and no perimeter strokes around cards/panels. */
+*, *::before, *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+.surface-card,
+.surface-card-soft,
+.mode-grid,
+.mode-grid > .mode-card,
+.menu-card,
+.setup-panel,
+.setup-panel-section,
+.setting-row,
+.custom-books-tree,
+.party-join-modal-card,
+.pause-card,
+.settings-modal,
+.avatar-editor-modal,
+.party-header-half,
+.party-members-block,
+.party-member-row,
+.party-host-controls,
+.party-wait-card,
+.party-score-row,
+.party-round-table-row,
+.party-lobby-status-card,
+.multiplayer-summary-round-card,
+.guess-column {
+  border: 0 !important;
+}

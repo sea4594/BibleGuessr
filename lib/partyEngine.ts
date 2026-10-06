@@ -195,7 +195,7 @@ function makeDefaultLobbySettings(): PartyLobbySettings {
     modeId: 'full-bible',
     selectedBook: null,
     selectedBooks: null,
-    roundsPerPlayer: 3,
+    roundsPerPlayer: 5,
     timerDurationSeconds: 30,
   };
 }

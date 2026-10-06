@@ -132,8 +132,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
       };
 
       const nextRounds = [...prev.rounds, newRound];
-      const skipResultScreen = !prev.multiplayer?.enabled && prev.totalRounds === 1;
+      const isHotSeat = Boolean(prev.multiplayer?.enabled && prev.multiplayer.lobbyType === 'hot-seat');
 
+      if (isHotSeat && prev.multiplayer) {
+        const playerCount = Math.max(prev.multiplayer.players.length, 1);
+        const roundsPerPlayer = Math.max(prev.multiplayer.roundsPerPlayer, 1);
+        const completesLogicalRound = prev.multiplayer.turnStyle === 'alternate'
+          ? prev.currentRound % playerCount === 0
+          : Math.floor((prev.currentRound - 1) / roundsPerPlayer) === playerCount - 1;
+
+        if (!completesLogicalRound && prev.currentRound < prev.totalRounds) {
+          return {
+            ...prev,
+            rounds: nextRounds,
+            currentRound: prev.currentRound + 1,
+            gameState: 'playing',
+          };
+        }
+      }
+
+      const skipResultScreen = !prev.multiplayer?.enabled && prev.totalRounds === 1;
       return {
         ...prev,
         rounds: nextRounds,
