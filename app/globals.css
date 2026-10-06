@@ -2847,3 +2847,152 @@ input:disabled {
 .guess-column {
   border: 0 !important;
 }
+
+/* ===== 2026-10-06 primary navigation, unified surfaces, and compact game UI ===== */
+:root {
+  --shadow: none;
+  --card-bg: var(--panel);
+  --control-bg: color-mix(in oklab, var(--panel) 72%, var(--bg));
+}
+
+/* Root navigation pages have no top bar, but still respect the device notch/status area. */
+.primary-nav-screen > .app-content {
+  padding-top: env(safe-area-inset-top) !important;
+}
+
+/* One card treatment in every theme: same surface role, no perimeter stroke, no shadow. */
+.surface-card,
+.surface-card-soft,
+.mode-grid > .mode-card,
+.menu-card,
+.setup-panel-section,
+.setting-row,
+.custom-books-tree,
+.party-join-modal-card,
+.pause-card,
+.settings-modal,
+.avatar-editor-modal,
+.party-header-half,
+.party-members-block,
+.party-member-row,
+.party-host-controls,
+.party-wait-card,
+.party-score-row,
+.party-round-table-row,
+.party-lobby-status-card,
+.multiplayer-summary-leaderboard,
+.multiplayer-summary-round-card,
+.guess-column {
+  background: var(--card-bg) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Controls consistently use the same secondary surface instead of theme-specific ad hoc shades. */
+.btn-outline,
+.settings-input,
+select,
+input[type='text'],
+input[type='number'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='tel'],
+.h-wheel-viewport,
+.vslider-track,
+.scroll-picker,
+.controls-row {
+  background: var(--control-bg) !important;
+}
+
+/* Bottom navigation always physically reaches the viewport edge. Browser tabs stay square;
+   installed standalone web apps get outer curvature only where the buttons meet the screen corners. */
+.main-bottom-nav {
+  bottom: 0 !important;
+  padding: 5px 0 0 !important;
+  margin: 0 !important;
+  align-items: stretch !important;
+  overflow: visible !important;
+}
+.main-nav-item {
+  height: calc(40px + env(safe-area-inset-bottom)) !important;
+  min-height: calc(40px + env(safe-area-inset-bottom)) !important;
+  margin: 0 !important;
+  padding: 3px 4px calc(3px + env(safe-area-inset-bottom)) !important;
+  border-radius: 10px 10px 0 0 !important;
+}
+.main-nav-item:first-child,
+.main-nav-item:last-child {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+@media (display-mode: standalone) {
+  .main-nav-item:first-child {
+    border-bottom-left-radius: 26px !important;
+  }
+  .main-nav-item:last-child {
+    border-bottom-right-radius: 26px !important;
+  }
+}
+
+/* Round result: score sits beside the guess; detailed score breakdown is intentionally absent. */
+.result-guess-score-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.result-guess-line {
+  min-width: 0;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.result-round-score {
+  font-size: clamp(2rem, 8vw, 3rem);
+  line-height: 1;
+  font-weight: 900;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  /* About 20% less vertical space for the verse, leaving more room for guessing controls. */
+  .game-content.app-content-fixed .play-layout {
+    grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.5fr) !important;
+  }
+
+  /* Keep the safe-area inset, but reduce the actual game toolbar chrome. */
+  .game-topbar {
+    gap: 5px;
+    padding: max(3px, env(safe-area-inset-top)) 8px 3px !important;
+  }
+  .game-topbar .btn-outline {
+    min-height: 30px;
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+    line-height: 1;
+  }
+  .game-topbar-exit,
+  .game-topbar-actions {
+    min-width: 62px;
+  }
+  .game-topbar-round {
+    font-size: 0.72rem;
+    line-height: 1;
+  }
+  .game-topbar-time {
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .game-topbar-pause {
+    width: 29px;
+    height: 29px;
+  }
+}
+.mode-card.mode-card-selected,
+.mode-grid > .mode-card.mode-card-selected {
+  background: color-mix(in oklab, var(--accent) 18%, var(--panel)) !important;
+}

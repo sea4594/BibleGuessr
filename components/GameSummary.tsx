@@ -290,7 +290,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
               <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Per Round Player Guesses</h3>
               <div className="grid gap-3">
                 {hotSeatGuessesByRound.map(entry => (
-                  <div key={`hotseat-guesses-${entry.logicalRound}`} className="border border-[var(--line)] rounded-xl p-3">
+                  <div key={`hotseat-guesses-${entry.logicalRound}`} className="p-3">
                     <p className="text-sm font-semibold mb-2">Round {entry.logicalRound}</p>
                     <p className="text-xs content-muted mb-2">{entry.verse.book} {entry.verse.chapter}:{entry.verse.verse}</p>
                     <div className="grid gap-2 text-sm">

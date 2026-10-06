@@ -43,48 +43,6 @@ export default function RoundResult({
   const runningPercent = Math.max(0, Math.min(100, Math.round((runningTotal / Math.max(rounds.length * 100, 1)) * 100)));
   const isHotSeat = Boolean(multiplayer?.enabled);
 
-  const formatPoints = (value: number) => {
-    return String(Math.round(value));
-  };
-
-  const breakdownRows = useMemo(() => {
-    const rows: Array<{ label: string; points: number }> = [];
-
-    if (scoreBreakdown.possiblePoints.testament) {
-      rows.push({ label: 'Testament', points: scoreBreakdown.testamentPoints ?? 0 });
-    }
-
-    if (scoreBreakdown.possiblePoints.category) {
-      rows.push({ label: 'Category', points: scoreBreakdown.categoryPoints ?? 0 });
-    }
-
-    if (scoreBreakdown.possiblePoints.book) {
-      rows.push({ label: 'Book', points: scoreBreakdown.bookPoints });
-    }
-
-    if (scoreBreakdown.possiblePoints.chapter || scoreBreakdown.possiblePoints.verse) {
-      rows.push({
-        label: 'Chapter & Verse',
-        points:
-          (scoreBreakdown.possiblePoints.chapter ? scoreBreakdown.chapterPoints : 0) +
-          (scoreBreakdown.possiblePoints.verse ? scoreBreakdown.versePoints : 0),
-      });
-    }
-
-    return rows;
-  }, [
-    scoreBreakdown.possiblePoints.testament,
-    scoreBreakdown.possiblePoints.category,
-    scoreBreakdown.possiblePoints.book,
-    scoreBreakdown.possiblePoints.chapter,
-    scoreBreakdown.possiblePoints.verse,
-    scoreBreakdown.testamentPoints,
-    scoreBreakdown.categoryPoints,
-    scoreBreakdown.bookPoints,
-    scoreBreakdown.chapterPoints,
-    scoreBreakdown.versePoints,
-  ]);
-
   const groupedRoundRows = useMemo(() => {
     if (!multiplayer?.enabled || multiplayer.players.length === 0) return null;
 
@@ -120,7 +78,6 @@ export default function RoundResult({
       <div className="app-content app-content-scroll">
         <div className="page max-w-lg">
           <section className="surface-card p-4 sm:p-5 mb-4 text-left w-full">
-            <p className="text-xs uppercase tracking-[0.12em] content-muted mb-2">Round Verse</p>
             <p className="text-base sm:text-lg leading-relaxed italic">&ldquo;{verse.text}&rdquo;</p>
           </section>
 
@@ -136,39 +93,22 @@ export default function RoundResult({
               />
             </div>
 
-            <p className="text-sm sm:text-base font-bold mb-4 whitespace-nowrap overflow-x-auto">
-              <span className="content-muted">YOU GUESSED:&nbsp;</span>
-              {round.wasBlankGuess ? (
-                <span style={{ color: '#ef4444' }}>No guess (time expired)</span>
-              ) : (
-                <>
-                  <span style={{ color: bookCorrect ? '#22c55e' : '#ef4444' }}>{guess.book}</span>
-                  <span>&nbsp;</span>
-                  <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>{guess.chapter}</span>
-                  <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>:</span>
-                  <span style={{ color: verseCorrect ? '#22c55e' : '#ef4444' }}>{guess.verse}</span>
-                </>
-              )}
-            </p>
-          </div>
-
-          <div className="surface-card p-4 sm:p-5 mb-4">
-            <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-2">Score Breakdown</h3>
-            {breakdownRows.map(row => (
-              <div key={row.label} className="flex justify-between text-sm py-1">
-                <span>{row.label}</span>
-                <span className="font-semibold">+{formatPoints(row.points)}</span>
-              </div>
-            ))}
-            {round.contextPenalty > 0 && (
-              <div className="flex justify-between text-sm py-1 text-[var(--danger)]">
-                <span>Context verses ({round.contextVersesAdded} x -10)</span>
-                <span className="font-semibold">-{round.contextPenalty}</span>
-              </div>
-            )}
-            <div className="flex justify-between items-center text-[1.55rem] sm:text-[1.75rem] py-3 border-t border-[var(--line)] mt-1 font-extrabold">
-              <span>Total</span>
-              <span>{scorePercent}%</span>
+            <div className="result-guess-score-row">
+              <p className="result-guess-line">
+                <span className="content-muted">YOU GUESSED:&nbsp;</span>
+                {round.wasBlankGuess ? (
+                  <span style={{ color: '#ef4444' }}>No guess (time expired)</span>
+                ) : (
+                  <>
+                    <span style={{ color: bookCorrect ? '#22c55e' : '#ef4444' }}>{guess.book}</span>
+                    <span>&nbsp;</span>
+                    <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>{guess.chapter}</span>
+                    <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>:</span>
+                    <span style={{ color: verseCorrect ? '#22c55e' : '#ef4444' }}>{guess.verse}</span>
+                  </>
+                )}
+              </p>
+              <div className="result-round-score">{scorePercent}%</div>
             </div>
           </div>
 

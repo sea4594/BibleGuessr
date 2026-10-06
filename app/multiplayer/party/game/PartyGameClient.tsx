@@ -677,7 +677,7 @@ export default function PartyGameClient() {
           {game.status === 'finished' ? (
             'Game Summary'
           ) : (
-            <>{modeConfig.name} · Round {game.currentRound}/{game.totalRounds} <span className="text-[var(--danger)]">(-{contextPenalty})</span></>
+            <>{modeConfig.name} · Round {game.currentRound}/{game.totalRounds} {contextPenalty > 0 && <span className="text-[var(--danger)]"> (-{contextPenalty})</span>}</>
           )}
         </p>
         <div className="game-topbar-actions">

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
@@ -392,6 +391,20 @@ export default function MultiplayerPage() {
     }
   };
 
+  const handleJoinCodeFocus = (index: number, input: HTMLInputElement) => {
+    const firstEmpty = joinCode.findIndex(slot => !slot);
+    if (!joinCode[index] && firstEmpty >= 0 && firstEmpty !== index) {
+      requestAnimationFrame(() => {
+        const target = joinRefs.current[firstEmpty];
+        target?.focus();
+        target?.select();
+      });
+      return;
+    }
+
+    requestAnimationFrame(() => input.select());
+  };
+
   const retryPartyCode = () => {
     setPartyLobbyError('');
     setRoom(null);
@@ -506,8 +519,7 @@ export default function MultiplayerPage() {
   };
 
   return (
-    <main className="app-screen">
-      <AppTopBar title="Multiplayer" />
+    <main className="app-screen primary-nav-screen">
 
       <div className={tab === 'party' ? 'app-content app-content-fixed multiplayer-party-content' : 'app-content app-content-scroll'}>
         <div className={tab === 'party' ? 'page max-w-4xl min-w-0 multiplayer-party-page' : 'page max-w-4xl min-w-0'}>
@@ -601,6 +613,8 @@ export default function MultiplayerPage() {
                         maxLength={1}
                         onChange={event => updateJoinCodeSlot(idx, event.target.value)}
                         onKeyDown={event => handleJoinCodeKeyDown(idx, event)}
+                        onFocus={event => handleJoinCodeFocus(idx, event.currentTarget)}
+                        onClick={event => handleJoinCodeFocus(idx, event.currentTarget)}
                         className="party-join-slot-input"
                         inputMode="text"
                         autoCapitalize="characters"

@@ -7,7 +7,6 @@ import { gameModes, GameModeId } from "@/lib/gameModes";
 import { bibleData } from "@/lib/bibleData";
 import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
-import AppTopBar from "@/components/AppTopBar";
 import { Zap } from "lucide-react";
 import CustomBookSelectorPopup from "@/components/CustomBookSelectorPopup";
 import {
@@ -100,8 +99,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="app-screen fade-up">
-      <AppTopBar title="BibleGuessr" />
+    <main className="app-screen primary-nav-screen fade-up">
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl setup-page home-page min-w-0">
           <section className="surface-card p-5 min-w-0">

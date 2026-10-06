@@ -17,6 +17,7 @@ const SettingsModalContext = createContext<SettingsModalContextType | null>(null
 export function SettingsModalProvider({ children }: { children: React.ReactNode }) {
   const { settings, setThemePreset } = useUiSettings();
   const { firebaseEnabled, login, loginPending, logout, syncError, syncStatus, user } = useAccountSync();
+  const googleUser = user && !user.isAnonymous ? user : null;
   const [isOpen, setIsOpen] = useState(false);
   const [showScoringVisualizer, setShowScoringVisualizer] = useState(false);
 
@@ -67,7 +68,7 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                 <p className="eyebrow mb-2">Account</p>
 
                 <div className="text-sm font-semibold mb-1">
-                  {user ? (user.displayName || user.email || 'Signed in') : 'Not signed in'}
+                  {googleUser ? (googleUser.email || googleUser.displayName || 'Google account') : 'Not signed in'}
                 </div>
 
                 <p className="text-xs content-muted mb-3">
@@ -77,12 +78,12 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                       ? 'Syncing your BibleGuessr data...'
                       : syncError
                         ? syncError
-                        : user
+                        : googleUser
                           ? 'Your profile, history, settings, and hot-seat config sync to this Google account.'
                           : 'Sign in with Google to sync everything across devices.'}
                 </p>
 
-                {user ? (
+                {googleUser ? (
                   <button
                     onClick={() => {
                       void logout();

@@ -1,13 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 
 export default function SinglePlayerPage() {
   return (
-    <main className="app-screen">
-      <AppTopBar title="Single Player" />
+    <main className="app-screen primary-nav-screen">
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-3xl">

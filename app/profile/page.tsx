@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import AppTopBar from '@/components/AppTopBar';
 import MainBottomNav from '@/components/MainBottomNav';
 import {
   AvatarSpec, avatarToDataUri, AVATAR_ATTRIBUTES,
@@ -12,7 +11,8 @@ import {
 } from '@/lib/avatarSystem';
 import { readLocalProfile, UserProfile, writeLocalProfile } from '@/lib/userProfile';
 import { useAccountSync } from '@/lib/accountSync';
-import { Pencil, X } from 'lucide-react';
+import { useSettingsModal } from '@/components/SettingsModalProvider';
+import { Pencil, Settings, X } from 'lucide-react';
 
 function AvatarEditor({
   avatar,
@@ -116,6 +116,11 @@ export default function ProfilePage() {
     syncStatus,
     user,
   } = useAccountSync();
+  const { openSettings } = useSettingsModal();
+  const googleUser = user && !user.isAnonymous ? user : null;
+  const googleAccountLabel = googleUser
+    ? (googleUser.email ?? googleUser.providerData.find(provider => provider.email)?.email ?? googleUser.displayName ?? 'Google account')
+    : null;
 
   const updateProfile = (updater: (prev: UserProfile) => UserProfile) => {
     setProfile(prev => {
@@ -144,7 +149,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="app-screen">
+    <main className="app-screen primary-nav-screen">
       {showEditor && (
         <AvatarEditor
           avatar={profile.avatar}
@@ -152,7 +157,6 @@ export default function ProfilePage() {
           onClose={() => setShowEditor(false)}
         />
       )}
-      <AppTopBar title="Profile" />
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
 
@@ -185,18 +189,18 @@ export default function ProfilePage() {
                 ? 'Google sync is disabled until Firebase env vars are configured.'
                 : !ready
                   ? 'Initializing account sync...'
-                  : user
-                    ? `Signed in as ${user.email ?? 'account user'}`
+                  : googleAccountLabel
+                    ? `Signed in as ${googleAccountLabel}`
                     : 'Using guest profile (device only)'}
             </p>
 
-            {firebaseEnabled && (!user || syncStatus === 'syncing' || Boolean(syncError)) && (
+            {firebaseEnabled && (!googleAccountLabel || syncStatus === 'syncing' || Boolean(syncError)) && (
               <p className="content-muted text-xs mb-4">
                 {syncStatus === 'syncing'
                   ? 'Syncing your profile and app data...'
                   : syncError
                     ? syncError
-                    : user
+                    : googleAccountLabel
                       ? ''
                       : 'Sign in with Google to sync everything across devices.'}
               </p>
@@ -206,7 +210,7 @@ export default function ProfilePage() {
               <Link href="/profile/statistics" className="btn-outline px-4 py-2">
                 Statistics
               </Link>
-              {firebaseEnabled && !user && (
+              {firebaseEnabled && !googleAccountLabel && (
                 <button
                   onClick={() => void handleSignIn()}
                   className="btn-outline px-4 py-2"
@@ -215,7 +219,7 @@ export default function ProfilePage() {
                   {loginPending ? 'Opening Google...' : 'Log in with Google'}
                 </button>
               )}
-              {user && (
+              {googleAccountLabel && (
                 <button
                   onClick={() => void handleSignOut()}
                   className="btn-outline px-4 py-2"
@@ -226,6 +230,13 @@ export default function ProfilePage() {
               )}
             </div>
             {statusMessage && <p className="text-sm content-muted mt-3">{statusMessage}</p>}
+
+            <button
+              onClick={openSettings}
+              className="btn-outline w-full mt-4 py-2.5 inline-flex items-center justify-center gap-2"
+            >
+              <Settings size={17} /> Settings
+            </button>
           </section>
 
         </div>
