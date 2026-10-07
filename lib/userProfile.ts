@@ -23,48 +23,41 @@ function hashStringSeed(input: string) {
 }
 
 function normalizeAvatar(raw: unknown, fallbackSeed: number): AvatarSpec {
-  const fallback = defaultAvatarSpec(fallbackSeed);
-  if (!raw || typeof raw !== 'object') return fallback;
-  const incoming = raw as Partial<AvatarSpec>;
-
+  if (!raw || typeof raw !== 'object') return defaultAvatarSpec(fallbackSeed);
   const legacy = raw as Record<string, unknown>;
   const hasLegacyShape = typeof legacy.skin === 'string' || typeof legacy.hair === 'string';
   if (hasLegacyShape) {
-    const background = typeof legacy.bg === 'string' ? legacy.bg : undefined;
     return constrainAvatarSpec({
-      ...fallback,
-      skinColor: typeof legacy.skin === 'string' ? legacy.skin : fallback.skinColor,
-      hairColor: typeof legacy.hair === 'string' ? legacy.hair : fallback.hairColor,
-      eyeType: typeof legacy.eyes === 'string' ? legacy.eyes : fallback.eyeType,
-      mouthType: typeof legacy.mouth === 'string' ? legacy.mouth : fallback.mouthType,
-      accessory: typeof legacy.accessory === 'string' ? legacy.accessory : fallback.accessory,
-      ...(background ? { background } : {}),
-    }, fallbackSeed);
+      skinColor: typeof legacy.skin === 'string' ? legacy.skin : undefined,
+      hairColor: typeof legacy.hair === 'string' ? legacy.hair : undefined,
+      eyeType: typeof legacy.eyes === 'string' ? legacy.eyes : undefined,
+      mouthType: typeof legacy.mouth === 'string' ? legacy.mouth : undefined,
+      accessory: typeof legacy.accessory === 'string' ? legacy.accessory : undefined,
+      background: typeof legacy.bg === 'string' ? legacy.bg : undefined,
+    } as Partial<AvatarSpec>, fallbackSeed);
   }
 
-  const normalized = constrainAvatarSpec({
-    ...fallback,
-    ...Object.fromEntries(
-      Object.entries(incoming).filter(([, value]) => typeof value === 'string')
-    ),
-  } as Partial<AvatarSpec>, fallbackSeed);
-
+  const incoming = Object.fromEntries(
+    Object.entries(raw as Partial<AvatarSpec>).filter(([, value]) => typeof value === 'string')
+  ) as Partial<AvatarSpec>;
   const hairAliases: Record<string, string> = {
     short: 'short-textured', crew: 'buzz-cut', curly: 'curls', long: 'long-straight',
     buzz: 'buzz-cut', crop: 'short-textured', sidepart: 'side-part',
+    pixie: 'short-textured', 'layered-bob': 'bob', braids: 'long-straight', 'curly-bob': 'curls',
+    'bro-flow': 'waves', 'man-bun': 'curls',
   };
   const eyeAliases: Record<string, string> = { dot: 'classic', sleepy: 'relaxed', wide: 'round' };
   const mouthAliases: Record<string, string> = { flat: 'neutral', pout: 'soft-smile', tongue: 'open-smile' };
   const shirtAliases: Record<string, string> = { tshirt: 'crew-tee', suit: 'button-up', dress: 'sweater' };
   const accessoryAliases: Record<string, string> = { hat: 'cap', earring: 'earrings' };
 
-  normalized.hairStyle = hairAliases[normalized.hairStyle] ?? normalized.hairStyle;
-  normalized.eyeType = eyeAliases[normalized.eyeType] ?? normalized.eyeType;
-  normalized.mouthType = mouthAliases[normalized.mouthType] ?? normalized.mouthType;
-  normalized.shirtStyle = shirtAliases[normalized.shirtStyle] ?? normalized.shirtStyle;
-  normalized.accessory = accessoryAliases[normalized.accessory] ?? normalized.accessory;
-  if (incoming.shirtStyle === 'dress' && typeof incoming.bottomStyle !== 'string') normalized.bottomStyle = 'skirt';
-  return constrainAvatarSpec(normalized, fallbackSeed);
+  if (typeof incoming.hairStyle === 'string') incoming.hairStyle = hairAliases[incoming.hairStyle] ?? incoming.hairStyle;
+  if (typeof incoming.eyeType === 'string') incoming.eyeType = eyeAliases[incoming.eyeType] ?? incoming.eyeType;
+  if (typeof incoming.mouthType === 'string') incoming.mouthType = mouthAliases[incoming.mouthType] ?? incoming.mouthType;
+  if (typeof incoming.shirtStyle === 'string') incoming.shirtStyle = shirtAliases[incoming.shirtStyle] ?? incoming.shirtStyle;
+  if (typeof incoming.accessory === 'string') incoming.accessory = accessoryAliases[incoming.accessory] ?? incoming.accessory;
+  if ((raw as Partial<AvatarSpec>).shirtStyle === 'dress' && typeof incoming.bottomStyle !== 'string') incoming.bottomStyle = 'skirt';
+  return constrainAvatarSpec(incoming, fallbackSeed);
 }
 
 function generateStableGuestName(seed: number) {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import MainBottomNav from '@/components/MainBottomNav';
+import AvatarEditor from '@/components/AvatarEditor';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
 import CustomBookSelectorPopup from '@/components/CustomBookSelectorPopup';
@@ -24,8 +25,8 @@ import {
   upsertPartyMember,
 } from '@/lib/partyEngine';
 import { ensureFirebaseSession, getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebaseClient';
-import { readClientId, readLocalProfile } from '@/lib/userProfile';
-import { avatarToDataUri } from '@/lib/avatarSystem';
+import { readClientId, readLocalProfile, writeLocalProfile, type UserProfile } from '@/lib/userProfile';
+import { avatarToDataUri, type AvatarSpec } from '@/lib/avatarSystem';
 import { PARTY_TIMER_SECOND_OPTIONS, clampTimerSeconds, formatTimerOptionLabel } from '@/lib/timerOptions';
 import { useAccountSync } from '@/lib/accountSync';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
@@ -99,6 +100,12 @@ export default function MultiplayerPage() {
   const [activeRoomCode, setActiveRoomCode] = useState<string | null>(() => readInitialCodeParam() ?? readInitialPartyCode());
   const [joinCode, setJoinCode] = useState(['', '', '', '']);
   const joinRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const [showPartyAvatarEditor, setShowPartyAvatarEditor] = useState(false);
+  const [avatarDraft, setAvatarDraft] = useState<AvatarSpec | null>(null);
+  const avatarDraftRef = useRef<AvatarSpec | null>(null);
+  const [editingPartyName, setEditingPartyName] = useState(false);
+  const [partyNameDraft, setPartyNameDraft] = useState('');
+  const navigatingToPartyGameRef = useRef(false);
 
   const { appStateNonce, user } = useAccountSync();
   const [profile, setProfile] = useState(() => readLocalProfile());
@@ -113,9 +120,9 @@ export default function MultiplayerPage() {
   const suppressLobbyLeaveRef = useRef(false);
 
   const displayName = useMemo(() => {
-    const accountName = user?.displayName?.trim();
-    if (accountName) return accountName;
-    return profile.name;
+    const profileName = profile.name.trim();
+    if (profileName) return profileName;
+    return user?.displayName?.trim() || 'Player';
   }, [profile.name, user?.displayName]);
 
   const partyModeOptions = useMemo(
@@ -130,6 +137,59 @@ export default function MultiplayerPage() {
   const isCurrentMember = Boolean(
     room?.members.some(member => member.id === partyMemberId || member.id === clientId)
   );
+  const currentPartyMember = room?.members.find(member => member.id === partyMemberId || member.id === clientId) ?? null;
+
+  const persistPartyProfile = useCallback(async (nextProfile: UserProfile) => {
+    setProfile(nextProfile);
+    writeLocalProfile(nextProfile);
+    if (activeRoomCode && firebaseConfigured && isCurrentMember) {
+      await upsertPartyMember(activeRoomCode, {
+        id: partyMemberId,
+        name: nextProfile.name.trim() || 'Player',
+        avatar: nextProfile.avatar,
+        isHost: room?.hostId === partyMemberId,
+        joinedAt: currentPartyMember?.joinedAt ?? Date.now(),
+      });
+    }
+  }, [activeRoomCode, currentPartyMember?.joinedAt, firebaseConfigured, isCurrentMember, partyMemberId, room?.hostId]);
+
+  const commitPartyName = useCallback(async () => {
+    const trimmed = partyNameDraft.trim();
+    setEditingPartyName(false);
+    if (!trimmed || trimmed === profile.name) {
+      setPartyNameDraft(profile.name);
+      return;
+    }
+    await persistPartyProfile({ ...profile, name: trimmed });
+  }, [partyNameDraft, persistPartyProfile, profile]);
+
+  const savePartyAvatar = useCallback(async (avatar: AvatarSpec) => {
+    avatarDraftRef.current = null;
+    setAvatarDraft(null);
+    await persistPartyProfile({ ...profile, avatar });
+  }, [persistPartyProfile, profile]);
+
+  const flushPartyIdentityEdits = useCallback(async () => {
+    let nextProfile = profile;
+    let changed = false;
+    if (editingPartyName) {
+      const trimmed = partyNameDraft.trim();
+      if (trimmed && trimmed !== nextProfile.name) {
+        nextProfile = { ...nextProfile, name: trimmed };
+        changed = true;
+      }
+    }
+    if (showPartyAvatarEditor && avatarDraftRef.current) {
+      nextProfile = { ...nextProfile, avatar: avatarDraftRef.current };
+      changed = true;
+    }
+    setEditingPartyName(false);
+    setShowPartyAvatarEditor(false);
+    setAvatarDraft(null);
+    avatarDraftRef.current = null;
+    if (changed) await persistPartyProfile(nextProfile);
+    return nextProfile;
+  }, [editingPartyName, partyNameDraft, persistPartyProfile, profile, showPartyAvatarEditor]);
   const lobbySettings = room?.lobbySettings;
   const lobbyComplete = Boolean(
     lobbySettings?.modeId &&
@@ -314,10 +374,15 @@ export default function MultiplayerPage() {
   }, [activeRoomCode, partyMemberId, room?.game?.status, tab]);
 
   useEffect(() => {
-    if (tab !== 'party' || !room?.code) return;
-    if (!room.game || room.game.status === 'lobby') return;
-    router.push(`/multiplayer/party/game?code=${room.code}`);
-  }, [room?.code, room?.game, router, tab]);
+    if (tab !== 'party' || !room?.code || !room.game || room.game.status === 'lobby') return;
+    if (navigatingToPartyGameRef.current) return;
+    navigatingToPartyGameRef.current = true;
+    void (async () => {
+      await flushPartyIdentityEdits();
+      suppressLobbyLeaveRef.current = true;
+      router.push(`/multiplayer/party/game?code=${room.code}`);
+    })();
+  }, [flushPartyIdentityEdits, room?.code, room?.game, router, tab]);
 
   const applyPlayers = (value: number) => {
     const n = Math.min(8, Math.max(2, value));
@@ -477,6 +542,7 @@ export default function MultiplayerPage() {
 
     setPartyStartError('');
     setPartyStartPending(true);
+    await flushPartyIdentityEdits();
 
     const modeConfig = gameModes[lobbySettings.modeId];
     const selectedBookData = lobbySettings.modeId === 'book-selection'
@@ -514,12 +580,21 @@ export default function MultiplayerPage() {
       return;
     }
 
+    navigatingToPartyGameRef.current = true;
     suppressLobbyLeaveRef.current = true;
     router.push(`/multiplayer/party/game?code=${room.code}`);
   };
 
   return (
     <main className="app-screen primary-nav-screen">
+      {showPartyAvatarEditor && (
+        <AvatarEditor
+          avatar={avatarDraft ?? profile.avatar}
+          onDraftChange={avatar => { avatarDraftRef.current = avatar; setAvatarDraft(avatar); }}
+          onSave={savePartyAvatar}
+          onClose={() => { setShowPartyAvatarEditor(false); setAvatarDraft(null); avatarDraftRef.current = null; }}
+        />
+      )}
 
       <div className={tab === 'party' ? 'app-content app-content-fixed multiplayer-party-content' : 'app-content app-content-scroll'}>
         <div className={tab === 'party' ? 'page max-w-4xl min-w-0 multiplayer-party-page' : 'page max-w-4xl min-w-0'}>
@@ -652,22 +727,74 @@ export default function MultiplayerPage() {
                     <div className="party-members-block">
                     <p className="font-semibold mb-2">Party Members</p>
                     <div className="party-members-list grid gap-1.5">
-                      {room.members.map(member => (
-                        <div key={member.id} className="party-member-row">
-                          <Image
-                            src={avatarToDataUri(member.avatar)}
-                            alt={`${member.name} avatar`}
-                            width={36}
-                            height={36}
-                            unoptimized
-                            className="w-9 h-9 border border-[var(--line)]"
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold">{member.name}</p>
-                            <p className="text-xs content-muted">{member.isHost ? 'Host' : 'Joined'}</p>
+                      {room.members.map(member => {
+                        const isSelf = member.id === partyMemberId || member.id === clientId;
+                        return (
+                          <div key={member.id} className={isSelf ? 'party-member-row is-self' : 'party-member-row'}>
+                            {isSelf ? (
+                              <button
+                                type="button"
+                                className="party-member-avatar-button"
+                                aria-label="Edit your avatar"
+                                onClick={() => {
+                                  avatarDraftRef.current = profile.avatar;
+                                  setAvatarDraft(profile.avatar);
+                                  setShowPartyAvatarEditor(true);
+                                }}
+                              >
+                                <Image
+                                  src={avatarToDataUri(member.avatar)}
+                                  alt={`${member.name} avatar`}
+                                  width={36}
+                                  height={36}
+                                  unoptimized
+                                  className="w-9 h-9"
+                                />
+                              </button>
+                            ) : (
+                              <Image
+                                src={avatarToDataUri(member.avatar)}
+                                alt={`${member.name} avatar`}
+                                width={36}
+                                height={36}
+                                unoptimized
+                                className="w-9 h-9"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              {isSelf && editingPartyName ? (
+                                <input
+                                  value={partyNameDraft}
+                                  onChange={event => setPartyNameDraft(event.target.value)}
+                                  onBlur={() => void commitPartyName()}
+                                  onKeyDown={event => {
+                                    if (event.key === 'Enter') event.currentTarget.blur();
+                                    if (event.key === 'Escape') {
+                                      setPartyNameDraft(profile.name);
+                                      setEditingPartyName(false);
+                                    }
+                                  }}
+                                  className="party-member-name-input"
+                                  maxLength={40}
+                                  autoFocus
+                                  aria-label="Edit your display name"
+                                />
+                              ) : isSelf ? (
+                                <button
+                                  type="button"
+                                  className="party-member-name-button"
+                                  onClick={() => { setPartyNameDraft(profile.name || member.name); setEditingPartyName(true); }}
+                                >
+                                  {member.name}
+                                </button>
+                              ) : (
+                                <p className="text-sm font-semibold truncate">{member.name}</p>
+                              )}
+                              <p className="text-xs content-muted">{isSelf ? `You${member.isHost ? ' · Host' : ''}` : member.isHost ? 'Host' : 'Joined'}</p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 

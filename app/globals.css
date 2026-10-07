@@ -3251,3 +3251,110 @@ input[type='tel'],
 .mode-grid > .mode-card.mode-card-selected {
   background: color-mix(in oklab, var(--accent) 18%, var(--panel)) !important;
 }
+
+/* ===== 2026-10-06 iPhone viewport edge + editable party identity ===== */
+/* Keep the application canvas tied to the actual dynamic viewport. Do not reserve a second
+   safe-area strip below page content; fixed bottom controls paint the safe area themselves. */
+html,
+body {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  padding: 0 !important;
+  background: var(--bg) !important;
+}
+.app-screen {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding-bottom: 0 !important;
+  background: var(--bg);
+}
+.app-content-scroll > .page,
+.app-content-fixed > .page,
+.setup-page {
+  padding-bottom: 0 !important;
+}
+.app-screen:has(> .main-bottom-nav) > .app-content-scroll {
+  padding-bottom: calc(46px + env(safe-area-inset-bottom)) !important;
+}
+.main-bottom-nav {
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: calc(46px + env(safe-area-inset-bottom)) !important;
+  min-height: calc(46px + env(safe-area-inset-bottom)) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 6px !important;
+  align-items: stretch !important;
+  background: var(--bg) !important;
+}
+.main-nav-item {
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 4px 4px calc(4px + env(safe-area-inset-bottom)) !important;
+  align-self: stretch !important;
+  border-radius: 10px 10px 0 0 !important;
+}
+.main-nav-item:first-child,
+.main-nav-item:last-child {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+@media (display-mode: standalone) {
+  .main-nav-item:first-child { border-bottom-left-radius: 28px !important; }
+  .main-nav-item:last-child { border-bottom-right-radius: 28px !important; }
+}
+
+.party-member-row.is-self {
+  background: color-mix(in oklab, var(--accent) 20%, var(--card-bg)) !important;
+}
+.party-member-avatar-button,
+.party-member-name-button {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.party-member-avatar-button {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--accent) 18%, var(--control-bg));
+}
+.party-member-avatar-button img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+.party-member-name-button {
+  max-width: 100%;
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.1;
+  font-weight: 800;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--accent) 55%, transparent);
+  text-underline-offset: 2px;
+}
+.party-member-name-input {
+  width: 100% !important;
+  min-height: 30px !important;
+  height: 30px !important;
+  padding: 3px 7px !important;
+  font-size: 0.875rem !important;
+  font-weight: 800 !important;
+}
