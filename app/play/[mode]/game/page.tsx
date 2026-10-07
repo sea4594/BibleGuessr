@@ -494,12 +494,6 @@ export default function GamePage() {
     router.push('/');
   };
 
-  const handleSelectGameMode = () => {
-    suppressEmptySessionRedirectRef.current = true;
-    router.push('/multiplayer/hot-seat/gamemode');
-    resetGame();
-  };
-
   const handlePlayAgain = () => {
     usedVerseKeysRef.current = new Set();
     setSharedVerseByRound({});
@@ -530,7 +524,6 @@ export default function GamePage() {
         session={session}
         onPlayAgain={handlePlayAgain}
         onHome={isHotSeatGame ? handleExitSummaryToHome : handleExitToHome}
-        onSelectGameMode={isHotSeatGame ? handleSelectGameMode : undefined}
       />
     );
   }

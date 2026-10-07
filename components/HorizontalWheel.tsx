@@ -8,6 +8,7 @@ interface Props {
   selected: number;
   onChange: (value: number) => void;
   itemWidth?: number;
+  formatValue?: (value: number) => string;
 }
 
 export default function HorizontalWheel({
@@ -16,34 +17,36 @@ export default function HorizontalWheel({
   selected,
   onChange,
   itemWidth = 64,
+  formatValue = value => String(value),
 }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const programmaticScrollRef = useRef(false);
+  const programmaticReleaseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sidePadding, setSidePadding] = useState(itemWidth);
 
-  const getScrollLeftForIndex = useCallback((idx: number) => {
-    return Math.max(0, idx * itemWidth);
-  }, [itemWidth]);
+  const getScrollLeftForIndex = useCallback((idx: number) => Math.max(0, idx * itemWidth), [itemWidth]);
+  const getIndexForScrollLeft = useCallback((scrollLeft: number) => Math.round(scrollLeft / itemWidth), [itemWidth]);
 
-  const getIndexForScrollLeft = useCallback((scrollLeft: number) => {
-    return Math.round(scrollLeft / itemWidth);
-  }, [itemWidth]);
-
-  const scrollToIndex = useCallback((idx: number, smooth = true) => {
+  const alignToIndex = useCallback((idx: number) => {
     if (!listRef.current) return;
-    listRef.current.scrollTo({ left: getScrollLeftForIndex(idx), behavior: smooth ? 'smooth' : 'auto' });
+    programmaticScrollRef.current = true;
+    if (programmaticReleaseRef.current) clearTimeout(programmaticReleaseRef.current);
+    listRef.current.scrollTo({ left: getScrollLeftForIndex(idx), behavior: 'auto' });
+    programmaticReleaseRef.current = setTimeout(() => {
+      programmaticScrollRef.current = false;
+      programmaticReleaseRef.current = null;
+    }, 120);
   }, [getScrollLeftForIndex]);
 
   useEffect(() => {
     if (!viewportRef.current) return;
-
     const updatePadding = () => {
       if (!viewportRef.current) return;
       const nextPadding = Math.max(0, Math.round((viewportRef.current.clientWidth - itemWidth) / 2));
       setSidePadding(prev => (prev === nextPadding ? prev : nextPadding));
     };
-
     updatePadding();
     const observer = new ResizeObserver(updatePadding);
     observer.observe(viewportRef.current);
@@ -52,19 +55,25 @@ export default function HorizontalWheel({
 
   useEffect(() => {
     const idx = values.indexOf(selected);
-    if (idx < 0 || !listRef.current) return;
-    scrollToIndex(idx);
-  }, [selected, values, scrollToIndex]);
+    if (idx >= 0) alignToIndex(idx);
+  }, [alignToIndex, selected, sidePadding, values]);
+
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (programmaticReleaseRef.current) clearTimeout(programmaticReleaseRef.current);
+  }, []);
 
   const snapToNearest = () => {
-    if (!listRef.current) return;
+    if (!listRef.current || programmaticScrollRef.current) return;
     const idx = getIndexForScrollLeft(listRef.current.scrollLeft);
     const clamped = Math.max(0, Math.min(values.length - 1, idx));
-    scrollToIndex(clamped);
-    onChange(values[clamped]);
+    const value = values[clamped];
+    alignToIndex(clamped);
+    if (value !== selected) onChange(value);
   };
 
   const onScroll = () => {
+    if (programmaticScrollRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(snapToNearest, 110);
   };
@@ -81,15 +90,13 @@ export default function HorizontalWheel({
               type="button"
               onClick={() => {
                 const idx = values.indexOf(value);
-                if (idx >= 0) {
-                  scrollToIndex(idx);
-                  onChange(value);
-                }
+                if (idx >= 0) alignToIndex(idx);
+                if (value !== selected) onChange(value);
               }}
               className={`h-wheel-item${value === selected ? ' selected' : ''}`}
               style={{ width: `${itemWidth}px`, minWidth: `${itemWidth}px` }}
             >
-              {value}
+              {formatValue(value)}
             </button>
           ))}
           <div className="h-wheel-spacer" style={{ width: `${sidePadding}px`, minWidth: `${sidePadding}px` }} aria-hidden="true" />

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUiSettings } from "@/lib/uiSettingsContext";
 import { useGame } from "@/lib/gameContext";
@@ -7,11 +7,10 @@ import { gameModes, GameModeId } from "@/lib/gameModes";
 import { bibleData } from "@/lib/bibleData";
 import { fetchVerseTextByReference } from "@/lib/verseClient";
 import MainBottomNav from "@/components/MainBottomNav";
+import GameModeSelector from "@/components/GameModeSelector";
 import { Zap } from "lucide-react";
-import CustomBookSelectorPopup from "@/components/CustomBookSelectorPopup";
 import {
   formatTimerOptionLabel,
-  NO_TIMER_SECONDS,
   QUICK_PLAY_TIMER_SECOND_OPTIONS,
   toTimerDurationSeconds,
 } from "@/lib/timerOptions";
@@ -50,14 +49,6 @@ export default function HomePage() {
   const [verseOfDay, setVerseOfDay] = useState<VerseOfDay | null>(null);
   const [loadingVerse, setLoadingVerse] = useState(true);
 
-  const modeOptions = useMemo(
-    () =>
-      Object.entries(gameModes)
-        .filter(([, mode]) => !mode.isSingleBook)
-        .map(([id, mode]) => ({ id, name: mode.name })),
-    []
-  );
-
   useEffect(() => {
     const ref = getDailyVerseRef();
     void fetchVerseTextByReference(ref.book, ref.chapter, ref.verse)
@@ -69,10 +60,12 @@ export default function HomePage() {
       .finally(() => setLoadingVerse(false));
   }, []);
 
+  const quickPlayModeId: GameModeId = settings.preferredGameMode in gameModes
+    ? settings.preferredGameMode as GameModeId
+    : 'full-bible';
+
   const handleQuickPlay = () => {
-    const modeId: GameModeId = (settings.preferredGameMode in gameModes)
-      ? (settings.preferredGameMode as GameModeId)
-      : "full-bible";
+    const modeId = quickPlayModeId;
     const selectedCustomBooks = modeId === "custom"
       ? bibleData.filter(book => settings.preferredCustomBooks.includes(book.book))
       : [];
@@ -118,77 +111,34 @@ export default function HomePage() {
             )}
           </section>
 
-          <div className="home-quickplay-stack grid gap-3">
-            <section className="surface-card p-5 min-w-0">
-              <h2 className="quickplay-title">Quick Play</h2>
+          <div className="home-quickplay-stack setup-controls-stack">
+            <GameModeSelector
+              modeId={quickPlayModeId}
+              onModeChange={mode => setPreferredGameMode(mode)}
+              selectedBook={settings.preferredBook}
+              onBookChange={setPreferredBook}
+              selectedBooks={settings.preferredCustomBooks}
+              onSelectedBooksChange={setPreferredCustomBooks}
+            />
 
-              <div className={`party-gamemode-row mb-4 ${settings.preferredGameMode === "book-selection" || settings.preferredGameMode === "custom" ? "has-book" : ""}`}>
-                <select
-                  value={settings.preferredGameMode}
-                  onChange={e => setPreferredGameMode(e.target.value)}
-                  className="settings-input party-gamemode-select"
-                  aria-label="Game mode"
-                >
-                  {modeOptions.map(option => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
-                    </option>
-                  ))}
-                  <option value="book-selection">Book</option>
-                </select>
+            <HorizontalWheel
+              label="Rounds"
+              values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+              selected={settings.preferredRounds}
+              onChange={setPreferredRounds}
+            />
 
-                {settings.preferredGameMode === "book-selection" && (
-                  <select
-                    value={settings.preferredBook}
-                    onChange={e => setPreferredBook(e.target.value)}
-                    className="settings-input party-book-select"
-                    aria-label="Book"
-                  >
-                    {bibleData.map(book => (
-                      <option key={book.book} value={book.book}>{book.book}</option>
-                    ))}
-                  </select>
-                )}
-
-                {settings.preferredGameMode === "custom" && (
-                  <CustomBookSelectorPopup
-                    selectedBooks={settings.preferredCustomBooks}
-                    onChange={setPreferredCustomBooks}
-                  />
-                )}
-              </div>
-
-              <div className="mb-4 min-w-0">
-                <HorizontalWheel
-                  label="Rounds"
-                  values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
-                  selected={settings.preferredRounds}
-                  onChange={value => setPreferredRounds(value)}
-                />
-              </div>
-
-              <div className="timer-inline-row">
-                <p className="setup-control-label">Timer</p>
-                <div className="timer-inline-controls">
-                  <label className="timer-inline-label">
-                    <select
-                      value={settings.quickPlayTimerSeconds}
-                      onChange={e => setQuickPlayTimerSeconds(Number(e.target.value))}
-                      className="settings-input timer-inline-select"
-                    >
-                      {QUICK_PLAY_TIMER_SECOND_OPTIONS.map(value => (
-                        <option key={value} value={value}>{formatTimerOptionLabel(value)}</option>
-                      ))}
-                    </select>
-                    <span>{settings.quickPlayTimerSeconds === NO_TIMER_SECONDS ? "" : "Seconds"}</span>
-                  </label>
-                </div>
-              </div>
-            </section>
+            <HorizontalWheel
+              label="Timer (seconds)"
+              values={QUICK_PLAY_TIMER_SECOND_OPTIONS}
+              selected={settings.quickPlayTimerSeconds}
+              onChange={setQuickPlayTimerSeconds}
+              formatValue={formatTimerOptionLabel}
+            />
 
             <button
               onClick={handleQuickPlay}
-              className="btn-primary w-full py-5 text-xl font-bold inline-flex items-center justify-center gap-3"
+              className="btn-primary setup-start-btn home-quickplay-start inline-flex items-center justify-center gap-3"
             >
               <Zap size={24} /> Start
             </button>

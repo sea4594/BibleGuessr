@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import MainBottomNav from '@/components/MainBottomNav';
 import AvatarEditor from '@/components/AvatarEditor';
 import HorizontalWheel from '@/components/HorizontalWheel';
-import TimerSetupControls from '@/components/TimerSetupControls';
-import CustomBookSelectorPopup from '@/components/CustomBookSelectorPopup';
-import { readHotSeatSettings, writeHotSeatSettings, type HotSeatSettings } from '@/lib/hotSeatSettings';
+import GameModeSelector from '@/components/GameModeSelector';
+import { defaultHotSeatSettings, readHotSeatSettings, writeHotSeatSettings, type HotSeatSettings } from '@/lib/hotSeatSettings';
 import { BookData } from '@/lib/bibleData';
 import { gameModes, GameModeId } from '@/lib/gameModes';
+import { useGame } from '@/lib/gameContext';
 import {
   endPartyLobby,
   hostParty,
@@ -27,7 +27,7 @@ import {
 import { ensureFirebaseSession, getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebaseClient';
 import { DISPLAY_NAME_MAX_LENGTH, normalizeDisplayName, readClientId, readLocalProfile, writeLocalProfile, type UserProfile } from '@/lib/userProfile';
 import { avatarToDataUri, type AvatarSpec } from '@/lib/avatarSystem';
-import { PARTY_TIMER_SECOND_OPTIONS, clampTimerSeconds, formatTimerOptionLabel } from '@/lib/timerOptions';
+import { PARTY_TIMER_SECOND_OPTIONS, clampTimerSeconds, formatTimerOptionLabel, toTimerDurationSeconds } from '@/lib/timerOptions';
 import { useAccountSync } from '@/lib/accountSync';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 import { bibleData } from '@/lib/bibleData';
@@ -82,19 +82,24 @@ async function buildRandomPartyVerse(books: BookData[]): Promise<PartyVerse | nu
 
 export default function MultiplayerPage() {
   const router = useRouter();
+  const { startGame } = useGame();
   const [tab, setTab] = useState<'hot-seat' | 'party'>(() => {
     const requestedTab = readInitialTabParam();
     if (requestedTab === 'party' || requestedTab === 'hot-seat') return requestedTab;
     return readInitialMultiplayerTab();
   });
-  const initialHotSeat = useMemo(() => readHotSeatSettings(), []);
   const firebaseConfigured = isFirebaseConfigured();
 
-  const [players, setPlayers] = useState(initialHotSeat.players);
-  const [rounds, setRounds] = useState(initialHotSeat.rounds);
-  const [turnStyle, setTurnStyle] = useState(initialHotSeat.turnStyle);
-  const [names, setNames] = useState<string[]>(initialHotSeat.names);
-  const [timerSeconds, setTimerSeconds] = useState(initialHotSeat.timerSeconds);
+  // Keep the server/client first render identical. Device-local Hot Seat settings are
+  // restored once after mount below, before persistence is enabled.
+  const [players, setPlayers] = useState(defaultHotSeatSettings.players);
+  const [rounds, setRounds] = useState(defaultHotSeatSettings.rounds);
+  const [turnStyle, setTurnStyle] = useState(defaultHotSeatSettings.turnStyle);
+  const [names, setNames] = useState<string[]>(defaultHotSeatSettings.names);
+  const [timerSeconds, setTimerSeconds] = useState(defaultHotSeatSettings.timerSeconds);
+  const [hotSeatModeId, setHotSeatModeId] = useState<GameModeId>(defaultHotSeatSettings.modeId);
+  const [hotSeatBook, setHotSeatBook] = useState(defaultHotSeatSettings.selectedBook);
+  const [hotSeatBooks, setHotSeatBooks] = useState(defaultHotSeatSettings.selectedBooks);
   const [hotSeatSettingsReady, setHotSeatSettingsReady] = useState(false);
 
   const [room, setRoom] = useState<PartyRoom | null>(null);
@@ -126,14 +131,6 @@ export default function MultiplayerPage() {
     if (profileName) return profileName;
     return normalizeDisplayName(user?.displayName ?? '') || 'Player';
   }, [profile.name, user?.displayName]);
-
-  const partyModeOptions = useMemo(
-    () =>
-      Object.values(gameModes)
-        .filter(mode => !mode.isSingleBook)
-        .map(mode => ({ id: mode.id, name: mode.name })),
-    []
-  );
 
   const isHost = Boolean(room?.hostId === partyMemberId);
   const isCurrentMember = Boolean(
@@ -210,6 +207,9 @@ export default function MultiplayerPage() {
     setTurnStyle(stored.turnStyle);
     setNames(stored.names);
     setTimerSeconds(stored.timerSeconds);
+    setHotSeatModeId(stored.modeId);
+    setHotSeatBook(stored.selectedBook);
+    setHotSeatBooks(stored.selectedBooks);
     setHotSeatSettingsReady(true);
   }, []);
 
@@ -260,8 +260,11 @@ export default function MultiplayerPage() {
       turnStyle,
       names,
       timerSeconds: clampTimerSeconds(timerSeconds),
+      modeId: hotSeatModeId,
+      selectedBook: hotSeatBook,
+      selectedBooks: hotSeatBooks,
     });
-  }, [hotSeatSettingsReady, players, rounds, turnStyle, names, timerSeconds]);
+  }, [hotSeatSettingsReady, players, rounds, turnStyle, names, timerSeconds, hotSeatModeId, hotSeatBook, hotSeatBooks]);
 
   const persistHotSeatSettingsNow = useCallback((patch: Partial<HotSeatSettings> = {}) => {
     writeHotSeatSettings({
@@ -270,9 +273,12 @@ export default function MultiplayerPage() {
       turnStyle,
       names,
       timerSeconds: clampTimerSeconds(timerSeconds),
+      modeId: hotSeatModeId,
+      selectedBook: hotSeatBook,
+      selectedBooks: hotSeatBooks,
       ...patch,
     });
-  }, [players, rounds, turnStyle, names, timerSeconds]);
+  }, [players, rounds, turnStyle, names, timerSeconds, hotSeatModeId, hotSeatBook, hotSeatBooks]);
 
   useEffect(() => {
     if (tab !== 'party' || !firebaseConfigured) return;
@@ -418,9 +424,39 @@ export default function MultiplayerPage() {
     persistHotSeatSettingsNow({ players: n, names: adjustedNames });
   };
 
-  const selectGamemode = () => {
+  const startHotSeat = () => {
+    const selectedBookData = hotSeatModeId === 'book-selection'
+      ? bibleData.find(book => book.book === hotSeatBook) ?? bibleData[0]
+      : null;
+    const selectedCustomBooks = hotSeatModeId === 'custom'
+      ? bibleData.filter(book => hotSeatBooks.includes(book.book))
+      : [];
+    if (hotSeatModeId === 'custom' && selectedCustomBooks.length === 0) return;
+
+    const modeConfig = hotSeatModeId === 'book-selection' && selectedBookData
+      ? { ...gameModes[hotSeatModeId], books: [selectedBookData] }
+      : hotSeatModeId === 'custom'
+        ? { ...gameModes[hotSeatModeId], books: selectedCustomBooks }
+        : gameModes[hotSeatModeId];
+    const hotSeatPlayers = names.slice(0, players).map((name, idx) => name.trim() || `Player ${idx + 1}`);
+
     persistHotSeatSettingsNow();
-    router.push('/multiplayer/hot-seat/gamemode');
+    startGame({
+      mode: hotSeatModeId,
+      modeConfig,
+      totalRounds: players * rounds,
+      timerDurationSeconds: toTimerDurationSeconds(timerSeconds),
+      selectedBook: selectedBookData?.book,
+      returnPath: '/multiplayer?tab=hot-seat',
+      multiplayer: {
+        enabled: true,
+        lobbyType: 'hot-seat',
+        players: hotSeatPlayers,
+        roundsPerPlayer: rounds,
+        turnStyle,
+      },
+    });
+    router.push(`/play/${hotSeatModeId}/game`);
   };
 
   const submitJoin = async () => {
@@ -642,47 +678,79 @@ export default function MultiplayerPage() {
           </div>
 
           {tab === 'hot-seat' && (
-            <div className="hotseat-shell min-w-0">
-              <div className="hotseat-rounds-turn-row">
-                <div className="hotseat-wheel-slot">
-                  <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={value => { setRounds(value); persistHotSeatSettingsNow({ rounds: value }); }} />
-                </div>
-                <div className="hotseat-turn-buttons">
-                  <button
-                    onClick={() => { setTurnStyle('alternate'); persistHotSeatSettingsNow({ turnStyle: 'alternate' }); }}
-                    className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
-                  >
-                    Alternate
-                  </button>
-                  <button
-                    onClick={() => { setTurnStyle('all-at-once'); persistHotSeatSettingsNow({ turnStyle: 'all-at-once' }); }}
-                    className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
-                  >
-                    All at once
-                  </button>
-                </div>
-              </div>
-
-              <div className="hotseat-wheel-slot">
-                <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
-              </div>
-
-              <TimerSetupControls
-                embedded
-                seconds={timerSeconds}
-                onSecondsChange={value => { setTimerSeconds(value); persistHotSeatSettingsNow({ timerSeconds: clampTimerSeconds(value) }); }}
+            <div className="hotseat-shell setup-controls-stack min-w-0">
+              <GameModeSelector
+                modeId={hotSeatModeId}
+                onModeChange={mode => { setHotSeatModeId(mode); persistHotSeatSettingsNow({ modeId: mode }); }}
+                selectedBook={hotSeatBook}
+                onBookChange={book => { setHotSeatBook(book); persistHotSeatSettingsNow({ selectedBook: book }); }}
+                selectedBooks={hotSeatBooks}
+                onSelectedBooksChange={books => { setHotSeatBooks(books); persistHotSeatSettingsNow({ selectedBooks: books }); }}
               />
+
+              <HorizontalWheel
+                label="Rounds per player"
+                values={ROUND_VALUES}
+                selected={rounds}
+                onChange={value => { setRounds(value); persistHotSeatSettingsNow({ rounds: value }); }}
+              />
+
+              <div className="hotseat-turn-buttons" aria-label="Turn order">
+                <button
+                  onClick={() => { setTurnStyle('alternate'); persistHotSeatSettingsNow({ turnStyle: 'alternate' }); }}
+                  className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                >
+                  Alternate
+                </button>
+                <button
+                  onClick={() => { setTurnStyle('all-at-once'); persistHotSeatSettingsNow({ turnStyle: 'all-at-once' }); }}
+                  className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
+                >
+                  All at once
+                </button>
+              </div>
+
+              <HorizontalWheel
+                label="Timer (seconds)"
+                values={PARTY_TIMER_VALUES}
+                selected={timerSeconds}
+                onChange={value => { setTimerSeconds(value); persistHotSeatSettingsNow({ timerSeconds: clampTimerSeconds(value) }); }}
+                formatValue={formatTimerOptionLabel}
+              />
+
+              <HorizontalWheel label="Player count" values={PLAYER_VALUES} selected={players} onChange={applyPlayers} />
 
               <section className="hotseat-names-window">
                 <p className="setup-control-label mb-2">Player Names</p>
                 <div className="grid gap-2 sm:grid-cols-2 hotseat-names-list">
                   {names.slice(0, players).map((name, idx) => (
-                    <input key={idx} value={name} onChange={e => { const n = names.slice(); n[idx] = e.target.value; setNames(n); persistHotSeatSettingsNow({ names: n }); }} className="settings-input !w-full" />
+                    <input
+                      key={idx}
+                      value={name}
+                      onChange={e => {
+                        const nextNames = names.slice();
+                        nextNames[idx] = e.target.value;
+                        setNames(nextNames);
+                        persistHotSeatSettingsNow({ names: nextNames });
+                      }}
+                      className="settings-input !w-full"
+                      maxLength={DISPLAY_NAME_MAX_LENGTH}
+                    />
                   ))}
                 </div>
               </section>
 
-              <button onClick={selectGamemode} className="btn-primary hotseat-select-gamemode-btn">Select Gamemode</button>
+              {hotSeatModeId === 'custom' && hotSeatBooks.length === 0 && (
+                <p className="text-xs text-[var(--danger)]">Select at least one book.</p>
+              )}
+
+              <button
+                onClick={startHotSeat}
+                disabled={hotSeatModeId === 'custom' && hotSeatBooks.length === 0}
+                className="btn-primary setup-start-btn hotseat-start-btn"
+              >
+                Start
+              </button>
             </div>
           )}
 
@@ -839,98 +907,58 @@ export default function MultiplayerPage() {
                     </div>
                   </div>
 
-                    <div className="party-host-controls">
-                    <label className="setup-control-label block mb-1">Game Mode</label>
-                    <div className={`party-gamemode-row mb-3 ${lobbySettings?.modeId === 'book-selection' || lobbySettings?.modeId === 'custom' ? 'has-book' : ''}`}>
-                      <select
-                        value={lobbySettings?.modeId ?? ''}
-                        onChange={e => {
-                          const value = e.target.value;
-                          void applyLobbySettings({
-                            modeId: value ? (value as GameModeId) : null,
-                            selectedBook: value === 'book-selection' ? (lobbySettings?.selectedBook ?? bibleData[0].book) : null,
-                            selectedBooks: value === 'custom'
-                              ? (lobbySettings?.selectedBooks?.length ? lobbySettings.selectedBooks : bibleData.map(book => book.book))
-                              : null,
-                          });
-                        }}
-                        className="settings-input party-gamemode-select"
-                        disabled={!isHost}
-                      >
-                        <option value="">Select mode</option>
-                        {partyModeOptions.map(option => (
-                          <option key={option.id} value={option.id}>{option.name}</option>
-                        ))}
-                        <option value="book-selection">Book</option>
-                      </select>
+                    <div className="party-host-controls setup-controls-stack">
+                      {isHost ? (
+                        <>
+                          <GameModeSelector
+                            modeId={lobbySettings?.modeId ?? 'full-bible'}
+                            onModeChange={mode => {
+                              void applyLobbySettings({
+                                modeId: mode,
+                                selectedBook: mode === 'book-selection' ? (lobbySettings?.selectedBook ?? bibleData[0].book) : null,
+                                selectedBooks: mode === 'custom'
+                                  ? (lobbySettings?.selectedBooks?.length ? lobbySettings.selectedBooks : bibleData.map(book => book.book))
+                                  : null,
+                              });
+                            }}
+                            selectedBook={lobbySettings?.selectedBook ?? bibleData[0].book}
+                            onBookChange={book => { void applyLobbySettings({ selectedBook: book }); }}
+                            selectedBooks={lobbySettings?.selectedBooks ?? bibleData.map(book => book.book)}
+                            onSelectedBooksChange={books => { void applyLobbySettings({ selectedBooks: books }); }}
+                          />
 
-                      {lobbySettings?.modeId === 'book-selection' && (
-                        <select
-                          value={lobbySettings.selectedBook || bibleData[0].book}
-                          onChange={e => {
-                            const value = e.target.value;
-                            void applyLobbySettings({ selectedBook: value });
-                          }}
-                          className="settings-input party-book-select"
-                          disabled={!isHost}
-                          aria-label="Book"
-                        >
-                          {bibleData.map(book => (
-                            <option key={book.book} value={book.book}>{book.book}</option>
-                          ))}
-                        </select>
+                          <HorizontalWheel
+                            label="Rounds"
+                            values={ROUND_VALUES}
+                            selected={lobbySettings?.roundsPerPlayer ?? 5}
+                            onChange={value => { void applyLobbySettings({ roundsPerPlayer: value }); }}
+                          />
+
+                          <HorizontalWheel
+                            label="Timer (seconds)"
+                            values={PARTY_TIMER_VALUES}
+                            selected={lobbySettings?.timerDurationSeconds ?? 30}
+                            onChange={value => { void applyLobbySettings({ timerDurationSeconds: value }); }}
+                            formatValue={formatTimerOptionLabel}
+                          />
+
+                          {lobbySettings?.modeId === 'custom' && (lobbySettings.selectedBooks?.length ?? 0) === 0 && (
+                            <p className="text-xs text-[var(--danger)]">Select at least one book.</p>
+                          )}
+                        </>
+                      ) : (
+                        <div className="party-settings-readonly">
+                          <p><span>Game Mode:</span> {lobbySettings?.modeId ? gameModes[lobbySettings.modeId].name : '—'}</p>
+                          {lobbySettings?.modeId === 'book-selection' && (
+                            <p><span>Book:</span> {lobbySettings.selectedBook ?? '—'}</p>
+                          )}
+                          {lobbySettings?.modeId === 'custom' && (
+                            <p><span>Books:</span> {lobbySettings.selectedBooks?.length ?? 0} selected</p>
+                          )}
+                          <p><span>Rounds:</span> {lobbySettings?.roundsPerPlayer ?? '—'}</p>
+                          <p><span>Timer:</span> {lobbySettings?.timerDurationSeconds === 0 ? 'None' : lobbySettings?.timerDurationSeconds ? `${lobbySettings.timerDurationSeconds} seconds` : '—'}</p>
+                        </div>
                       )}
-
-                      {lobbySettings?.modeId === 'custom' && (
-                        <CustomBookSelectorPopup
-                          selectedBooks={lobbySettings.selectedBooks ?? []}
-                          onChange={books => {
-                            void applyLobbySettings({ selectedBooks: books });
-                          }}
-                          disabled={!isHost}
-                        />
-                      )}
-                    </div>
-
-                    {lobbySettings?.modeId === 'custom' && (lobbySettings.selectedBooks?.length ?? 0) === 0 && (
-                      <p className="text-xs text-[var(--danger)] -mt-1 mb-3">Select at least one book.</p>
-                    )}
-
-                    <label className="setup-control-label block mb-1">Rounds</label>
-                    <select
-                      value={lobbySettings?.roundsPerPlayer ?? ''}
-                      onChange={e => {
-                        const value = e.target.value;
-                        void applyLobbySettings({ roundsPerPlayer: value ? Number(value) : null });
-                      }}
-                      className="settings-input !w-full mb-3"
-                      disabled={!isHost}
-                    >
-                      <option value="">Select rounds</option>
-                      {ROUND_VALUES.map(value => (
-                        <option key={value} value={value}>{value}</option>
-                      ))}
-                    </select>
-
-                    <label className="setup-control-label block mb-1">Timer</label>
-                    <select
-                      value={lobbySettings?.timerDurationSeconds ?? ''}
-                      onChange={e => {
-                        const value = e.target.value;
-                        void applyLobbySettings({ timerDurationSeconds: value ? Number(value) : null });
-                      }}
-                      className="settings-input !w-full"
-                      disabled={!isHost}
-                    >
-                      <option value="">Select timer</option>
-                      {PARTY_TIMER_VALUES.map(value => (
-                        <option key={value} value={value}>{formatTimerOptionLabel(value)}</option>
-                      ))}
-                    </select>
-
-                    {!isHost && (
-                      <p className="text-xs content-muted mt-3">Only the host can edit these settings.</p>
-                    )}
                     </div>
                   </div>
 
