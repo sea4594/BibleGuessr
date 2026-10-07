@@ -10,6 +10,7 @@ import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import RoundResult from '@/components/RoundResult';
 import GameSummary from '@/components/GameSummary';
+import ScoreBar from '@/components/ScoreBar';
 import { fetchVerseTextByReference } from '@/lib/verseClient';
 import {
   buildVerseReferencePool,
@@ -164,8 +165,9 @@ function HotSeatRoundSummary({
                       {renderHotSeatGuess(round)}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="party-round-score-stack">
                     <p className="party-round-table-score">{Math.max(0, Math.min(100, Math.round(roundScore)))}%</p>
+                    <ScoreBar score={roundScore} className="score-bar-compact" label={`${player} round score`} />
                     <p className="text-xs content-muted">total {Math.max(0, Math.min(100, totalPercent))}%</p>
                   </div>
                 </div>

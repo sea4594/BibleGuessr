@@ -167,7 +167,6 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-lg">
-          <p className="content-muted mb-3">{session.modeConfig.name}</p>
           <MultiplayerGameSummary
             players={[{ id: 'single-player', name: '', score: accuracy }]}
             rounds={singlePlayerRounds}

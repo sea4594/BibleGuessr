@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import GuessInterface from '@/components/GuessInterface';
 import VerseDisplay from '@/components/VerseDisplay';
 import PartyGameSummary from '@/components/PartyGameSummary';
+import ScoreBar from '@/components/ScoreBar';
 import {
   finalizeExpiredPartyRound,
   getPartyRoom,
@@ -773,8 +774,9 @@ export default function PartyGameClient() {
                         {submission ? renderSubmissionGuess(submission, true) : <span style={{ color: '#ef4444' }}>No guess</span>}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="party-round-score-stack">
                       <p className="party-round-table-score">{clampPercent(roundScore)}%</p>
+                      <ScoreBar score={roundScore} className="score-bar-compact" label={`${member.name} round score`} />
                       <p className="text-xs content-muted">total {toOverallPercent(totalScore, game.currentRound)}%</p>
                     </div>
                   </div>

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { RoundData } from '@/lib/gameContext';
 import { useSettingsModal } from './SettingsModalProvider';
+import ScoreBar from './ScoreBar';
 
 interface Props {
   round: RoundData;
@@ -120,16 +121,22 @@ export default function RoundResult({
                 {multiplayer?.players
                   .filter(player => byPlayer.has(player))
                   .map(player => (
-                  <div key={`${logicalRound}-${player}`} className="flex justify-between text-sm py-1 pl-4">
+                  <div key={`${logicalRound}-${player}`} className="round-score-list-row pl-4">
                     <span>{player}</span>
-                    <span className="font-semibold">{Math.max(0, Math.min(100, Math.round(byPlayer.get(player) ?? 0)))}%</span>
+                    <span className="round-score-list-value">
+                      <span className="font-semibold">{Math.max(0, Math.min(100, Math.round(byPlayer.get(player) ?? 0)))}%</span>
+                      <ScoreBar score={byPlayer.get(player) ?? 0} className="score-bar-compact" label={`${player} round score`} />
+                    </span>
                   </div>
                 ))}
               </div>
             )) : rounds.map((item, idx) => (
-              <div key={idx} className="flex justify-between text-sm py-1.5 border-t border-[var(--line)] first:border-0">
+              <div key={idx} className="round-score-list-row py-1.5 border-t border-[var(--line)] first:border-0">
                 <span>Round {idx + 1}</span>
-                <span className="font-semibold">{Math.max(0, Math.min(100, Math.round(item.score)))}%</span>
+                <span className="round-score-list-value">
+                  <span className="font-semibold">{Math.max(0, Math.min(100, Math.round(item.score)))}%</span>
+                  <ScoreBar score={item.score} className="score-bar-compact" label={`Round ${idx + 1} score`} />
+                </span>
               </div>
             ))}
             <div className="flex justify-between items-center text-[1.55rem] sm:text-[1.75rem] py-3 mt-1 border-t border-[var(--line)] font-extrabold">

@@ -36,7 +36,6 @@ export default function CustomBookSelectorPopup({
                 return (
                   <div key={book.book} className={selected ? 'party-readonly-book-row is-selected' : 'party-readonly-book-row'}>
                     <span>{book.book}</span>
-                    <span className="party-readonly-book-state">{selected ? 'Selected' : ''}</span>
                   </div>
                 );
               })}

@@ -4120,3 +4120,123 @@ input:not([type='range']) {
   justify-content: center;
   text-align: center;
 }
+
+/* ===== 2026-10-07 party lifecycle + score-bar + bottom-action polish ===== */
+/* Host/Join cards: ~10% taller than the prior 76px version. Labels move visually
+   upward without changing the layout position of the code, slots, or Join button. */
+.party-header-half {
+  height: 84px !important;
+  min-height: 84px !important;
+  max-height: 84px !important;
+}
+.party-header-half > .content-muted {
+  transform: translateY(-7px) !important;
+}
+.party-host-half .party-code-value {
+  font-size: clamp(1.95rem, 6vw, 2.45rem) !important;
+  line-height: 1 !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+.party-join-action-btn {
+  flex: 0 0 auto !important;
+}
+
+/* Custom-book popup is a fully opaque panel. Read-only selection is communicated
+   by highlighting alone; no redundant "Selected" labels. */
+.custom-books-modal-card {
+  width: min(430px, 100%);
+  max-height: min(82vh, 680px);
+  overflow: hidden;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--panel) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.party-readonly-book-list {
+  max-height: min(68vh, 560px) !important;
+}
+.party-readonly-book-row {
+  justify-content: flex-start !important;
+}
+.party-readonly-book-state {
+  display: none !important;
+}
+
+/* Reusable red/green score bars for both final scores and individual rounds. */
+.score-bar {
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.score-bar-compact {
+  width: 76px;
+  height: 7px;
+}
+.multiplayer-summary-score-stack,
+.multiplayer-summary-entry-score-stack,
+.round-score-list-value,
+.party-round-score-stack {
+  display: grid;
+  justify-items: end;
+  align-items: center;
+  gap: 4px;
+}
+.multiplayer-summary-entry-score-stack {
+  min-width: 76px;
+}
+.round-score-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.875rem;
+}
+.party-round-score-stack {
+  min-width: 78px;
+  text-align: right;
+}
+
+/* Keep the already-correct 8px bottom spacing, but protect bottom action corners
+   from rounded device edges. Safe-area left/right matter in landscape; the radius
+   gives portrait Home Screen buttons the same visual gap around their corners. */
+.round-screen-footer {
+  padding-left: max(8px, env(safe-area-inset-left)) !important;
+  padding-right: max(8px, env(safe-area-inset-right)) !important;
+  padding-bottom: 8px !important;
+}
+.round-screen-footer .btn-primary,
+.party-round-summary-footer .btn-primary,
+.game-shell > .game-content.app-content-fixed .guess-interface .btn-primary,
+.party-game-summary > .btn-primary {
+  border-radius: clamp(12px, 3.8vw, 17px) !important;
+  overflow: hidden;
+}
+@media (display-mode: standalone) and (max-width: 640px) {
+  .round-screen-footer .btn-primary,
+  .party-round-summary-footer .btn-primary,
+  .game-shell > .game-content.app-content-fixed .guess-interface .btn-primary,
+  .party-game-summary > .btn-primary {
+    border-radius: 16px !important;
+  }
+}
+/* Keep Host/Join content exactly where it was while pinning only the label nearer the top. */
+.party-header-half {
+  position: relative !important;
+}
+.party-header-half::before {
+  content: '';
+  flex: 0 0 11px;
+  height: 11px;
+}
+.party-header-half > .content-muted {
+  position: absolute !important;
+  top: 3px !important;
+  left: 6px !important;
+  transform: none !important;
+  margin: 0 !important;
+}

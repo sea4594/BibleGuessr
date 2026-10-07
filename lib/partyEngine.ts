@@ -1,11 +1,14 @@
 import {
+  arrayRemove,
   deleteField,
   doc,
   getDoc,
+  getDocFromServer,
   onSnapshot,
   runTransaction,
   setDoc,
   serverTimestamp,
+  updateDoc,
 } from 'firebase/firestore';
 import { ensureFirebaseSession, getFirebaseAuth, getFirebaseDb } from './firebaseClient';
 import { constrainAvatarSpec, defaultAvatarSpec, type AvatarSpec } from './avatarSystem';
@@ -331,10 +334,15 @@ export async function hostParty(
 ): Promise<PartyRoom | null> {
   const db = getFirebaseDb();
   if (!db) return null;
-  await ensureFirebaseSession();
+  if (!(await ensureFirebaseSession())) return null;
 
   const startingSettings = mergeLobbySettings(makeDefaultLobbySettings(), initialLobbySettings);
 
+  // Room creation used to be a Firestore transaction. On mobile Safari a transaction
+  // can sit in the SDK retry loop for a long time after a network transition, which
+  // made Party initialization appear permanently stuck until the app restarted.
+  // A server existence check + direct create keeps each attempt short and lets the UI
+  // automatically retry if connectivity changes.
   for (let attempt = 0; attempt < 30; attempt++) {
     const code = generateCode();
     const ref = doc(db, 'parties', code);
@@ -351,27 +359,21 @@ export async function hostParty(
     };
 
     try {
-      await runTransaction(db, async tx => {
-        const snapshot = await tx.get(ref);
-        if (snapshot.exists() && !isRoomExpired(snapshot.data())) throw new Error('party-code-in-use');
-        tx.set(ref, { ...room, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      });
+      const existing = await getDocFromServer(ref);
+      if (existing.exists() && !isRoomExpired(existing.data())) continue;
+      await setDoc(ref, { ...room, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       storePartyHostSettings(startingSettings);
       return room;
-    } catch (error) {
-      if (error instanceof Error && error.message === 'party-code-in-use') continue;
-      try {
-        await setDoc(ref, { ...room, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-        storePartyHostSettings(startingSettings);
-        return room;
-      } catch {
-        return null;
-      }
+    } catch {
+      // Network/auth errors are retryable by the caller. Do not enter a long Firestore
+      // transaction retry loop and do not surface a terminal timeout to the user.
+      return null;
     }
   }
 
   return null;
 }
+
 
 export async function joinParty(code: string, member: PartyMember): Promise<boolean> {
   const db = getFirebaseDb();
@@ -920,79 +922,97 @@ export function subscribeToParty(
 export async function leaveParty(code: string, memberId: string): Promise<boolean> {
   const db = getFirebaseDb();
   if (!db) return false;
-  await ensureFirebaseSession();
+  if (!(await ensureFirebaseSession())) return false;
 
   const ref = doc(db, 'parties', code);
-  const actorId = resolveActorId(memberId);
 
   try {
-    await runTransaction(db, async tx => {
-    const snapshot = await tx.get(ref);
-    if (!snapshot.exists()) return;
+    const snapshot = await getDoc(ref);
+    if (!snapshot.exists()) return true;
     if (isRoomExpired(snapshot.data())) {
-      tx.delete(ref);
-      return;
+      await runTransaction(db, async tx => {
+        const current = await tx.get(ref);
+        if (current.exists()) tx.delete(ref);
+      });
+      return true;
     }
 
     const room = snapshot.data() as PartyRoom;
-    const filtered = (room.members ?? []).filter(m => m.id !== actorId);
-    if (filtered.length === 0) {
-      tx.delete(ref);
-      return;
-    }
+    // Use the membership id that was actually stored in the room. Do not replace it
+    // with whatever auth.currentUser happens to be after an auth/session transition.
+    const exactMember = (room.members ?? []).find(member => member.id === memberId);
+    const fallbackActorId = resolveActorId(memberId);
+    const member = exactMember ?? (room.members ?? []).find(entry => entry.id === fallbackActorId);
+    if (!member) return true;
+    const actorId = member.id;
 
-    const nextHostId = room.hostId === actorId ? (filtered[0]?.id ?? '') : room.hostId;
-    const normalizedMembers = filtered.map(member => ({
-      ...member,
-      isHost: member.id === nextHostId,
-    }));
-
-    const game = room.game;
-    let nextGame = game;
-
-    if (game) {
-      const nextSubmissions = { ...game.submissions };
-      delete nextSubmissions[actorId];
-
-      const nextScores = { ...game.scores };
-      delete nextScores[actorId];
-
-      const nextRoundScores = { ...game.roundScores };
-      delete nextRoundScores[actorId];
-
-      const nextRoundHistory = (game.roundHistory ?? []).map(entry => {
-        const submissions = { ...entry.submissions };
-        const roundScores = { ...entry.roundScores };
-        delete submissions[actorId];
-        delete roundScores[actorId];
-        return { ...entry, submissions, roundScores };
+    // Non-host lobby departure is the common path. arrayRemove is atomic and avoids a
+    // transaction retry, so hosts see the member disappear immediately.
+    if (room.game?.status !== 'in-round' && room.game?.status !== 'round-complete' && room.hostId !== actorId) {
+      await updateDoc(ref, {
+        members: arrayRemove(member),
+        updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(Date.now()),
       });
-
-      const activeMemberIds = normalizedMembers.map(member => member.id);
-      const allSubmitted =
-        game.status === 'in-round' &&
-        activeMemberIds.length > 0 &&
-        activeMemberIds.every(id => Boolean(nextSubmissions[id]));
-
-      nextGame = {
-        ...game,
-        submissions: nextSubmissions,
-        scores: nextScores,
-        roundScores: nextRoundScores,
-        roundHistory: nextRoundHistory,
-        status: allSubmitted ? 'round-complete' : game.status,
-        updatedAt: Date.now(),
-      };
+      return true;
     }
 
-    tx.update(ref, {
-      hostId: nextHostId,
-      members: normalizedMembers,
-      game: nextGame,
-      updatedAt: serverTimestamp(),
-      expiresAt: expiresAtFromNow(Date.now()),
+    await runTransaction(db, async tx => {
+      const currentSnapshot = await tx.get(ref);
+      if (!currentSnapshot.exists()) return;
+      const currentRoom = currentSnapshot.data() as PartyRoom;
+      const filtered = (currentRoom.members ?? []).filter(m => m.id !== actorId);
+      if (filtered.length === 0) {
+        tx.delete(ref);
+        return;
+      }
+
+      const nextHostId = currentRoom.hostId === actorId ? (filtered[0]?.id ?? '') : currentRoom.hostId;
+      const normalizedMembers = filtered.map(currentMember => ({
+        ...currentMember,
+        isHost: currentMember.id === nextHostId,
+      }));
+
+      const game = currentRoom.game;
+      let nextGame = game;
+      if (game) {
+        const nextSubmissions = { ...game.submissions };
+        delete nextSubmissions[actorId];
+        const nextScores = { ...game.scores };
+        delete nextScores[actorId];
+        const nextRoundScores = { ...game.roundScores };
+        delete nextRoundScores[actorId];
+        const nextRoundHistory = (game.roundHistory ?? []).map(entry => {
+          const submissions = { ...entry.submissions };
+          const roundScores = { ...entry.roundScores };
+          delete submissions[actorId];
+          delete roundScores[actorId];
+          return { ...entry, submissions, roundScores };
+        });
+        const activeMemberIds = normalizedMembers.map(currentMember => currentMember.id);
+        const allSubmitted =
+          game.status === 'in-round' &&
+          activeMemberIds.length > 0 &&
+          activeMemberIds.every(id => Boolean(nextSubmissions[id]));
+        nextGame = {
+          ...game,
+          submissions: nextSubmissions,
+          scores: nextScores,
+          roundScores: nextRoundScores,
+          roundHistory: nextRoundHistory,
+          status: allSubmitted ? 'round-complete' : game.status,
+          updatedAt: Date.now(),
+        };
+      }
+
+      tx.update(ref, {
+        hostId: nextHostId,
+        members: normalizedMembers,
+        game: nextGame,
+        updatedAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(Date.now()),
+      });
     });
-  });
     return true;
   } catch (error) {
     console.error('Unable to leave party cleanly:', error);

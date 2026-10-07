@@ -50,6 +50,32 @@ export const firebaseEnabled = Boolean(
 let persistenceReadyPromise: Promise<void> | null = null;
 let anonymousSignInPromise: Promise<boolean> | null = null;
 let authReadyPromise: Promise<void> | null = null;
+const AUTH_BOOTSTRAP_ATTEMPT_MS = 7000;
+
+function authAttemptDeadline<T>(promise: Promise<T>, fallback: T, timeoutMs = AUTH_BOOTSTRAP_ATTEMPT_MS): Promise<T> {
+  return new Promise(resolve => {
+    let settled = false;
+    const timer = globalThis.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve(fallback);
+    }, timeoutMs);
+    promise.then(
+      value => {
+        if (settled) return;
+        settled = true;
+        globalThis.clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        if (settled) return;
+        settled = true;
+        globalThis.clearTimeout(timer);
+        resolve(fallback);
+      }
+    );
+  });
+}
 
 export function isFirebaseConfigured() {
   return firebaseEnabled;
@@ -89,56 +115,70 @@ export async function ensureFirebaseSession(): Promise<boolean> {
   if (auth.currentUser) return true;
 
   if (!anonymousSignInPromise) {
-    anonymousSignInPromise = signInAnonymously(auth)
+    const attempt = signInAnonymously(auth)
       .then(() => true)
-      .catch(() => false)
-      .finally(() => {
-        anonymousSignInPromise = null;
-      });
+      .catch(() => false);
+    anonymousSignInPromise = attempt;
+    void attempt.finally(() => {
+      if (anonymousSignInPromise === attempt) anonymousSignInPromise = null;
+    });
   }
 
-  return anonymousSignInPromise;
+  const attempt = anonymousSignInPromise;
+  const result = await authAttemptDeadline(attempt, false);
+  // Safari/PWA networking can occasionally leave an SDK promise pending forever.
+  // Never let one stale attempt poison every future Party operation until restart.
+  if (!result && anonymousSignInPromise === attempt) anonymousSignInPromise = null;
+  return Boolean(auth.currentUser) || result;
 }
 
 export const app: FirebaseApp | null = getFirebaseApp();
 export const auth: Auth | null = getFirebaseAuth();
 export const db: Firestore | null = getFirebaseDb();
 
-function ensureAuthPersistence() {
-  if (!firebaseEnabled || !auth) return Promise.resolve();
+async function ensureAuthPersistence() {
+  if (!firebaseEnabled || !auth) return;
 
   if (!persistenceReadyPromise) {
-    persistenceReadyPromise = setPersistence(auth, browserLocalPersistence).catch(() => {
-      // Continue best-effort if persistence cannot be configured in this environment.
+    const attempt = setPersistence(auth, browserLocalPersistence).catch(() => undefined);
+    persistenceReadyPromise = attempt;
+    void attempt.finally(() => {
+      if (persistenceReadyPromise === attempt) persistenceReadyPromise = null;
     });
   }
 
-  return persistenceReadyPromise;
+  const attempt = persistenceReadyPromise;
+  await authAttemptDeadline(attempt, undefined);
+  if (persistenceReadyPromise === attempt) persistenceReadyPromise = null;
 }
 
 export async function ensureAuthReady() {
   if (!firebaseEnabled || !auth) return;
 
   await ensureAuthPersistence();
+  if (auth.currentUser) return;
 
   if (!authReadyPromise) {
-    authReadyPromise = new Promise(resolve => {
-      const unsubscribe = onAuthStateChanged(
+    let unsubscribe: (() => void) | null = null;
+    const attempt = new Promise<void>(resolve => {
+      unsubscribe = onAuthStateChanged(
         auth,
-        () => {
-          unsubscribe();
-          resolve();
-        },
-        () => {
-          unsubscribe();
-          resolve();
-        }
+        () => { unsubscribe?.(); resolve(); },
+        () => { unsubscribe?.(); resolve(); }
       );
+    });
+    authReadyPromise = attempt;
+    void attempt.finally(() => {
+      if (authReadyPromise === attempt) authReadyPromise = null;
+      unsubscribe?.();
     });
   }
 
-  await authReadyPromise;
+  const attempt = authReadyPromise;
+  await authAttemptDeadline(attempt, undefined);
+  if (authReadyPromise === attempt) authReadyPromise = null;
 }
+
 
 if (firebaseEnabled && auth) {
   void ensureAuthPersistence();

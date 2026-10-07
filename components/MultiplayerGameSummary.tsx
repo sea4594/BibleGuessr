@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import ScoreBar from '@/components/ScoreBar';
 
 export type MultiplayerSummaryPlayer = {
   id: string;
@@ -88,7 +89,10 @@ export default function MultiplayerGameSummary({ players, rounds, showAvatars = 
                 />
               )}
               <span className="multiplayer-summary-player-name">{player.name}</span>
-              <span className="multiplayer-summary-final-score">{Math.max(0, Math.min(100, Math.round(player.score)))}%</span>
+              <span className="multiplayer-summary-score-stack">
+                <span className="multiplayer-summary-final-score">{Math.max(0, Math.min(100, Math.round(player.score)))}%</span>
+                <ScoreBar score={player.score} className="score-bar-compact" label={`${player.name} final score`} />
+              </span>
             </div>
           ))}
         </section>
@@ -105,7 +109,10 @@ export default function MultiplayerGameSummary({ players, rounds, showAvatars = 
                 <div key={`${round.id}-${entry.playerId}`} className={singlePlayer ? 'multiplayer-summary-entry single-player' : 'multiplayer-summary-entry'}>
                   {!singlePlayer && <span className="multiplayer-summary-entry-name">{entry.name}</span>}
                   <span className="multiplayer-summary-entry-guess">{renderSummaryGuess(entry)}</span>
-                  <span className="multiplayer-summary-entry-score">{Math.max(0, Math.min(100, Math.round(entry.score)))}%</span>
+                  <span className="multiplayer-summary-entry-score-stack">
+                    <span className="multiplayer-summary-entry-score">{Math.max(0, Math.min(100, Math.round(entry.score)))}%</span>
+                    <ScoreBar score={entry.score} className="score-bar-compact" label={`${entry.name || 'Round'} score`} />
+                  </span>
                 </div>
               ))}
             </div>

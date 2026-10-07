@@ -39,19 +39,6 @@ const ROUND_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const PARTY_TIMER_VALUES = PARTY_TIMER_SECOND_OPTIONS;
 const MULTIPLAYER_TAB_STORAGE_KEY = 'bg-multiplayer-tab-v1';
 const PARTY_CODE_STORAGE_KEY = 'bg-party-room-code-v1';
-const PARTY_CREATE_TIMEOUT_MS = 12000;
-
-const PARTY_TIMEOUT = Symbol('party-timeout');
-async function withPartyTimeout<T>(promise: Promise<T>, timeoutMs = PARTY_CREATE_TIMEOUT_MS): Promise<T | typeof PARTY_TIMEOUT> {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<typeof PARTY_TIMEOUT>(resolve => {
-    timer = setTimeout(() => resolve(PARTY_TIMEOUT), timeoutMs);
-  });
-  const result = await Promise.race([promise, timeout]);
-  if (timer) clearTimeout(timer);
-  return result;
-}
-
 function readInitialMultiplayerTab() {
   if (typeof window === 'undefined') return 'party' as const;
   const stored = localStorage.getItem(MULTIPLAYER_TAB_STORAGE_KEY);
@@ -138,7 +125,6 @@ export default function MultiplayerPage() {
   const [partyActionPending, setPartyActionPending] = useState(false);
   const [partyJoinPending, setPartyJoinPending] = useState(false);
   const [partyIdentityReady, setPartyIdentityReady] = useState(!firebaseConfigured);
-  const [partyRetryNonce, setPartyRetryNonce] = useState(0);
   const suppressLobbyLeaveRef = useRef(false);
   const leavingPartyRef = useRef(false);
 
@@ -259,22 +245,25 @@ export default function MultiplayerPage() {
     setPartyIdentityReady(false);
 
     const resolveId = async () => {
-      const sessionResult = await withPartyTimeout(ensureFirebaseSession(), 8000);
-      const authUid = getFirebaseAuth()?.currentUser?.uid;
-      if (!cancelled) {
-        setPartyMemberId(authUid ?? clientId);
-        setPartyIdentityReady(true);
-        if (tab === 'party' && sessionResult === PARTY_TIMEOUT && !authUid) {
-          setPartyLobbyError('Party sign-in timed out. Tap Retry to try again.');
+      while (!cancelled) {
+        await ensureFirebaseSession();
+        const authUid = getFirebaseAuth()?.currentUser?.uid;
+        if (authUid) {
+          if (!cancelled) {
+            setPartyMemberId(authUid);
+            setPartyIdentityReady(true);
+            setPartyLobbyError('');
+          }
+          return;
         }
+        await new Promise(resolve => window.setTimeout(resolve, 900));
       }
     };
 
     void resolveId();
-    return () => {
-      cancelled = true;
-    };
-  }, [clientId, firebaseConfigured, tab]);
+    return () => { cancelled = true; };
+  }, [clientId, firebaseConfigured]);
+
 
   useEffect(() => {
     if (!hotSeatSettingsReady) return;
@@ -309,128 +298,98 @@ export default function MultiplayerPage() {
     let unsubscribe: () => void = () => {};
     let cancelled = false;
     let retryTimer: number | null = null;
-    let subscriptionWatchdog: number | null = null;
+
+    const scheduleRetry = (callback: () => void, delay = 900) => {
+      if (cancelled || retryTimer !== null) return;
+      retryTimer = window.setTimeout(() => {
+        retryTimer = null;
+        if (!cancelled) callback();
+      }, delay);
+    };
 
     const subscribeToRoom = (code: string) => {
-      let receivedFirstUpdate = false;
-      if (subscriptionWatchdog) window.clearTimeout(subscriptionWatchdog);
-      subscriptionWatchdog = window.setTimeout(() => {
-        if (!cancelled && !receivedFirstUpdate) {
-          setPartyLobbyError('Unable to reconnect to this party. Tap Retry to try again.');
-        }
-      }, PARTY_CREATE_TIMEOUT_MS);
-
+      unsubscribe();
+      setPartyLobbyPending(true);
       unsubscribe = subscribeToParty(
         code,
         next => {
           if (cancelled) return;
-          receivedFirstUpdate = true;
-          if (subscriptionWatchdog) {
-            window.clearTimeout(subscriptionWatchdog);
-            subscriptionWatchdog = null;
-          }
           if (!next) {
             setRoom(null);
+            setPartyLobbyPending(true);
+            setPartyLobbyError('');
             setActiveRoomCode(null);
-            setPartyLobbyError('Party lobby unavailable. Recreating your code...');
-            if (!retryTimer) {
-              retryTimer = window.setTimeout(() => {
-                retryTimer = null;
-                setPartyRetryNonce(value => value + 1);
-              }, 500);
-            }
             return;
           }
 
           const stillMember = next.members.some(member => member.id === partyMemberId || member.id === clientId);
           if (!stillMember) {
             setRoom(null);
+            setPartyLobbyPending(true);
+            setPartyLobbyError('');
             setActiveRoomCode(null);
-            setPartyLobbyError('You left that party.');
             return;
           }
 
           leavingPartyRef.current = false;
           setRoom(next);
+          setPartyLobbyPending(false);
           setPartyLobbyError('');
         },
         () => {
           if (cancelled) return;
-          setPartyLobbyError('Realtime connection to this party was interrupted. Tap Retry to reconnect.');
+          setPartyLobbyPending(true);
+          setPartyLobbyError('');
+          scheduleRetry(() => subscribeToRoom(code));
         }
       );
     };
 
-    const run = async () => {
+    const createRoom = async () => {
+      if (cancelled) return;
       setPartyLobbyPending(true);
-      try {
-        if (activeRoomCode) {
-          subscribeToRoom(activeRoomCode);
-          return;
-        }
+      setPartyLobbyError('');
 
-        const sessionResult = await withPartyTimeout(ensureFirebaseSession(), 8000);
-        const authUid = getFirebaseAuth()?.currentUser?.uid;
-        if (sessionResult === PARTY_TIMEOUT && !authUid) {
-          setPartyLobbyError('Party sign-in timed out. Tap Retry to try again.');
-          return;
-        }
-        const hasSession = sessionResult === PARTY_TIMEOUT ? false : sessionResult;
-        if ((!hasSession && !authUid) && !user) {
-          if (!cancelled) {
-            setPartyLobbyError('Party hosting requires Firebase Authentication. Enable Anonymous sign-in in Firebase Auth (or log in with Google), then retry.');
-          }
-          return;
-        }
-
-        const createResult = await withPartyTimeout(hostParty({
-          id: partyMemberId,
-          name: displayName,
-          avatar: profile.avatar,
-          isHost: true,
-          joinedAt: Date.now(),
-        }));
-
-        if (cancelled) return;
-        if (createResult === PARTY_TIMEOUT) {
-          setPartyLobbyError('Party code creation timed out. Tap Retry to try again.');
-          return;
-        }
-
-        const created = createResult;
-        if (created) {
-          leavingPartyRef.current = false;
-          setActiveRoomCode(created.code);
-          setRoom(created);
-          setPartyLobbyError('');
-          subscribeToRoom(created.code);
-        } else {
-          const hasAuthUser = Boolean(getFirebaseAuth()?.currentUser);
-          setPartyLobbyError(
-            hasAuthUser
-              ? 'Unable to create a party code. Firestore rules or the network blocked the request.'
-              : 'Unable to create a party code. Firebase Authentication is required (enable Anonymous auth or sign in).'
-          );
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Party lobby initialization failed:', error);
-          setPartyLobbyError('Unable to prepare your party code. Tap Retry to try again.');
-        }
-      } finally {
-        if (!cancelled) setPartyLobbyPending(false);
+      const hasSession = await ensureFirebaseSession();
+      if (cancelled) return;
+      const authUid = getFirebaseAuth()?.currentUser?.uid;
+      if (!hasSession || !authUid) {
+        scheduleRetry(() => { void createRoom(); });
+        return;
       }
+
+      const created = await hostParty({
+        id: partyMemberId,
+        name: displayName,
+        avatar: profile.avatar,
+        isHost: true,
+        joinedAt: Date.now(),
+      });
+      if (cancelled) return;
+
+      if (!created) {
+        scheduleRetry(() => { void createRoom(); });
+        return;
+      }
+
+      leavingPartyRef.current = false;
+      setActiveRoomCode(created.code);
+      setRoom(created);
+      setPartyLobbyPending(false);
+      setPartyLobbyError('');
+      subscribeToRoom(created.code);
     };
 
-    void run();
+    if (activeRoomCode) subscribeToRoom(activeRoomCode);
+    else void createRoom();
 
     return () => {
       cancelled = true;
       unsubscribe();
-      if (retryTimer) window.clearTimeout(retryTimer);
-      if (subscriptionWatchdog) window.clearTimeout(subscriptionWatchdog);
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
     };
-  }, [tab, activeRoomCode, clientId, displayName, firebaseConfigured, partyIdentityReady, partyMemberId, partyRetryNonce, profile.avatar, user]);
+  }, [tab, activeRoomCode, clientId, displayName, firebaseConfigured, partyIdentityReady, partyMemberId, profile.avatar]);
+
 
   useEffect(() => {
     if (tab !== 'party' || !firebaseConfigured || !activeRoomCode || !isCurrentMember) return;
@@ -522,16 +481,10 @@ export default function MultiplayerPage() {
 
     setPartyJoinPending(true);
 
-    const sessionResult = await withPartyTimeout(ensureFirebaseSession(), 8000);
+    const hasSession = await ensureFirebaseSession();
     const authUid = getFirebaseAuth()?.currentUser?.uid;
-    if (sessionResult === PARTY_TIMEOUT && !authUid) {
-      setPartyLobbyError('Party sign-in timed out. Please try again.');
-      setPartyJoinPending(false);
-      return;
-    }
-    const hasSession = sessionResult === PARTY_TIMEOUT ? false : sessionResult;
-    if ((!hasSession && !authUid) && !user) {
-      setPartyLobbyError('Joining a party requires Firebase Authentication. Enable Anonymous sign-in in Firebase Auth (or log in with Google).');
+    if (!hasSession || !authUid) {
+      setPartyLobbyError('Unable to connect to Party right now. Please try again.');
       setPartyJoinPending(false);
       return;
     }
@@ -607,14 +560,6 @@ export default function MultiplayerPage() {
     }
 
     requestAnimationFrame(() => input.select());
-  };
-
-  const retryPartyCode = () => {
-    leavingPartyRef.current = false;
-    setPartyLobbyError('');
-    setRoom(null);
-    setActiveRoomCode(null);
-    setPartyRetryNonce(value => value + 1);
   };
 
   const handleLeaveLobby = () => {
@@ -889,11 +834,8 @@ export default function MultiplayerPage() {
               {!firebaseConfigured && <div className="surface-card-soft p-4 text-sm">Add Firebase env vars to enable online party hosting and joining.</div>}
               {firebaseConfigured && !room && (
                 <div className="surface-card-soft p-4 text-sm">
-                  <p>{partyLobbyPending ? 'Preparing your party code…' : 'Creating your party lobby...'}</p>
+                  <p>Preparing your party code…</p>
                   {partyLobbyError && <p className="text-[var(--danger)] mt-2">{partyLobbyError}</p>}
-                  {!partyLobbyPending && (
-                    <button onClick={retryPartyCode} className="btn-outline px-3 py-1.5 text-sm mt-3">Retry</button>
-                  )}
                 </div>
               )}
               {firebaseConfigured && room && (
