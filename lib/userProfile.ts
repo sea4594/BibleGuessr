@@ -1,4 +1,4 @@
-import { AvatarSpec, defaultAvatarSpec } from './avatarSystem';
+import { AvatarSpec, constrainAvatarSpec, defaultAvatarSpec } from './avatarSystem';
 import { setSyncedLocalStorageItem } from './localDataState';
 
 export interface UserProfile {
@@ -31,7 +31,7 @@ function normalizeAvatar(raw: unknown, fallbackSeed: number): AvatarSpec {
   const hasLegacyShape = typeof legacy.skin === 'string' || typeof legacy.hair === 'string';
   if (hasLegacyShape) {
     const background = typeof legacy.bg === 'string' ? legacy.bg : undefined;
-    return {
+    return constrainAvatarSpec({
       ...fallback,
       skinColor: typeof legacy.skin === 'string' ? legacy.skin : fallback.skinColor,
       hairColor: typeof legacy.hair === 'string' ? legacy.hair : fallback.hairColor,
@@ -39,19 +39,19 @@ function normalizeAvatar(raw: unknown, fallbackSeed: number): AvatarSpec {
       mouthType: typeof legacy.mouth === 'string' ? legacy.mouth : fallback.mouthType,
       accessory: typeof legacy.accessory === 'string' ? legacy.accessory : fallback.accessory,
       ...(background ? { background } : {}),
-    };
+    }, fallbackSeed);
   }
 
-  const normalized = {
+  const normalized = constrainAvatarSpec({
     ...fallback,
     ...Object.fromEntries(
       Object.entries(incoming).filter(([, value]) => typeof value === 'string')
     ),
-  } as AvatarSpec;
+  } as Partial<AvatarSpec>, fallbackSeed);
 
   const hairAliases: Record<string, string> = {
     short: 'short-textured', crew: 'buzz-cut', curly: 'curls', long: 'long-straight',
-    buzz: 'buzz-cut', crop: 'short-textured',
+    buzz: 'buzz-cut', crop: 'short-textured', sidepart: 'side-part',
   };
   const eyeAliases: Record<string, string> = { dot: 'classic', sleepy: 'relaxed', wide: 'round' };
   const mouthAliases: Record<string, string> = { flat: 'neutral', pout: 'soft-smile', tongue: 'open-smile' };
@@ -64,7 +64,7 @@ function normalizeAvatar(raw: unknown, fallbackSeed: number): AvatarSpec {
   normalized.shirtStyle = shirtAliases[normalized.shirtStyle] ?? normalized.shirtStyle;
   normalized.accessory = accessoryAliases[normalized.accessory] ?? normalized.accessory;
   if (incoming.shirtStyle === 'dress' && typeof incoming.bottomStyle !== 'string') normalized.bottomStyle = 'skirt';
-  return normalized;
+  return constrainAvatarSpec(normalized, fallbackSeed);
 }
 
 function generateStableGuestName(seed: number) {

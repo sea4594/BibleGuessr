@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import MainBottomNav from '@/components/MainBottomNav';
 import {
-  AvatarSpec, AvatarGroup, avatarOptionLabel, avatarToDataUri, AVATAR_ATTRIBUTES,
+  AvatarGender, AvatarSpec, AvatarGroup, avatarOptionLabel, avatarToDataUri, constrainAvatarSpec, getAvatarAttributes,
   defaultAvatarSpec, randomAvatarSpec,
 } from '@/lib/avatarSystem';
 import { readLocalProfile, UserProfile, writeLocalProfile } from '@/lib/userProfile';
@@ -27,8 +27,14 @@ function AvatarEditor({
     { key: 'extras', label: 'Extras' },
   ];
 
+  const attributes = getAvatarAttributes(local.gender);
+
   const update = (key: keyof AvatarSpec, value: string) => {
-    setLocal(prev => ({ ...prev, [key]: value }));
+    setLocal(prev => constrainAvatarSpec({ ...prev, [key]: value } as Partial<AvatarSpec>));
+  };
+
+  const updateGender = (gender: AvatarGender) => {
+    setLocal(prev => constrainAvatarSpec({ ...prev, gender } as Partial<AvatarSpec>));
   };
 
   return (
@@ -46,7 +52,21 @@ function AvatarEditor({
           <div className="avatar-editor-preview-stage" aria-label="Avatar preview">
             <Image src={avatarToDataUri(local)} alt="Avatar preview" width={164} height={239} unoptimized priority className="avatar-editor-preview-image" />
           </div>
-          <button onClick={() => setLocal(randomAvatarSpec())} className="btn-outline avatar-randomize-btn">
+          <div className="avatar-gender-toggle" role="tablist" aria-label="Avatar gender">
+            {(['male', 'female'] as AvatarGender[]).map(gender => (
+              <button
+                key={gender}
+                type="button"
+                role="tab"
+                aria-selected={local.gender === gender}
+                onClick={() => updateGender(gender)}
+                className={local.gender === gender ? 'avatar-gender-choice is-active' : 'avatar-gender-choice'}
+              >
+                {avatarOptionLabel(gender)}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setLocal(randomAvatarSpec(local.gender))} className="btn-outline avatar-randomize-btn">
             <Shuffle size={15} /> Randomize
           </button>
         </div>
@@ -67,7 +87,7 @@ function AvatarEditor({
         </div>
 
         <div className="avatar-editor-options">
-          {AVATAR_ATTRIBUTES.filter(attr => attr.group === activeGroup).map(attr => (
+          {attributes.filter(attr => attr.group === activeGroup).map(attr => (
             <section key={attr.key} className="avatar-attribute-section">
               <div className="avatar-attribute-heading">
                 <h3>{attr.label}</h3>
@@ -122,7 +142,6 @@ function AvatarEditor({
         </div>
 
         <div className="avatar-editor-actions">
-          <button onClick={onClose} className="btn-outline avatar-cancel-btn">Cancel</button>
           <button onClick={() => { onChange(local); onClose(); }} className="btn-primary avatar-apply-btn">Save Avatar</button>
         </div>
       </div>

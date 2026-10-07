@@ -8,7 +8,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { ensureFirebaseSession, getFirebaseAuth, getFirebaseDb } from './firebaseClient';
-import { defaultAvatarSpec, type AvatarSpec } from './avatarSystem';
+import { constrainAvatarSpec, defaultAvatarSpec, type AvatarSpec } from './avatarSystem';
 import { bibleData } from './bibleData';
 import { gameModes, type GameModeId } from './gameModes';
 import { verseReferenceKey } from './verseSelection';
@@ -114,30 +114,25 @@ const PARTY_TIMER_MAX_SECONDS = 60;
 export const PARTY_ROUND_START_DELAY_MS = 2000;
 
 function sanitizeAvatarForStorage(avatar: AvatarSpec): AvatarSpec {
-  const fallback = defaultAvatarSpec(0);
-  const sanitized: AvatarSpec = {
-    skinColor: typeof avatar.skinColor === 'string' ? avatar.skinColor : fallback.skinColor,
-    hairStyle: typeof avatar.hairStyle === 'string' ? avatar.hairStyle : fallback.hairStyle,
-    hairColor: typeof avatar.hairColor === 'string' ? avatar.hairColor : fallback.hairColor,
-    eyeType: typeof avatar.eyeType === 'string' ? avatar.eyeType : fallback.eyeType,
-    eyeColor: typeof avatar.eyeColor === 'string' ? avatar.eyeColor : fallback.eyeColor,
-    eyebrowStyle: typeof avatar.eyebrowStyle === 'string' ? avatar.eyebrowStyle : fallback.eyebrowStyle,
-    mouthType: typeof avatar.mouthType === 'string' ? avatar.mouthType : fallback.mouthType,
-    facialHair: typeof avatar.facialHair === 'string' ? avatar.facialHair : fallback.facialHair,
-    shirtStyle: typeof avatar.shirtStyle === 'string' ? avatar.shirtStyle : fallback.shirtStyle,
-    shirtColor: typeof avatar.shirtColor === 'string' ? avatar.shirtColor : fallback.shirtColor,
-    bottomStyle: typeof avatar.bottomStyle === 'string' ? avatar.bottomStyle : fallback.bottomStyle,
-    pantsColor: typeof avatar.pantsColor === 'string' ? avatar.pantsColor : fallback.pantsColor,
-    shoeStyle: typeof avatar.shoeStyle === 'string' ? avatar.shoeStyle : fallback.shoeStyle,
-    shoeColor: typeof avatar.shoeColor === 'string' ? avatar.shoeColor : fallback.shoeColor,
-    accessory: typeof avatar.accessory === 'string' ? avatar.accessory : fallback.accessory,
-  };
-
-  if (typeof avatar.background === 'string') {
-    sanitized.background = avatar.background;
-  }
-
-  return sanitized;
+  return constrainAvatarSpec({
+    gender: typeof avatar.gender === 'string' ? avatar.gender : undefined,
+    skinColor: typeof avatar.skinColor === 'string' ? avatar.skinColor : undefined,
+    hairStyle: typeof avatar.hairStyle === 'string' ? avatar.hairStyle : undefined,
+    hairColor: typeof avatar.hairColor === 'string' ? avatar.hairColor : undefined,
+    eyeType: typeof avatar.eyeType === 'string' ? avatar.eyeType : undefined,
+    eyeColor: typeof avatar.eyeColor === 'string' ? avatar.eyeColor : undefined,
+    eyebrowStyle: typeof avatar.eyebrowStyle === 'string' ? avatar.eyebrowStyle : undefined,
+    mouthType: typeof avatar.mouthType === 'string' ? avatar.mouthType : undefined,
+    facialHair: typeof avatar.facialHair === 'string' ? avatar.facialHair : undefined,
+    shirtStyle: typeof avatar.shirtStyle === 'string' ? avatar.shirtStyle : undefined,
+    shirtColor: typeof avatar.shirtColor === 'string' ? avatar.shirtColor : undefined,
+    bottomStyle: typeof avatar.bottomStyle === 'string' ? avatar.bottomStyle : undefined,
+    pantsColor: typeof avatar.pantsColor === 'string' ? avatar.pantsColor : undefined,
+    shoeStyle: typeof avatar.shoeStyle === 'string' ? avatar.shoeStyle : undefined,
+    shoeColor: typeof avatar.shoeColor === 'string' ? avatar.shoeColor : undefined,
+    accessory: typeof avatar.accessory === 'string' ? avatar.accessory : undefined,
+    background: typeof avatar.background === 'string' ? avatar.background : undefined,
+  } as Partial<AvatarSpec>);
 }
 
 function sanitizeMemberForStorage(member: PartyMember, forceHost?: boolean): PartyMember {
