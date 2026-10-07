@@ -95,11 +95,13 @@ export default function MultiplayerPage() {
   const [turnStyle, setTurnStyle] = useState(initialHotSeat.turnStyle);
   const [names, setNames] = useState<string[]>(initialHotSeat.names);
   const [timerSeconds, setTimerSeconds] = useState(initialHotSeat.timerSeconds);
+  const [hotSeatSettingsReady, setHotSeatSettingsReady] = useState(false);
 
   const [room, setRoom] = useState<PartyRoom | null>(null);
   const [activeRoomCode, setActiveRoomCode] = useState<string | null>(() => readInitialCodeParam() ?? readInitialPartyCode());
   const [joinCode, setJoinCode] = useState(['', '', '', '']);
   const joinRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const pendingJoinFocusRef = useRef<number | null>(null);
   const [showPartyAvatarEditor, setShowPartyAvatarEditor] = useState(false);
   const [avatarDraft, setAvatarDraft] = useState<AvatarSpec | null>(null);
   const avatarDraftRef = useRef<AvatarSpec | null>(null);
@@ -201,6 +203,16 @@ export default function MultiplayerPage() {
   );
 
   useEffect(() => {
+    const stored = readHotSeatSettings();
+    setPlayers(stored.players);
+    setRounds(stored.rounds);
+    setTurnStyle(stored.turnStyle);
+    setNames(stored.names);
+    setTimerSeconds(stored.timerSeconds);
+    setHotSeatSettingsReady(true);
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(MULTIPLAYER_TAB_STORAGE_KEY, tab);
   }, [tab]);
@@ -240,6 +252,7 @@ export default function MultiplayerPage() {
   }, [clientId, firebaseConfigured, tab]);
 
   useEffect(() => {
+    if (!hotSeatSettingsReady) return;
     writeHotSeatSettings({
       players,
       rounds,
@@ -247,7 +260,7 @@ export default function MultiplayerPage() {
       names,
       timerSeconds: clampTimerSeconds(timerSeconds),
     });
-  }, [players, rounds, turnStyle, names, timerSeconds]);
+  }, [hotSeatSettingsReady, players, rounds, turnStyle, names, timerSeconds]);
 
   useEffect(() => {
     if (tab !== 'party' || !firebaseConfigured) return;
@@ -394,7 +407,10 @@ export default function MultiplayerPage() {
     });
   };
 
-  const selectGamemode = () => router.push('/multiplayer/hot-seat/gamemode');
+  const selectGamemode = () => {
+    writeHotSeatSettings({ players, rounds, turnStyle, names, timerSeconds: clampTimerSeconds(timerSeconds) });
+    router.push('/multiplayer/hot-seat/gamemode');
+  };
 
   const submitJoin = async () => {
     const code = joinCode.join('').toUpperCase();
@@ -434,7 +450,13 @@ export default function MultiplayerPage() {
     setJoinCode(next);
 
     if (char && index < 3) {
-      joinRefs.current[index + 1]?.focus();
+      const nextIndex = index + 1;
+      pendingJoinFocusRef.current = nextIndex;
+      requestAnimationFrame(() => {
+        const target = joinRefs.current[nextIndex];
+        target?.focus();
+        target?.setSelectionRange(0, 0);
+      });
     }
 
     if (char && index === 3 && next.every(slot => slot.length === 1)) {
@@ -457,6 +479,11 @@ export default function MultiplayerPage() {
   };
 
   const handleJoinCodeFocus = (index: number, input: HTMLInputElement) => {
+    if (pendingJoinFocusRef.current === index) {
+      pendingJoinFocusRef.current = null;
+      return;
+    }
+
     const firstEmpty = joinCode.findIndex(slot => !slot);
     if (!joinCode[index] && firstEmpty >= 0 && firstEmpty !== index) {
       requestAnimationFrame(() => {

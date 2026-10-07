@@ -42,7 +42,7 @@ export const FEMALE_MOUTH_TYPES = [...MOUTH_TYPES,'lipstick-smile','lipstick-pou
 export const LIPSTICK_COLORS = ['#9B2C3D','#C7445A','#D96B7C','#7D2941','#A64A69','#B35B43'] as const;
 export const FACIAL_HAIR = ['none','stubble','mustache','goatee','short-beard','full-beard'] as const;
 export const MALE_SHIRT_STYLES = ['crew-tee','v-neck','polo','button-up','hoodie','sweatshirt','sweater','jersey','tank'] as const;
-export const FEMALE_SHIRT_STYLES = ['fitted-tee','scoop-neck','blouse','cardigan','cropped-hoodie','sweater','tank'] as const;
+export const FEMALE_SHIRT_STYLES = ['fitted-tee','square-neck','wrap-top','peplum','blouse','cardigan','sweater','tank'] as const;
 export const SHIRT_STYLES = [...MALE_SHIRT_STYLES, ...FEMALE_SHIRT_STYLES] as const;
 export const SHIRT_COLORS = [
   '#3159C7','#4377E8','#1D8A68','#46A56B','#0F8496','#7A4FC2','#A94EAA',
@@ -103,7 +103,7 @@ const OPTION_LABELS: Record<string, string> = {
   'soft-smile': 'Soft smile', smile: 'Smile', grin: 'Grin', neutral: 'Neutral', 'open-smile': 'Open smile', smirk: 'Smirk', 'lipstick-smile': 'Lipstick smile', 'lipstick-pout': 'Lipstick pout',
   none: 'None', stubble: 'Stubble', mustache: 'Mustache', goatee: 'Goatee', 'short-beard': 'Short beard', 'full-beard': 'Full beard',
   'crew-tee': 'Crew tee', 'v-neck': 'V-neck', polo: 'Polo', 'button-up': 'Button-up', hoodie: 'Hoodie',
-  sweatshirt: 'Sweatshirt', sweater: 'Sweater', jersey: 'Jersey', tank: 'Tank', 'fitted-tee': 'Fitted tee', 'scoop-neck': 'Scoop neck', blouse: 'Blouse', cardigan: 'Cardigan', 'cropped-hoodie': 'Cropped hoodie',
+  sweatshirt: 'Sweatshirt', sweater: 'Sweater', jersey: 'Jersey', tank: 'Tank', 'fitted-tee': 'Fitted tee', 'square-neck': 'Square neck', 'wrap-top': 'Wrap top', peplum: 'Peplum top', blouse: 'Blouse', cardigan: 'Cardigan',
   jeans: 'Jeans', chinos: 'Chinos', joggers: 'Joggers', shorts: 'Shorts', 'wide-leg': 'Wide leg', skirt: 'Skirt', 'skinny-jeans': 'Slim jeans', 'straight-jeans': 'Straight jeans', 'tailored-shorts': 'Tailored shorts',
   sneakers: 'Sneakers', 'high-tops': 'High-tops', boots: 'Boots', loafers: 'Loafers', 'ankle-boots': 'Ankle boots', flats: 'Flats', 'mary-janes': 'Mary Janes',
   glasses: 'Glasses', 'round-glasses': 'Round glasses', sunglasses: 'Sunglasses', cap: 'Cap', beanie: 'Beanie', headband: 'Headband', earrings: 'Earrings',
@@ -153,8 +153,8 @@ export function constrainAvatarSpec(spec: Partial<AvatarSpec>, seed = 0): Avatar
 
   if (gender === 'female') {
     const shirtMap: Record<string, string> = {
-      'crew-tee': 'fitted-tee', 'v-neck': 'scoop-neck', polo: 'blouse', 'button-up': 'blouse',
-      hoodie: 'cropped-hoodie', sweatshirt: 'sweater', jersey: 'fitted-tee',
+      'crew-tee': 'fitted-tee', 'v-neck': 'square-neck', polo: 'peplum', 'button-up': 'blouse',
+      hoodie: 'cardigan', sweatshirt: 'sweater', jersey: 'fitted-tee', 'scoop-neck': 'square-neck', 'cropped-hoodie': 'cardigan',
     };
     const bottomMap: Record<string, string> = { jeans: 'skinny-jeans', chinos: 'straight-jeans', shorts: 'tailored-shorts' };
     const shoeMap: Record<string, string> = { 'high-tops': 'sneakers', boots: 'ankle-boots', loafers: 'flats' };
@@ -164,7 +164,7 @@ export function constrainAvatarSpec(spec: Partial<AvatarSpec>, seed = 0): Avatar
     next.facialHair = 'none';
   } else {
     const shirtMap: Record<string, string> = {
-      'fitted-tee': 'crew-tee', 'scoop-neck': 'v-neck', blouse: 'button-up', cardigan: 'sweater', 'cropped-hoodie': 'hoodie',
+      'fitted-tee': 'crew-tee', 'scoop-neck': 'v-neck', 'square-neck': 'v-neck', 'wrap-top': 'v-neck', peplum: 'sweater', blouse: 'button-up', cardigan: 'sweater', 'cropped-hoodie': 'hoodie',
     };
     const bottomMap: Record<string, string> = { 'skinny-jeans': 'jeans', 'straight-jeans': 'chinos', 'tailored-shorts': 'shorts', skirt: 'chinos' };
     const shoeMap: Record<string, string> = { 'ankle-boots': 'boots', flats: 'loafers', 'mary-janes': 'loafers' };
@@ -305,22 +305,27 @@ function mouthSvg(type: string, gender: AvatarGender, lipstickColor: string): st
   }
 }
 function facialHairSvg(style: string, color: string): string {
-  const c = alpha(shiftHex(color, -8), .86), dark = shiftHex(color, -22);
+  const c = shiftHex(color, -8), dark = shiftHex(color, -22);
   switch (style) {
-    case 'stubble': return `<g fill="${c}" opacity=".55"><circle cx="96" cy="122" r="1.2"/><circle cx="102" cy="131" r="1.2"/><circle cx="110" cy="138" r="1.2"/><circle cx="120" cy="141" r="1.2"/><circle cx="130" cy="138" r="1.2"/><circle cx="138" cy="131" r="1.2"/><circle cx="144" cy="122" r="1.2"/><circle cx="91" cy="113" r="1.1"/><circle cx="149" cy="113" r="1.1"/></g>`;
-    case 'mustache': return `<path d="M102 116Q111 110 120 117Q129 110 138 116Q134 124 121 121Q106 124 102 116Z" fill="${c}"/>`;
-    case 'goatee': return `<path d="M108 117Q120 112 132 117Q128 122 120 120Q112 122 108 117Z" fill="${c}"/><path d="M109 129Q120 139 131 129L128 145Q120 153 112 145Z" fill="${c}"/>`;
-    case 'short-beard': return `<path d="M79 103Q80 126 90 141Q98 151 111 157L113 143Q102 138 96 128Q90 116 90 103Z" fill="${c}"/><path d="M161 103Q160 126 150 141Q142 151 129 157L127 143Q138 138 144 128Q150 116 150 103Z" fill="${c}"/><path d="M99 137Q120 150 141 137L137 154Q120 166 103 154Z" fill="${c}"/><path d="M101 114Q111 108 120 115Q129 108 139 114Q134 122 120 120Q106 122 101 114Z" fill="${dark}"/>`;
-    case 'full-beard': return `<path d="M77 100Q78 132 89 151Q98 164 111 170L114 149Q101 142 94 130Q87 117 87 101Z" fill="${c}"/><path d="M163 100Q162 132 151 151Q142 164 129 170L126 149Q139 142 146 130Q153 117 153 101Z" fill="${c}"/><path d="M96 138Q120 154 144 138L139 165Q120 179 101 165Z" fill="${c}"/><path d="M99 113Q110 106 120 114Q130 106 141 113Q135 122 120 120Q105 122 99 113Z" fill="${dark}"/>`;
+    case 'stubble': return `<g fill="${c}" opacity=".55"><circle cx="91" cy="113" r="1.1"/><circle cx="96" cy="122" r="1.2"/><circle cx="102" cy="131" r="1.2"/><circle cx="110" cy="138" r="1.2"/><circle cx="120" cy="141" r="1.2"/><circle cx="130" cy="138" r="1.2"/><circle cx="138" cy="131" r="1.2"/><circle cx="144" cy="122" r="1.2"/><circle cx="149" cy="113" r="1.1"/></g>`;
+    case 'mustache': return `<path d="M101 115Q111 108 120 115Q129 108 139 115Q134 124 120 121Q106 124 101 115Z" fill="${c}"/>`;
+    case 'goatee': return `<path d="M106 116Q120 109 134 116Q129 123 120 121Q111 123 106 116Z" fill="${c}"/><path d="M107 128Q120 139 133 128L129 147Q120 155 111 147Z" fill="${c}"/>`;
+    case 'short-beard': return `<path d="M82 103C83 123 89 139 101 149C108 155 114 158 120 159C126 158 132 155 139 149C151 139 157 123 158 103C151 108 147 116 143 123C136 124 131 126 127 130C123 133 117 133 113 130C109 126 104 124 97 123C93 116 89 108 82 103Z" fill="${c}"/><path d="M99 113Q110 106 120 114Q130 106 141 113Q135 122 120 120Q105 122 99 113Z" fill="${dark}"/>`;
+    case 'full-beard': return `<path d="M79 99C80 126 88 148 101 161C108 168 114 172 120 174C126 172 132 168 139 161C152 148 160 126 161 99C153 106 149 115 145 122C137 123 132 126 127 130C123 134 117 134 113 130C108 126 103 123 95 122C91 115 87 106 79 99Z" fill="${c}"/><path d="M98 112Q110 104 120 113Q130 104 142 112Q136 122 120 120Q104 122 98 112Z" fill="${dark}"/>`;
     default: return '';
   }
 }
 function armsSvg(style: string, shirtColor: string, skinColor: string, gender: AvatarGender): string {
-  const longSleeve = ['hoodie','cropped-hoodie','sweatshirt','sweater','button-up','blouse','cardigan'].includes(style);
+  const longSleeve = ['hoodie','sweatshirt','sweater','button-up','blouse','cardigan','wrap-top'].includes(style);
   const female = gender === 'female';
   const xL = female ? 57 : 50, xR = female ? 166 : 165, armW = female ? 19 : 25, handR = female ? 10.5 : 12.5;
-  if (style === 'tank' || style === 'jersey') {
-    return `<rect x="${female ? 57 : 48}" y="158" width="${female ? 19 : 27}" height="67" rx="${female ? 9 : 13}" fill="${skinColor}"/><circle cx="${female ? 66.5 : 61.5}" cy="226" r="${female ? 10.5 : 13.5}" fill="${skinColor}"/><rect x="${female ? 164 : 165}" y="158" width="${female ? 19 : 27}" height="67" rx="${female ? 9 : 13}" fill="${skinColor}"/><circle cx="${female ? 173.5 : 178.5}" cy="226" r="${female ? 10.5 : 13.5}" fill="${skinColor}"/>`;
+  if (style === 'tank') {
+    return female
+      ? `<path d="M101 151Q86 150 78 159Q69 170 67 191L66 214Q66 225 74 229Q82 228 83 217L84 187Q85 170 99 160Z" fill="${skinColor}"/><path d="M139 151Q154 150 162 159Q171 170 173 191L174 214Q174 225 166 229Q158 228 157 217L156 187Q155 170 141 160Z" fill="${skinColor}"/>`
+      : `<path d="M104 151Q84 149 72 160Q61 172 60 193L60 214Q60 226 70 230Q80 228 81 216L82 187Q84 167 102 159Z" fill="${skinColor}"/><path d="M136 151Q156 149 168 160Q179 172 180 193L180 214Q180 226 170 230Q160 228 159 216L158 187Q156 167 138 159Z" fill="${skinColor}"/>`;
+  }
+  if (style === 'jersey') {
+    return `<path d="M${female ? 80 : 74} 156Q${female ? 66 : 56} 153 ${female ? 57 : 48} 169L${female ? 61 : 53} 186L${female ? 81 : 76} 181Z" fill="${shirtColor}"/><rect x="${xL}" y="181" width="${armW}" height="44" rx="${female ? 9 : 12}" fill="${skinColor}"/><circle cx="${female ? 66.5 : 62}" cy="226" r="${handR}" fill="${skinColor}"/><path d="M${female ? 160 : 166} 156Q${female ? 174 : 184} 153 ${female ? 183 : 192} 169L${female ? 179 : 187} 186L${female ? 159 : 164} 181Z" fill="${shirtColor}"/><rect x="${xR}" y="181" width="${armW}" height="44" rx="${female ? 9 : 12}" fill="${skinColor}"/><circle cx="${female ? 173.5 : 178}" cy="226" r="${handR}" fill="${skinColor}"/>`;
   }
   if (longSleeve) {
     return `<path d="M${female ? 80 : 73} 157Q${female ? 65 : 58} 154 ${female ? 57 : 48} 170L${female ? 56 : 47} 218Q${female ? 57 : 48} 226 ${female ? 65 : 58} 226H${female ? 75 : 70}L${female ? 83 : 78} 166Z" fill="${shirtColor}"/><circle cx="${female ? 65 : 58}" cy="226" r="${female ? 10.5 : 13}" fill="${skinColor}"/><path d="M${female ? 160 : 167} 157Q${female ? 175 : 182} 154 ${female ? 183 : 192} 170L${female ? 184 : 193} 218Q${female ? 183 : 192} 226 ${female ? 175 : 182} 226H${female ? 165 : 170}L${female ? 157 : 162} 166Z" fill="${shirtColor}"/><circle cx="${female ? 175 : 182}" cy="226" r="${female ? 10.5 : 13}" fill="${skinColor}"/>`;
@@ -333,11 +338,12 @@ function shirtSvg(style: string, shirtColor: string, skinColor: string, gender: 
   const femaleBody = `<path d="M83 151Q95 145 105 145H135Q145 145 157 151L154 184Q151 207 157 237H83Q89 207 86 184Z" fill="${shirtColor}"/>`;
   const body = gender === 'female' ? femaleBody : maleBody;
   switch (style) {
-    case 'fitted-tee': return `${femaleBody}<path d="M103 147Q120 158 137 147" stroke="${shade}" stroke-width="4" fill="none" opacity=".55"/>`;
-    case 'scoop-neck': return `${femaleBody}<path d="M101 147Q120 172 139 147Q136 164 120 169Q104 164 101 147Z" fill="${skinColor}"/>`;
-    case 'blouse': return `${femaleBody}<path d="M102 146Q120 163 138 146L132 172Q120 161 108 172Z" fill="${light}"/><path d="M120 162V232" stroke="${shade}" stroke-width="2"/><g fill="${shade}"><circle cx="124" cy="181" r="1.8"/><circle cx="124" cy="199" r="1.8"/><circle cx="124" cy="217" r="1.8"/></g><path d="M88 206Q120 216 152 206" stroke="${light}" stroke-width="2.5" fill="none" opacity=".55"/>`;
-    case 'cardigan': return `${femaleBody}<path d="M104 146Q120 160 136 146" stroke="${light}" stroke-width="4" fill="none"/><path d="M120 151V237" stroke="${shade}" stroke-width="3"/><path d="M93 175H111V201H93ZM129 175H147V201H129Z" fill="${light}" opacity=".28"/>`;
-    case 'cropped-hoodie': return `<path d="M84 151Q96 145 106 145H134Q144 145 156 151L153 218H87Z" fill="${shirtColor}"/><path d="M96 148Q120 133 144 148L136 170Q120 158 104 170Z" fill="${shade}"/><path d="M108 163L113 183M132 163L127 183" stroke="${light}" stroke-width="2.4"/><rect x="87" y="211" width="66" height="9" rx="4.5" fill="${shade}"/>`;
+    case 'fitted-tee': return `${femaleBody}<path d="M103 147Q120 158 137 147" stroke="${shade}" stroke-width="4" fill="none" opacity=".5"/>`;
+    case 'square-neck': return `${femaleBody}<path d="M104 146V160H136V146Q132 166 120 167Q108 166 104 146Z" fill="${skinColor}"/><path d="M104 160H136" stroke="${light}" stroke-width="2.5"/>`;
+    case 'wrap-top': return `${femaleBody}<path d="M101 146L136 183" stroke="${light}" stroke-width="5"/><path d="M139 146L106 183" stroke="${shade}" stroke-width="3"/><path d="M91 206Q120 214 149 206" stroke="${light}" stroke-width="3" fill="none"/>`;
+    case 'peplum': return `<path d="M84 151Q96 145 106 145H134Q144 145 156 151L153 201Q145 207 140 211L159 237H81L100 211Q95 207 87 201Z" fill="${shirtColor}"/><path d="M103 147Q120 164 137 147" stroke="${light}" stroke-width="4" fill="none"/><path d="M91 205Q120 216 149 205" stroke="${shade}" stroke-width="2.5" fill="none"/>`;
+    case 'blouse': return `${femaleBody}<path d="M102 146Q120 164 138 146L133 170Q120 162 107 170Z" fill="${light}"/><path d="M120 162V232" stroke="${shade}" stroke-width="2"/><path d="M88 205Q120 216 152 205" stroke="${light}" stroke-width="3" fill="none" opacity=".7"/>`;
+    case 'cardigan': return `${femaleBody}<path d="M104 146Q120 160 136 146" stroke="${light}" stroke-width="4" fill="none"/><path d="M120 151V237" stroke="${shade}" stroke-width="3"/><circle cx="125" cy="177" r="2" fill="${light}"/><circle cx="125" cy="197" r="2" fill="${light}"/><circle cx="125" cy="217" r="2" fill="${light}"/>`;
     case 'v-neck': return `${body}<path d="M103 146L120 169L137 146Z" fill="${skinColor}"/>`;
     case 'polo': return `${body}<path d="M101 146L120 161L139 146L132 168L120 160L108 168Z" fill="${light}"/><path d="M120 160V188" stroke="${shade}" stroke-width="3"/><circle cx="124" cy="174" r="2" fill="${shade}"/>`;
     case 'button-up': return `${body}<path d="M103 146L120 161L109 174L96 151ZM137 146L120 161L131 174L144 151Z" fill="${light}"/><path d="M120 160V236" stroke="${shade}" stroke-width="2"/><g fill="${shade}"><circle cx="125" cy="180" r="2"/><circle cx="125" cy="199" r="2"/><circle cx="125" cy="218" r="2"/></g>`;
@@ -393,8 +399,8 @@ function accessorySvg(accessory: string, shirtColor: string): string {
     case 'glasses': return `<rect x="83" y="80" width="28" height="20" rx="7" fill="none" stroke="${dark}" stroke-width="3"/><rect x="129" y="80" width="28" height="20" rx="7" fill="none" stroke="${dark}" stroke-width="3"/><path d="M111 89H129M71 86L83 88M157 88L169 86" stroke="${dark}" stroke-width="3" fill="none"/>`;
     case 'round-glasses': return `<circle cx="97" cy="89" r="14" fill="none" stroke="${dark}" stroke-width="3"/><circle cx="143" cy="89" r="14" fill="none" stroke="${dark}" stroke-width="3"/><path d="M111 89H129M72 85L83 87M157 87L168 85" stroke="${dark}" stroke-width="3"/>`;
     case 'sunglasses': return `<path d="M81 80H111L108 99Q97 106 86 99Z" fill="${dark}"/><path d="M129 80H159L154 99Q143 106 132 99Z" fill="${dark}"/><path d="M111 87H129M69 83L81 85M159 85L171 83" stroke="${dark}" stroke-width="3"/>`;
-    case 'cap': return `<path d="M63 56Q68 21 120 19Q172 21 177 56L173 61H67Z" fill="${accent}"/><path d="M54 58Q120 44 186 58Q180 72 120 75Q60 72 54 58Z" fill="${accentDark}"/><path d="M86 35Q120 25 154 35" stroke="${light}" stroke-width="3" fill="none" opacity=".55"/><path d="M120 20V55" stroke="${accentDark}" stroke-width="2" opacity=".35"/>`;
-    case 'beanie': return `<path d="M59 58Q63 15 120 15Q177 15 181 58Z" fill="${accent}"/><rect x="57" y="52" width="126" height="23" rx="10" fill="${accentDark}"/><path d="M88 33H152" stroke="${light}" stroke-width="3" opacity=".45"/>`;
+    case 'cap': return `<path d="M72 57Q76 26 120 24Q164 26 168 57L165 62H75Z" fill="${accent}"/><path d="M105 59Q139 54 171 61Q164 69 137 71Q118 71 103 67Z" fill="${accentDark}"/><path d="M91 38Q120 29 149 38" stroke="${light}" stroke-width="2.5" fill="none" opacity=".5"/><path d="M120 25V56" stroke="${accentDark}" stroke-width="1.8" opacity=".3"/>`;
+    case 'beanie': return `<path d="M69 58Q72 24 120 22Q168 24 171 58Z" fill="${accent}"/><rect x="67" y="52" width="106" height="19" rx="8" fill="${accentDark}"/><path d="M94 37H146" stroke="${light}" stroke-width="2.5" opacity=".42"/>`;
     case 'headband': return `<path d="M68 61Q120 45 172 61" stroke="${accent}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M69 60Q71 66 76 70M171 60Q169 66 164 70" stroke="${accentDark}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
     case 'earrings': return `<circle cx="71" cy="108" r="4.5" fill="#D7B44B"/><circle cx="169" cy="108" r="4.5" fill="#D7B44B"/><circle cx="71" cy="115" r="3" fill="none" stroke="#D7B44B" stroke-width="2"/><circle cx="169" cy="115" r="3" fill="none" stroke="#D7B44B" stroke-width="2"/>`;
     default: return '';
@@ -445,8 +451,8 @@ export function avatarToSvg(spec: AvatarSpec, focus: AvatarFocus = 'full'): stri
   ${eyebrowSvg(eyebrowStyle, hairColor)}
   ${eyeSvg(eyeType, eyeColor, gender)}
   ${noseSvg(skinColor)}
-  ${mouthSvg(mouthType, gender, lipstickColor)}
   ${gender === 'male' ? facialHairSvg(facialHair, hairColor) : ''}
+  ${mouthSvg(mouthType, gender, lipstickColor)}
   ${clippedHair(hairFront(hairStyle, hairColor), accessory)}
   ${accessorySvg(accessory, shirtColor)}
 </svg>`.trim();
