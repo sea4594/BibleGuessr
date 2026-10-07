@@ -3601,3 +3601,102 @@ body {
     padding-bottom: 5px !important;
   }
 }
+
+/* ===== 2026-10-07 compact primary nav, stronger controls, party sizing ===== */
+:root {
+  /* Secondary controls should be visibly distinct from both the page and card surface
+     without becoming another accent color. */
+  --control-bg: color-mix(in oklab, var(--panel) 82%, var(--accent));
+}
+
+/* 25% shorter than the previous 44px navigation chrome. The home-indicator safe area
+   remains part of the button itself, so the buttons still reach the physical screen edge. */
+.app-screen:has(> .main-bottom-nav) > .app-content-scroll {
+  padding-bottom: calc(33px + env(safe-area-inset-bottom)) !important;
+}
+.main-bottom-nav {
+  height: calc(33px + env(safe-area-inset-bottom)) !important;
+  min-height: calc(33px + env(safe-area-inset-bottom)) !important;
+}
+.main-nav-item {
+  padding: 2px 3px calc(2px + env(safe-area-inset-bottom)) !important;
+  gap: 1px !important;
+}
+.main-nav-item svg,
+.main-nav-icon {
+  width: 15px !important;
+  height: 15px !important;
+}
+.main-nav-label {
+  font-size: 0.68rem !important;
+  line-height: 1.12 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Profile settings belongs in the card corner rather than as a full-width action. */
+.profile-settings-icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  min-height: 38px !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* Party setup: settings uses exactly the height its controls need; members own the
+   remaining viewport. Rows are top-packed so a short player list never stretches. */
+.multiplayer-party-content {
+  padding-bottom: calc(33px + env(safe-area-inset-bottom)) !important;
+}
+.party-lobby-main {
+  align-items: start !important;
+}
+.party-members-block {
+  height: 100% !important;
+  max-height: 100% !important;
+  align-self: stretch !important;
+}
+.party-host-controls {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  align-self: start !important;
+  overflow-y: auto !important;
+}
+.party-members-list {
+  align-content: start !important;
+  grid-auto-rows: max-content !important;
+}
+.party-member-row {
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+  overflow: hidden !important;
+}
+.party-start-dock {
+  margin: 0 0 6px !important;
+}
+
+@media (max-width: 640px) {
+  .party-lobby-main {
+    grid-template-rows: minmax(0, 1fr) auto !important;
+  }
+  .party-host-controls {
+    padding: 6px !important;
+  }
+}
+.party-member-row {
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+}
+.party-member-avatar-button {
+  flex: 0 0 46px !important;
+  width: 46px !important;
+  height: 46px !important;
+}

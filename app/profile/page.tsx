@@ -70,7 +70,15 @@ export default function ProfilePage() {
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
 
-          <section className="surface-card p-5">
+          <section className="surface-card p-5 relative">
+            <button
+              onClick={openSettings}
+              className="btn-outline profile-settings-icon"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <Settings size={19} />
+            </button>
             <div className="flex flex-col items-center gap-3 mb-4">
               <Image
                 src={avatarToDataUri(profile.avatar)}
@@ -141,12 +149,6 @@ export default function ProfilePage() {
             </div>
             {statusMessage && <p className="text-sm content-muted mt-3">{statusMessage}</p>}
 
-            <button
-              onClick={openSettings}
-              className="btn-outline w-full mt-4 py-2.5 inline-flex items-center justify-center gap-2"
-            >
-              <Settings size={17} /> Settings
-            </button>
           </section>
 
         </div>

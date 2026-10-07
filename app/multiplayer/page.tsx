@@ -752,7 +752,6 @@ export default function MultiplayerPage() {
                 <>
                   <div className="party-lobby-main">
                     <div className="party-members-block">
-                    <p className="font-semibold mb-2">Party Members</p>
                     <div className="party-members-list grid gap-1.5">
                       {room.members.map(member => {
                         const isSelf = member.id === partyMemberId || member.id === clientId;
