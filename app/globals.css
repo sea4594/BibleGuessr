@@ -3757,3 +3757,14 @@ body {
 .profile-account-actions > * {
   width: 100%;
 }
+
+/* ===== 2026-10-07 center primary-nav content across full button height ===== */
+/* The navigation container already includes the iPhone home-indicator inset in its
+   total height. Do not also reserve that inset as padding inside every button: doing
+   so shrinks the flex content box and visually centers the icon/label in only its
+   upper half. */
+.main-nav-item {
+  padding: 0 3px !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
