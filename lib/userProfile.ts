@@ -8,11 +8,13 @@ export interface UserProfile {
 
 const STORAGE_KEY = 'bg-user-profile-v2';
 const CLIENT_ID_KEY = 'bg-client-id-v1';
+export const DISPLAY_NAME_MAX_LENGTH = 25;
 
 const NAME_A = ['Joyful','Bright','Steady','Swift','Faithful','Calm','Bold','Kind','Keen','Wise','Noble','Brave'];
 const NAME_B = ['Pilgrim','Scholar','Traveler','Reader','Seeker','Psalmist','Scribe','Keeper','Beacon','Friend','Shepherd','Herald'];
 
 function randomItem<T>(arr: T[]) { return arr[Math.floor(Math.random() * arr.length)]; }
+export function normalizeDisplayName(name: string) { return name.trim().slice(0, DISPLAY_NAME_MAX_LENGTH); }
 
 function hashStringSeed(input: string) {
   let hash = 0;
@@ -118,7 +120,7 @@ export function readLocalProfile(): UserProfile {
         : parsed;
 
     const sanitized: UserProfile = {
-      name: typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name : stableGuest.name,
+      name: typeof parsed.name === 'string' && normalizeDisplayName(parsed.name) ? normalizeDisplayName(parsed.name) : stableGuest.name,
       avatar: normalizeAvatar(candidateAvatar, hashStringSeed(clientId) % 997),
     };
 
@@ -135,7 +137,8 @@ export function readLocalProfile(): UserProfile {
 
 export function writeLocalProfile(profile: UserProfile) {
   if (typeof window === 'undefined') return;
-  setSyncedLocalStorageItem(STORAGE_KEY, JSON.stringify(profile));
+  const name = normalizeDisplayName(profile.name) || 'Player';
+  setSyncedLocalStorageItem(STORAGE_KEY, JSON.stringify({ ...profile, name }));
 }
 
 export function readClientId(): string {

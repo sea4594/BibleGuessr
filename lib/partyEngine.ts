@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { ensureFirebaseSession, getFirebaseAuth, getFirebaseDb } from './firebaseClient';
 import { constrainAvatarSpec, defaultAvatarSpec, type AvatarSpec } from './avatarSystem';
+import { DISPLAY_NAME_MAX_LENGTH } from './userProfile';
 import { bibleData } from './bibleData';
 import { gameModes, type GameModeId } from './gameModes';
 import { verseReferenceKey } from './verseSelection';
@@ -139,7 +140,7 @@ function sanitizeAvatarForStorage(avatar: AvatarSpec): AvatarSpec {
 function sanitizeMemberForStorage(member: PartyMember, forceHost?: boolean): PartyMember {
   return {
     ...member,
-    name: member.name.trim() || 'Player',
+    name: member.name.trim().slice(0, DISPLAY_NAME_MAX_LENGTH) || 'Player',
     isHost: forceHost ?? member.isHost,
     avatar: sanitizeAvatarForStorage(member.avatar),
   };

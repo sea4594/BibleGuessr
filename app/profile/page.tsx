@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import MainBottomNav from '@/components/MainBottomNav';
 import { AvatarSpec, avatarToDataUri, defaultAvatarSpec } from '@/lib/avatarSystem';
-import { readLocalProfile, UserProfile, writeLocalProfile } from '@/lib/userProfile';
+import { DISPLAY_NAME_MAX_LENGTH, readLocalProfile, UserProfile, writeLocalProfile } from '@/lib/userProfile';
 import { useAccountSync } from '@/lib/accountSync';
 import { useSettingsModal } from '@/components/SettingsModalProvider';
 import { Pencil, Settings } from 'lucide-react';
@@ -98,7 +98,8 @@ export default function ProfilePage() {
             <label className="block text-sm font-semibold mb-1">Display Name</label>
             <input
               value={profile.name}
-              onChange={e => updateProfile(prev => ({ ...prev, name: e.target.value }))}
+              onChange={e => updateProfile(prev => ({ ...prev, name: e.target.value.slice(0, DISPLAY_NAME_MAX_LENGTH) }))}
+              maxLength={DISPLAY_NAME_MAX_LENGTH}
               className="settings-input !w-full mb-3"
               placeholder="Your name"
             />
@@ -109,25 +110,16 @@ export default function ProfilePage() {
                   ? 'Initializing account sync...'
                   : googleAccountLabel
                     ? `Signed in as ${googleAccountLabel}`
-                    : 'Using guest profile (device only)'}
+                    : 'Not logged in'}
             </p>
 
-            {firebaseEnabled && (!googleAccountLabel || syncStatus === 'syncing' || Boolean(syncError)) && (
+            {firebaseEnabled && (syncStatus === 'syncing' || Boolean(syncError)) && (
               <p className="content-muted text-xs mb-4">
-                {syncStatus === 'syncing'
-                  ? 'Syncing your profile and app data...'
-                  : syncError
-                    ? syncError
-                    : googleAccountLabel
-                      ? ''
-                      : 'Sign in with Google to sync everything across devices.'}
+                {syncStatus === 'syncing' ? 'Syncing your profile and app data...' : syncError}
               </p>
             )}
 
-            <div className="flex flex-wrap gap-2">
-              <Link href="/profile/statistics" className="btn-outline px-4 py-2">
-                Statistics
-              </Link>
+            <div className="profile-account-actions">
               {firebaseEnabled && !googleAccountLabel && (
                 <button
                   onClick={() => void handleSignIn()}
@@ -146,6 +138,9 @@ export default function ProfilePage() {
                   Log out
                 </button>
               )}
+              <Link href="/profile/statistics" className="btn-outline px-4 py-2 text-center">
+                Statistics
+              </Link>
             </div>
             {statusMessage && <p className="text-sm content-muted mt-3">{statusMessage}</p>}
 

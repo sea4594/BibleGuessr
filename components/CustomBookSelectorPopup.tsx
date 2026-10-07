@@ -36,9 +36,8 @@ export default function CustomBookSelectorPopup({
         disabled={disabled}
         className="btn-outline w-full py-2.5"
       >
-        Select Books
+        Select Books ({selectedBooks.length} selected)
       </button>
-      <p className="text-xs content-muted mt-2">{selectedBooks.length} selected</p>
       {modal}
     </>
   );

@@ -25,7 +25,7 @@ import {
   upsertPartyMember,
 } from '@/lib/partyEngine';
 import { ensureFirebaseSession, getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebaseClient';
-import { readClientId, readLocalProfile, writeLocalProfile, type UserProfile } from '@/lib/userProfile';
+import { DISPLAY_NAME_MAX_LENGTH, normalizeDisplayName, readClientId, readLocalProfile, writeLocalProfile, type UserProfile } from '@/lib/userProfile';
 import { avatarToDataUri, type AvatarSpec } from '@/lib/avatarSystem';
 import { PARTY_TIMER_SECOND_OPTIONS, clampTimerSeconds, formatTimerOptionLabel } from '@/lib/timerOptions';
 import { useAccountSync } from '@/lib/accountSync';
@@ -122,9 +122,9 @@ export default function MultiplayerPage() {
   const suppressLobbyLeaveRef = useRef(false);
 
   const displayName = useMemo(() => {
-    const profileName = profile.name.trim();
+    const profileName = normalizeDisplayName(profile.name);
     if (profileName) return profileName;
-    return user?.displayName?.trim() || 'Player';
+    return normalizeDisplayName(user?.displayName ?? '') || 'Player';
   }, [profile.name, user?.displayName]);
 
   const partyModeOptions = useMemo(
@@ -142,13 +142,14 @@ export default function MultiplayerPage() {
   const currentPartyMember = room?.members.find(member => member.id === partyMemberId || member.id === clientId) ?? null;
 
   const persistPartyProfile = useCallback(async (nextProfile: UserProfile) => {
-    setProfile(nextProfile);
-    writeLocalProfile(nextProfile);
+    const normalizedProfile = { ...nextProfile, name: normalizeDisplayName(nextProfile.name) || 'Player' };
+    setProfile(normalizedProfile);
+    writeLocalProfile(normalizedProfile);
     if (activeRoomCode && firebaseConfigured && isCurrentMember) {
       await upsertPartyMember(activeRoomCode, {
         id: partyMemberId,
-        name: nextProfile.name.trim() || 'Player',
-        avatar: nextProfile.avatar,
+        name: normalizedProfile.name,
+        avatar: normalizedProfile.avatar,
         isHost: room?.hostId === partyMemberId,
         joinedAt: currentPartyMember?.joinedAt ?? Date.now(),
       });
@@ -156,7 +157,7 @@ export default function MultiplayerPage() {
   }, [activeRoomCode, currentPartyMember?.joinedAt, firebaseConfigured, isCurrentMember, partyMemberId, room?.hostId]);
 
   const commitPartyName = useCallback(async () => {
-    const trimmed = partyNameDraft.trim();
+    const trimmed = normalizeDisplayName(partyNameDraft);
     setEditingPartyName(false);
     if (!trimmed || trimmed === profile.name) {
       setPartyNameDraft(profile.name);
@@ -175,7 +176,7 @@ export default function MultiplayerPage() {
     let nextProfile = profile;
     let changed = false;
     if (editingPartyName) {
-      const trimmed = partyNameDraft.trim();
+      const trimmed = normalizeDisplayName(partyNameDraft);
       if (trimmed && trimmed !== nextProfile.name) {
         nextProfile = { ...nextProfile, name: trimmed };
         changed = true;
@@ -787,36 +788,40 @@ export default function MultiplayerPage() {
                                 className="w-9 h-9"
                               />
                             )}
-                            <div className="flex-1 min-w-0">
-                              {isSelf && editingPartyName ? (
-                                <input
-                                  value={partyNameDraft}
-                                  onChange={event => setPartyNameDraft(event.target.value)}
-                                  onBlur={() => void commitPartyName()}
-                                  onKeyDown={event => {
-                                    if (event.key === 'Enter') event.currentTarget.blur();
-                                    if (event.key === 'Escape') {
-                                      setPartyNameDraft(profile.name);
-                                      setEditingPartyName(false);
-                                    }
-                                  }}
-                                  className="party-member-name-input"
-                                  maxLength={40}
-                                  autoFocus
-                                  aria-label="Edit your display name"
-                                />
-                              ) : isSelf ? (
-                                <button
-                                  type="button"
-                                  className="party-member-name-button"
-                                  onClick={() => { setPartyNameDraft(profile.name || member.name); setEditingPartyName(true); }}
-                                >
-                                  {member.name}
-                                </button>
-                              ) : (
-                                <p className="text-sm font-semibold truncate">{member.name}</p>
+                            <div className="party-member-main">
+                              <div className="party-member-name-wrap">
+                                {isSelf && editingPartyName ? (
+                                  <input
+                                    value={partyNameDraft}
+                                    onChange={event => setPartyNameDraft(event.target.value)}
+                                    onBlur={() => void commitPartyName()}
+                                    onKeyDown={event => {
+                                      if (event.key === 'Enter') event.currentTarget.blur();
+                                      if (event.key === 'Escape') {
+                                        setPartyNameDraft(profile.name);
+                                        setEditingPartyName(false);
+                                      }
+                                    }}
+                                    className="party-member-name-input"
+                                    maxLength={DISPLAY_NAME_MAX_LENGTH}
+                                    autoFocus
+                                    aria-label="Edit your display name"
+                                  />
+                                ) : isSelf ? (
+                                  <button
+                                    type="button"
+                                    className="party-member-name-button"
+                                    onClick={() => { setPartyNameDraft(profile.name || member.name); setEditingPartyName(true); }}
+                                  >
+                                    {member.name}
+                                  </button>
+                                ) : (
+                                  <p className="party-member-name-text">{member.name}</p>
+                                )}
+                              </div>
+                              {(isSelf || member.isHost) && (
+                                <span className="party-member-role">{isSelf ? (member.isHost ? 'You - Host' : 'You') : 'Host'}</span>
                               )}
-                              <p className="text-xs content-muted">{isSelf ? `You${member.isHost ? ' · Host' : ''}` : member.isHost ? 'Host' : 'Joined'}</p>
                             </div>
                           </div>
                         );
@@ -868,7 +873,6 @@ export default function MultiplayerPage() {
 
                     {lobbySettings?.modeId === 'custom' && (
                       <div className="mb-3">
-                        <label className="text-sm font-semibold block mb-2">Books</label>
                         <CustomBookSelectorPopup
                           selectedBooks={lobbySettings.selectedBooks ?? []}
                           onChange={books => {
