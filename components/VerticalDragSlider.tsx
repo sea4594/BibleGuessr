@@ -1,12 +1,18 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
 
+export interface VerticalSliderItemColor {
+  background: string;
+  text: string;
+}
+
 interface Props {
   items: string[];
   selectedIndex: number | null;
   onChange: (index: number) => void;
   label: string;
   disabled?: boolean;
+  itemColors?: Array<VerticalSliderItemColor | null>;
 }
 
 // Upward calibration: fingertip registers at center of touch, but the visible
@@ -21,6 +27,7 @@ export default function VerticalDragSlider({
   onChange,
   label,
   disabled = false,
+  itemColors,
 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -106,13 +113,19 @@ export default function VerticalDragSlider({
   // 5-item context window
   const contextItems = [-2, -1, 0, 1, 2].map(off => {
     const i = hoverIdx + off;
-    return i < 0 || i >= items.length ? null : { label: items[i], isCenter: off === 0 };
+    return i < 0 || i >= items.length ? null : { index: i, label: items[i], isCenter: off === 0 };
   });
+  const activeColor = activeIdx === null ? null : (itemColors?.[activeIdx] ?? null);
 
   return (
     <div className={`vslider-col${disabled ? ' opacity-40' : ''}`}>
       <p className="vslider-label">{label}</p>
-      <p className="vslider-selected-val">{disabled ? '—' : (activeIdx === null ? '—' : (items[activeIdx] ?? '—'))}</p>
+      <p
+        className="vslider-selected-val"
+        style={activeColor ? { backgroundColor: activeColor.background, color: activeColor.text, borderRadius: '6px', padding: '2px 5px' } : undefined}
+      >
+        {disabled ? '—' : (activeIdx === null ? '—' : (items[activeIdx] ?? '—'))}
+      </p>
 
       <div className="vslider-track-wrap">
         <div
@@ -127,20 +140,29 @@ export default function VerticalDragSlider({
           style={{ touchAction: 'none', cursor: disabled ? 'default' : 'pointer' }}
         >
           <div className="vslider-book-list" aria-hidden="true">
-            {items.map((name, i) => (
-              <div
-                key={i}
-                className={`vslider-book-item${activeIdx !== null && i === activeIdx ? ' active' : ''}`}
-                style={{
-                  height: `${itemHeightPercent}%`,
-                  minHeight: `${itemHeightPercent}%`,
-                  lineHeight: `${itemHeightPercent}%`,
-                  fontSize: `${dynamicFontPx}px`,
-                }}
-              >
-                {name}
-              </div>
-            ))}
+            {items.map((name, i) => {
+              const itemColor = itemColors?.[i] ?? null;
+              const isActive = activeIdx !== null && i === activeIdx;
+              return (
+                <div
+                  key={i}
+                  className={`vslider-book-item${isActive ? ' active' : ''}`}
+                  style={{
+                    height: `${itemHeightPercent}%`,
+                    minHeight: `${itemHeightPercent}%`,
+                    lineHeight: `${itemHeightPercent}%`,
+                    fontSize: `${dynamicFontPx}px`,
+                    ...(itemColor ? {
+                      backgroundColor: itemColor.background,
+                      color: itemColor.text,
+                      boxShadow: isActive ? 'inset 0 0 0 1.5px rgba(255,255,255,0.95), inset 0 0 0 3px rgba(0,0,0,0.24)' : undefined,
+                    } : {}),
+                  }}
+                >
+                  {name}
+                </div>
+              );
+            })}
           </div>
 
         </div>
@@ -151,7 +173,15 @@ export default function VerticalDragSlider({
               item === null ? (
                 <div key={i} className="vslider-popup-item empty" />
               ) : (
-                <div key={i} className={`vslider-popup-item${item.isCenter ? ' center' : ''}`}>
+                <div
+                  key={i}
+                  className={`vslider-popup-item${item.isCenter ? ' center' : ''}`}
+                  style={itemColors?.[item.index] ? {
+                    backgroundColor: itemColors[item.index]!.background,
+                    color: itemColors[item.index]!.text,
+                    boxShadow: item.isCenter ? 'inset 0 0 0 2px rgba(255,255,255,0.9), 0 0 0 1px rgba(0,0,0,0.2)' : undefined,
+                  } : undefined}
+                >
                   {item.label}
                 </div>
               )

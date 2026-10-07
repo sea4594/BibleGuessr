@@ -1,7 +1,21 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { GameModeConfig } from '@/lib/gameModes';
+import { GameModeConfig, getBookCategory, type BookCategory } from '@/lib/gameModes';
 import VerticalDragSlider from './VerticalDragSlider';
+
+
+const BOOK_CATEGORY_COLORS: Record<Exclude<BookCategory, 'Unknown'>, { background: string; text: string }> = {
+  'Pentateuch': { background: '#6D28D9', text: '#FFFFFF' },
+  'Historical': { background: '#1D4ED8', text: '#FFFFFF' },
+  'Wisdom': { background: '#0E7490', text: '#FFFFFF' },
+  'Major Prophets': { background: '#047857', text: '#FFFFFF' },
+  'Minor Prophets': { background: '#4D7C0F', text: '#FFFFFF' },
+  'Gospels': { background: '#A16207', text: '#FFFFFF' },
+  'Acts': { background: '#C2410C', text: '#FFFFFF' },
+  'Pauline Epistles': { background: '#B91C1C', text: '#FFFFFF' },
+  'General Epistles': { background: '#BE185D', text: '#FFFFFF' },
+  'Apocalypse': { background: '#374151', text: '#FFFFFF' },
+};
 
 interface Props {
   modeConfig: GameModeConfig;
@@ -39,6 +53,12 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const bookNames = useMemo(() => modeConfig.books.map(b => b.book), [modeConfig]);
+  const bookCategoryColors = useMemo(() => {
+    const categories = modeConfig.books.map(book => getBookCategory(book.book));
+    const knownCategories = categories.filter((category): category is Exclude<BookCategory, 'Unknown'> => category !== 'Unknown');
+    if (new Set(knownCategories).size <= 1) return undefined;
+    return categories.map(category => category === 'Unknown' ? null : BOOK_CATEGORY_COLORS[category]);
+  }, [modeConfig.books]);
   const selectedBook = selection.bookIdx === null ? null : modeConfig.books[selection.bookIdx] ?? null;
 
   const chaptersCount = selectedBook ? selectedBook.chapters.length : 0;
@@ -130,6 +150,7 @@ export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange
           selectedIndex={selection.bookIdx}
           onChange={handleBookChange}
           disabled={bookNames.length <= 1}
+          itemColors={bookCategoryColors}
         />
         <VerticalDragSlider
           label="Chapter"
