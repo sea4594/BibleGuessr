@@ -2936,6 +2936,9 @@ input:disabled {
 .multiplayer-summary-player:first-child {
   border-top: 0;
 }
+.multiplayer-summary-player.no-avatar {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
 .multiplayer-summary-avatar {
   width: 44px;
   height: 44px;

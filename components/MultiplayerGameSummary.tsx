@@ -5,7 +5,7 @@ import Image from 'next/image';
 export type MultiplayerSummaryPlayer = {
   id: string;
   name: string;
-  avatarSrc: string;
+  avatarSrc?: string;
   score: number;
 };
 
@@ -23,24 +23,27 @@ export type MultiplayerSummaryRound = {
 type Props = {
   players: MultiplayerSummaryPlayer[];
   rounds: MultiplayerSummaryRound[];
+  showAvatars?: boolean;
 };
 
-export default function MultiplayerGameSummary({ players, rounds }: Props) {
+export default function MultiplayerGameSummary({ players, rounds, showAvatars = true }: Props) {
   const ranked = players.slice().sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
   return (
     <div className="multiplayer-summary">
       <section className="surface-card multiplayer-summary-leaderboard">
         {ranked.map(player => (
-          <div key={player.id} className="multiplayer-summary-player">
-            <Image
-              src={player.avatarSrc}
-              alt={`${player.name} avatar`}
-              width={44}
-              height={44}
-              unoptimized
-              className="multiplayer-summary-avatar"
-            />
+          <div key={player.id} className={showAvatars ? 'multiplayer-summary-player' : 'multiplayer-summary-player no-avatar'}>
+            {showAvatars && player.avatarSrc && (
+              <Image
+                src={player.avatarSrc}
+                alt={`${player.name} avatar`}
+                width={44}
+                height={44}
+                unoptimized
+                className="multiplayer-summary-avatar"
+              />
+            )}
             <span className="multiplayer-summary-player-name">{player.name}</span>
             <span className="multiplayer-summary-final-score">{Math.max(0, Math.min(100, Math.round(player.score)))}%</span>
           </div>

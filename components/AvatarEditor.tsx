@@ -30,7 +30,7 @@ export default function AvatarEditor({ avatar, onSave, onClose, onDraftChange }:
     { key: 'outfit', label: 'Outfit' },
     { key: 'extras', label: 'Extras' },
   ];
-  const attributes = getAvatarAttributes(local.gender);
+  const attributes = getAvatarAttributes(local.gender, local.mouthType);
 
   const setDraft = (next: AvatarSpec) => {
     setLocal(next);

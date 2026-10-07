@@ -5,7 +5,6 @@ import { X } from 'lucide-react';
 import { GameSession } from '@/lib/gameContext';
 import { addGameRecord } from '@/lib/gameStats';
 import MultiplayerGameSummary from '@/components/MultiplayerGameSummary';
-import { avatarToDataUri, defaultAvatarSpec } from '@/lib/avatarSystem';
 
 interface Props {
   session: GameSession;
@@ -179,10 +178,9 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
   }, [session.mode, session.modeConfig.name, session.totalRounds, totalScore, accuracy]);
 
   if (isHotSeat && session.multiplayer?.enabled && hotSeatGuessesByRound) {
-    const hotSeatPlayers = playerTotals.map((entry, idx) => ({
+    const hotSeatPlayers = playerTotals.map(entry => ({
       id: entry.player,
       name: entry.player,
-      avatarSrc: avatarToDataUri(defaultAvatarSpec(idx)),
       score: entry.percent,
     }));
     const hotSeatRounds = hotSeatGuessesByRound.map(entry => ({
@@ -211,7 +209,7 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
 
         <div className="app-content app-content-scroll">
           <div className="page max-w-lg">
-            <MultiplayerGameSummary players={hotSeatPlayers} rounds={hotSeatRounds} />
+            <MultiplayerGameSummary players={hotSeatPlayers} rounds={hotSeatRounds} showAvatars={false} />
           </div>
         </div>
 

@@ -123,6 +123,7 @@ function sanitizeAvatarForStorage(avatar: AvatarSpec): AvatarSpec {
     eyeColor: typeof avatar.eyeColor === 'string' ? avatar.eyeColor : undefined,
     eyebrowStyle: typeof avatar.eyebrowStyle === 'string' ? avatar.eyebrowStyle : undefined,
     mouthType: typeof avatar.mouthType === 'string' ? avatar.mouthType : undefined,
+    lipstickColor: typeof avatar.lipstickColor === 'string' ? avatar.lipstickColor : undefined,
     facialHair: typeof avatar.facialHair === 'string' ? avatar.facialHair : undefined,
     shirtStyle: typeof avatar.shirtStyle === 'string' ? avatar.shirtStyle : undefined,
     shirtColor: typeof avatar.shirtColor === 'string' ? avatar.shirtColor : undefined,
