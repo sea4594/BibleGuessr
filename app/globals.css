@@ -4240,3 +4240,50 @@ input:not([type='range']) {
   transform: none !important;
   margin: 0 !important;
 }
+
+/* ===== 2026-10-07 party join-card + bottom-action refinement ===== */
+/* Host/Join cards: another ~10% taller. Host layout stays centered; Join gets more
+   breathing room between its label and code boxes, with the action anchored low. */
+.party-header-half {
+  height: 92px !important;
+  min-height: 92px !important;
+  max-height: 92px !important;
+}
+.party-join-half::before {
+  flex-basis: 18px !important;
+  height: 18px !important;
+}
+.party-join-slot-row {
+  margin-top: 2px !important;
+}
+.party-join-slot-input {
+  height: 30px !important;
+  min-height: 30px !important;
+  padding-bottom: 2px !important;
+  font-size: 0.95rem !important;
+}
+.party-join-action-btn {
+  margin-top: auto !important;
+  margin-bottom: 0 !important;
+}
+
+/* There is no browser-exposed physical screen-corner radius. The iPhone bottom
+   safe-area inset is the closest reliable signal, so scale bottom-action rounding
+   from it while preserving a sensible radius on square-cornered screens. */
+.round-screen-footer .btn-primary,
+.party-round-summary-footer .btn-primary,
+.game-shell > .game-content.app-content-fixed .guess-interface .btn-primary,
+.party-game-summary > .btn-primary {
+  border-radius: max(14px, calc(env(safe-area-inset-bottom) * 0.72)) !important;
+}
+.party-game-summary {
+  padding-bottom: 8px !important;
+}
+@media (display-mode: standalone) and (max-width: 640px) {
+  .round-screen-footer .btn-primary,
+  .party-round-summary-footer .btn-primary,
+  .game-shell > .game-content.app-content-fixed .guess-interface .btn-primary,
+  .party-game-summary > .btn-primary {
+    border-radius: max(16px, calc(env(safe-area-inset-bottom) * 0.72)) !important;
+  }
+}

@@ -127,6 +127,11 @@ export default function MultiplayerPage() {
   const [partyIdentityReady, setPartyIdentityReady] = useState(!firebaseConfigured);
   const suppressLobbyLeaveRef = useRef(false);
   const leavingPartyRef = useRef(false);
+  const partyJoinPendingRef = useRef(false);
+  const joiningPartyCodeRef = useRef<string | null>(null);
+  const partyLifecycleRef = useRef<{ tab: 'hot-seat' | 'party'; activeRoomCode: string | null; partyMemberId: string; gameStatus: 'lobby' | 'in-round' | 'round-complete' | 'finished' | undefined }>({
+    tab, activeRoomCode, partyMemberId, gameStatus: room?.game?.status,
+  });
 
   const displayName = useMemo(() => {
     const profileName = normalizeDisplayName(profile.name);
@@ -134,11 +139,20 @@ export default function MultiplayerPage() {
     return normalizeDisplayName(user?.displayName ?? '') || 'Player';
   }, [profile.name, user?.displayName]);
 
-  const isHost = Boolean(room?.hostId === partyMemberId);
-  const isCurrentMember = Boolean(
-    room?.members.some(member => member.id === partyMemberId || member.id === clientId)
-  );
-  const currentPartyMember = room?.members.find(member => member.id === partyMemberId || member.id === clientId) ?? null;
+  const accountUid = user?.uid ?? null;
+  const isSelfMemberId = useCallback((memberId: string) => (
+    memberId === partyMemberId || memberId === clientId || Boolean(accountUid && memberId === accountUid)
+  ), [accountUid, clientId, partyMemberId]);
+  const isHost = Boolean(room?.hostId && isSelfMemberId(room.hostId));
+  const isCurrentMember = Boolean(room?.members.some(member => isSelfMemberId(member.id)));
+  const currentPartyMember = room?.members.find(member => isSelfMemberId(member.id)) ?? null;
+
+  partyLifecycleRef.current = {
+    tab,
+    activeRoomCode,
+    partyMemberId: accountUid ?? partyMemberId,
+    gameStatus: room?.game?.status,
+  };
 
   const persistPartyProfile = useCallback(async (nextProfile: UserProfile) => {
     const normalizedProfile = { ...nextProfile, name: normalizeDisplayName(nextProfile.name) || 'Player' };
@@ -146,14 +160,14 @@ export default function MultiplayerPage() {
     writeLocalProfile(normalizedProfile);
     if (activeRoomCode && firebaseConfigured && isCurrentMember && !leavingPartyRef.current) {
       await upsertPartyMember(activeRoomCode, {
-        id: partyMemberId,
+        id: accountUid ?? partyMemberId,
         name: normalizedProfile.name,
         avatar: normalizedProfile.avatar,
-        isHost: room?.hostId === partyMemberId,
+        isHost: Boolean(room?.hostId && isSelfMemberId(room.hostId)),
         joinedAt: currentPartyMember?.joinedAt ?? Date.now(),
       });
     }
-  }, [activeRoomCode, currentPartyMember?.joinedAt, firebaseConfigured, isCurrentMember, partyMemberId, room?.hostId]);
+  }, [activeRoomCode, currentPartyMember?.joinedAt, firebaseConfigured, isCurrentMember, accountUid, isSelfMemberId, partyMemberId, room?.hostId]);
 
   const commitPartyName = useCallback(async () => {
     const trimmed = normalizeDisplayName(partyNameDraft);
@@ -315,22 +329,40 @@ export default function MultiplayerPage() {
         next => {
           if (cancelled) return;
           if (!next) {
+            // Leaving the automatically-created host room deletes it when this device
+            // is its only member. Ignore that old room's final null snapshot while a
+            // guest join is in flight, or it will clear the target code and auto-host
+            // a brand-new room underneath the successful join.
+            if (joiningPartyCodeRef.current && joiningPartyCodeRef.current !== code) return;
             setRoom(null);
             setPartyLobbyPending(true);
             setPartyLobbyError('');
-            setActiveRoomCode(null);
+            if (joiningPartyCodeRef.current === code) {
+              scheduleRetry(() => subscribeToRoom(code), 350);
+            } else {
+              setActiveRoomCode(null);
+            }
             return;
           }
 
-          const stillMember = next.members.some(member => member.id === partyMemberId || member.id === clientId);
+          const authUid = getFirebaseAuth()?.currentUser?.uid;
+          const stillMember = next.members.some(member =>
+            member.id === partyMemberId || member.id === clientId || Boolean(authUid && member.id === authUid)
+          );
           if (!stillMember) {
+            // While intentionally switching from our automatically-created host room
+            // into another party, ignore the old room's final membership update.
+            // Clearing activeRoomCode here would otherwise immediately create a new host
+            // room and make a successful guest join look like it failed.
+            if (joiningPartyCodeRef.current && joiningPartyCodeRef.current !== code) return;
             setRoom(null);
             setPartyLobbyPending(true);
             setPartyLobbyError('');
-            setActiveRoomCode(null);
+            if (!joiningPartyCodeRef.current) setActiveRoomCode(null);
             return;
           }
 
+          if (joiningPartyCodeRef.current === code) joiningPartyCodeRef.current = null;
           leavingPartyRef.current = false;
           setRoom(next);
           setPartyLobbyPending(false);
@@ -381,7 +413,7 @@ export default function MultiplayerPage() {
     };
 
     if (activeRoomCode) subscribeToRoom(activeRoomCode);
-    else void createRoom();
+    else if (!joiningPartyCodeRef.current) void createRoom();
 
     return () => {
       cancelled = true;
@@ -397,11 +429,11 @@ export default function MultiplayerPage() {
     const syncMember = () => {
       if (leavingPartyRef.current) return;
       void upsertPartyMember(activeRoomCode, {
-        id: partyMemberId,
+        id: accountUid ?? partyMemberId,
         name: displayName,
         avatar: profile.avatar,
-        isHost: room?.hostId === partyMemberId,
-        joinedAt: Date.now(),
+        isHost: Boolean(room?.hostId && isSelfMemberId(room.hostId)),
+        joinedAt: currentPartyMember?.joinedAt ?? Date.now(),
       });
     };
 
@@ -409,16 +441,25 @@ export default function MultiplayerPage() {
     const heartbeat = window.setInterval(syncMember, 60_000);
 
     return () => window.clearInterval(heartbeat);
-  }, [activeRoomCode, displayName, firebaseConfigured, isCurrentMember, partyMemberId, profile.avatar, room?.hostId, tab]);
+  }, [activeRoomCode, currentPartyMember?.joinedAt, displayName, firebaseConfigured, isCurrentMember, accountUid, isSelfMemberId, partyMemberId, profile.avatar, room?.hostId, tab]);
 
   useEffect(() => {
+    // Leave only when this page actually unmounts. The previous dependency-based
+    // cleanup also ran during ordinary room/member/status changes, which could remove
+    // a guest immediately after a successful join or exactly when a game started.
     return () => {
-      if (tab === 'party' && activeRoomCode && room?.game?.status === 'lobby' && !suppressLobbyLeaveRef.current) {
+      const current = partyLifecycleRef.current;
+      if (
+        current.tab === 'party' &&
+        current.activeRoomCode &&
+        current.gameStatus === 'lobby' &&
+        !suppressLobbyLeaveRef.current
+      ) {
         leavingPartyRef.current = true;
-        void leaveParty(activeRoomCode, partyMemberId);
+        void leaveParty(current.activeRoomCode, current.partyMemberId);
       }
     };
-  }, [activeRoomCode, partyMemberId, room?.game?.status, tab]);
+  }, []);
 
   useEffect(() => {
     if (tab !== 'party' || !room?.code || !room.game || room.game.status === 'lobby') return;
@@ -477,35 +518,55 @@ export default function MultiplayerPage() {
 
   const submitJoin = async () => {
     const code = joinCode.join('').toUpperCase();
-    if (code.length !== 4 || !firebaseConfigured || partyJoinPending) return;
+    if (code.length !== 4 || !firebaseConfigured || partyJoinPendingRef.current) return;
 
+    partyJoinPendingRef.current = true;
     setPartyJoinPending(true);
+    joiningPartyCodeRef.current = code;
 
-    const hasSession = await ensureFirebaseSession();
-    const authUid = getFirebaseAuth()?.currentUser?.uid;
-    if (!hasSession || !authUid) {
-      setPartyLobbyError('Unable to connect to Party right now. Please try again.');
+    try {
+      const hasSession = await ensureFirebaseSession();
+      const authUid = getFirebaseAuth()?.currentUser?.uid;
+      if (!hasSession || !authUid) {
+        joiningPartyCodeRef.current = null;
+        setPartyLobbyError('Unable to connect to Party right now. Please try again.');
+        return;
+      }
+
+      // Join and subscribe with one stable identity. partyMemberId can still contain
+      // the device client id for a render while Firebase auth finishes restoring.
+      // Using the auth UID here prevents the room from writing one id and the local
+      // membership check immediately looking for another.
+      const joiningMemberId = authUid;
+      if (partyMemberId !== joiningMemberId) setPartyMemberId(joiningMemberId);
+
+      if (activeRoomCode && activeRoomCode !== code) {
+        leavingPartyRef.current = true;
+        await leaveParty(activeRoomCode, joiningMemberId);
+      }
+
+      const ok = await joinParty(code, {
+        id: joiningMemberId,
+        name: displayName,
+        avatar: profile.avatar,
+        isHost: false,
+        joinedAt: 0,
+      });
+      if (ok) {
+        leavingPartyRef.current = false;
+        setPartyLobbyError('');
+        setPartyStartError('');
+        setJoinCode(['', '', '', '']);
+        setRoom(null);
+        setActiveRoomCode(code);
+      } else {
+        joiningPartyCodeRef.current = null;
+        setPartyLobbyError('Could not join that party code. Check the code and try again.');
+      }
+    } finally {
+      partyJoinPendingRef.current = false;
       setPartyJoinPending(false);
-      return;
     }
-
-    if (activeRoomCode && activeRoomCode !== code) {
-      leavingPartyRef.current = true;
-      await leaveParty(activeRoomCode, partyMemberId);
-    }
-
-    const ok = await joinParty(code, { id: partyMemberId, name: displayName, avatar: profile.avatar, isHost: false, joinedAt: 0 });
-    if (ok) {
-      leavingPartyRef.current = false;
-      setPartyLobbyError('');
-      setPartyStartError('');
-      setJoinCode(['', '', '', '']);
-      setActiveRoomCode(code);
-    } else {
-      setPartyLobbyError('Could not join that party code. Check the code and try again.');
-    }
-
-    setPartyJoinPending(false);
   };
 
   const updateJoinCodeSlot = (index: number, value: string) => {
@@ -565,6 +626,8 @@ export default function MultiplayerPage() {
   const handleLeaveLobby = () => {
     if (!activeRoomCode || !room || isHost) return;
     const codeToLeave = activeRoomCode;
+    joiningPartyCodeRef.current = null;
+    partyJoinPendingRef.current = false;
     leavingPartyRef.current = true;
     setRoom(null);
     setActiveRoomCode(null);
@@ -844,7 +907,7 @@ export default function MultiplayerPage() {
                     <div className="party-members-block">
                     <div className="party-members-list grid gap-1.5">
                       {room.members.map(member => {
-                        const isSelf = member.id === partyMemberId || member.id === clientId;
+                        const isSelf = isSelfMemberId(member.id);
                         return (
                           <div key={member.id} className={isSelf ? 'party-member-row is-self' : 'party-member-row'}>
                             {isSelf ? (
