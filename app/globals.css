@@ -4348,3 +4348,70 @@ input:not([type='range']) {
     font-size: 0.88rem !important;
   }
 }
+
+
+/* ===== 2026-10-07 footer / party / avatar cleanup ===== */
+/* Action docks are visual spacing only; never draw separator rules above them. */
+.round-screen-footer,
+.party-round-summary-footer,
+.party-start-dock,
+.avatar-editor-actions {
+  border-top: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Active party status must use the exact same flat surface as the Host/Join cards. */
+.party-lobby-status-card.party-header-half {
+  border: 0 !important;
+  background: var(--card-bg) !important;
+  box-shadow: none !important;
+}
+
+/* The self row is already highlighted; do not add a second box behind its avatar. */
+.party-member-avatar-button,
+.party-member-row.is-self .party-member-avatar-button {
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+
+/* Desktop Party uses fixed app content, so explicitly reserve the taller desktop nav. */
+@media (min-width: 641px) {
+  .multiplayer-party-content {
+    padding-bottom: calc(66px + env(safe-area-inset-bottom)) !important;
+  }
+  .multiplayer-party-page,
+  .party-lobby-shell {
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
+/* On phones the avatar editor does not need a redundant title block. Keep only Close,
+   and position Save with the same small bottom gap as the game action buttons. */
+@media (max-width: 640px) {
+  .avatar-editor-header > div {
+    display: none !important;
+  }
+  .avatar-editor-header {
+    min-height: calc(env(safe-area-inset-top) + 40px) !important;
+    padding: env(safe-area-inset-top) 10px 0 !important;
+    justify-content: flex-end !important;
+  }
+  .avatar-editor-close {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  .avatar-editor-actions {
+    padding: 8px 10px 8px !important;
+  }
+}
+
+/* Keep the mobile avatar editor on the same app viewport contract as the rest of the PWA. */
+@media (max-width: 640px) {
+  .avatar-editor-modal {
+    height: var(--app-viewport-height) !important;
+    max-height: var(--app-viewport-height) !important;
+  }
+}

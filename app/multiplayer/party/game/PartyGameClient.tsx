@@ -714,7 +714,6 @@ export default function PartyGameClient() {
                       <div className="party-round-table-meta">
                         <p className="text-sm font-semibold">{member.name}</p>
                         <p className="text-sm whitespace-nowrap overflow-x-auto">
-                          <span className="content-muted">Guess:&nbsp;</span>
                           {submission ? renderSubmissionGuess(submission, false) : <span className="content-muted">Waiting…</span>}
                         </p>
                       </div>
@@ -777,7 +776,6 @@ export default function PartyGameClient() {
                     <div className="party-round-table-meta">
                       <p className="text-sm font-semibold">{member.name}</p>
                       <p className="text-sm whitespace-nowrap overflow-x-auto">
-                        <span className="content-muted">Guess:&nbsp;</span>
                         {submission ? renderSubmissionGuess(submission, true) : <span style={{ color: '#ef4444' }}>No guess</span>}
                       </p>
                     </div>

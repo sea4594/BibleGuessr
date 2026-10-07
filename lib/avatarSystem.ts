@@ -251,7 +251,7 @@ function hairFront(style: string, color: string): string {
     case 'waves': return `<path d="M70 71Q71 35 120 31Q168 34 170 69Q157 57 145 63Q133 69 121 61Q109 53 96 62Q84 70 70 71Z" fill="${color}"/><path d="M83 52Q96 44 108 51Q120 58 132 50Q144 43 157 51" stroke="${hi}" stroke-width="3" fill="none" opacity=".5"/>`;
     case 'curly':
     case 'curls': return `<g fill="${color}"><circle cx="82" cy="61" r="17"/><circle cx="101" cy="48" r="18"/><circle cx="120" cy="44" r="19"/><circle cx="139" cy="48" r="18"/><circle cx="158" cy="61" r="17"/></g><g fill="${hi}" opacity=".32"><circle cx="101" cy="48" r="5"/><circle cx="139" cy="48" r="5"/></g>`;
-    case 'afro': return `<g fill="${color}"><circle cx="78" cy="64" r="18"/><circle cx="93" cy="49" r="20"/><circle cx="111" cy="42" r="21"/><circle cx="129" cy="42" r="21"/><circle cx="147" cy="49" r="20"/><circle cx="162" cy="64" r="18"/><path d="M78 68Q120 52 162 68L158 74Q120 62 82 74Z"/></g>`;
+    case 'afro': return `<g fill="${color}"><circle cx="78" cy="64" r="18"/><circle cx="93" cy="49" r="20"/><circle cx="111" cy="42" r="21"/><circle cx="129" cy="42" r="21"/><circle cx="147" cy="49" r="20"/><circle cx="162" cy="64" r="18"/><path d="M82 61Q120 48 158 61L155 66Q120 57 85 66Z"/></g>`;
     case 'bob': return `<path d="M70 68Q75 28 120 29Q165 29 170 68Q151 52 128 52Q103 50 70 68Z" fill="${color}"/>`;
     case 'long':
     case 'long-straight': return `<path d="M69 68Q75 27 120 27Q164 27 171 67Q148 50 121 51Q94 50 69 68Z" fill="${color}"/>`;
@@ -418,7 +418,7 @@ function frecklesSvg(freckles: string, skinColor: string): string {
 }
 function hatTempleHairSvg(style: string, color: string, accessory: string): string {
   if ((accessory !== 'cap' && accessory !== 'beanie') || style === 'bald') return '';
-  return `<path d="M73 63Q79 61 85 65L84 104Q80 111 74 108Z" fill="${color}"/><path d="M167 63Q161 61 155 65L156 104Q160 111 166 108Z" fill="${color}"/>`;
+  return `<path d="M76 64Q90 78 76 101Q65 82 76 64Z" fill="${color}"/><path d="M164 64Q150 78 164 101Q175 82 164 64Z" fill="${color}"/>`;
 }
 
 function faceShapeSvg(skinColor: string): string {
