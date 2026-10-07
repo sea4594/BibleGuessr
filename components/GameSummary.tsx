@@ -195,6 +195,9 @@ export default function GameSummary({ session, onPlayAgain, onHome, onSelectGame
             ? 'No guess'
             : `${playerRound.guess.book} ${playerRound.guess.chapter}:${playerRound.guess.verse}`,
           score: playerRound?.score ?? 0,
+          wasBlankGuess: !playerRound || Boolean(playerRound.wasBlankGuess),
+          guessParts: playerRound && !playerRound.wasBlankGuess ? playerRound.guess : undefined,
+          feedback: playerRound && !playerRound.wasBlankGuess ? playerRound.scoreBreakdown.feedback : undefined,
         };
       }),
     }));

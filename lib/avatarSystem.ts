@@ -322,7 +322,7 @@ function armsSvg(style: string, shirtColor: string, skinColor: string, gender: A
   if (style === 'tank') {
     return female
       ? `<path d="M101 151Q86 150 78 159Q69 170 67 191L66 214Q66 225 74 229Q82 228 83 217L84 187Q85 170 99 160Z" fill="${skinColor}"/><path d="M139 151Q154 150 162 159Q171 170 173 191L174 214Q174 225 166 229Q158 228 157 217L156 187Q155 170 141 160Z" fill="${skinColor}"/>`
-      : `<path d="M104 151Q84 149 72 160Q61 172 60 193L60 214Q60 226 70 230Q80 228 81 216L82 187Q84 167 102 159Z" fill="${skinColor}"/><path d="M136 151Q156 149 168 160Q179 172 180 193L180 214Q180 226 170 230Q160 228 159 216L158 187Q156 167 138 159Z" fill="${skinColor}"/>`;
+      : `<path d="M102 151Q86 146 72 155Q58 166 57 191L57 214Q57 227 69 231Q81 228 82 215L83 186Q85 165 104 158Z" fill="${skinColor}"/><path d="M138 151Q154 146 168 155Q182 166 183 191L183 214Q183 227 171 231Q159 228 158 215L157 186Q155 165 136 158Z" fill="${skinColor}"/>`;
   }
   if (style === 'jersey') {
     return `<path d="M${female ? 80 : 74} 156Q${female ? 66 : 56} 153 ${female ? 57 : 48} 169L${female ? 61 : 53} 186L${female ? 81 : 76} 181Z" fill="${shirtColor}"/><rect x="${xL}" y="181" width="${armW}" height="44" rx="${female ? 9 : 12}" fill="${skinColor}"/><circle cx="${female ? 66.5 : 62}" cy="226" r="${handR}" fill="${skinColor}"/><path d="M${female ? 160 : 166} 156Q${female ? 174 : 184} 153 ${female ? 183 : 192} 169L${female ? 179 : 187} 186L${female ? 159 : 164} 181Z" fill="${shirtColor}"/><rect x="${xR}" y="181" width="${armW}" height="44" rx="${female ? 9 : 12}" fill="${skinColor}"/><circle cx="${female ? 173.5 : 178}" cy="226" r="${handR}" fill="${skinColor}"/>`;
@@ -353,7 +353,7 @@ function shirtSvg(style: string, shirtColor: string, skinColor: string, gender: 
     case 'jersey': return `<path d="M88 148H101Q120 160 139 148H152L164 161L157 237H83L76 161Z" fill="${shirtColor}"/><path d="M92 149Q120 174 148 149" stroke="${light}" stroke-width="5" fill="none"/><path d="M88 154L84 228M152 154L156 228" stroke="${light}" stroke-width="4" opacity=".65"/>`;
     case 'tank': return gender === 'female'
       ? `<path d="M96 147H106Q120 159 134 147H144L154 237H86Z" fill="${shirtColor}"/><path d="M104 148Q120 168 136 148" fill="${skinColor}"/>`
-      : `<path d="M93 147H105Q120 159 135 147H147L159 237H81Z" fill="${shirtColor}"/><path d="M103 148Q120 169 137 148" fill="${skinColor}"/>`;
+      : `<path d="M84 147H103Q120 158 137 147H156L162 237H78Z" fill="${shirtColor}"/><path d="M105 148Q120 164 135 148" fill="${skinColor}"/>`;
     default: return `${body}<path d="M101 147Q120 159 139 147" stroke="${shade}" stroke-width="5" fill="none" opacity=".55"/>`;
   }
 }
@@ -387,7 +387,7 @@ function shoesSvg(style: string, color: string, gender: AvatarGender): string {
     }
   }
   switch (style) {
-    case 'high-tops': return `<path d="M72 302H114V337H68Q61 333 66 326L77 319Z" fill="${color}"/><path d="M126 302H168L174 326Q179 333 172 337H126Z" fill="${color}"/><path d="M72 329H113M127 329H171" stroke="${light}" stroke-width="4"/><path d="M82 309L104 319M158 309L136 319" stroke="${shade}" stroke-width="2"/>`;
+    case 'high-tops': return `<path d="M72 302H114V337H68Q61 333 66 326L77 319Z" fill="${color}"/><path d="M168 302H126V337H172Q179 333 174 326L163 319Z" fill="${color}"/><path d="M72 329H113M127 329H168" stroke="${light}" stroke-width="4"/><path d="M82 309L104 319M158 309L136 319" stroke="${shade}" stroke-width="2"/>`;
     case 'boots': return `<path d="M75 294H113V337H66Q61 330 69 324L77 317Z" fill="${color}"/><path d="M127 294H165L163 317L171 324Q179 330 174 337H127Z" fill="${color}"/><path d="M72 326H112M128 326H168" stroke="${shade}" stroke-width="4"/>`;
     case 'loafers': return `<path d="M78 315H113L116 336H66Q61 328 72 322Z" fill="${color}"/><path d="M127 315H162L168 322Q179 328 174 336H124Z" fill="${color}"/><path d="M79 322H105M135 322H161" stroke="${light}" stroke-width="3"/>`;
     default: return `<path d="M${gender === 'female' ? 80 : 77} 315H113L117 337H${gender === 'female' ? 70 : 65}Q${gender === 'female' ? 65 : 60} 329 ${gender === 'female' ? 75 : 72} 322Z" fill="${color}"/><path d="M127 315H${gender === 'female' ? 160 : 163}L${gender === 'female' ? 165 : 168} 322Q${gender === 'female' ? 175 : 180} 329 ${gender === 'female' ? 170 : 175} 337H123Z" fill="${color}"/><path d="M${gender === 'female' ? 71 : 66} 331H116M124 331H${gender === 'female' ? 169 : 174}" stroke="${light}" stroke-width="4"/><path d="M82 320L104 328M158 320L136 328" stroke="${shade}" stroke-width="2"/>`;

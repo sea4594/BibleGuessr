@@ -17,8 +17,37 @@ export type MultiplayerSummaryRound = {
     name: string;
     guess: string;
     score: number;
+    wasBlankGuess?: boolean;
+    guessParts?: { book: string; chapter: number; verse: number };
+    feedback?: {
+      book: 'correct' | 'close' | 'wrong';
+      chapter: 'correct' | 'close' | 'wrong';
+      verse: 'correct' | 'close' | 'wrong';
+    };
   }>;
 };
+
+
+function renderSummaryGuess(entry: MultiplayerSummaryRound['entries'][number]) {
+  if (entry.wasBlankGuess || !entry.guessParts) {
+    return <span style={{ color: '#ef4444' }}>{entry.guess}</span>;
+  }
+  if (!entry.feedback) return <>{entry.guess}</>;
+
+  const bookCorrect = entry.feedback.book === 'correct';
+  const chapterCorrect = bookCorrect && entry.feedback.chapter === 'correct';
+  const verseCorrect = chapterCorrect && entry.feedback.verse === 'correct';
+
+  return (
+    <>
+      <span style={{ color: bookCorrect ? '#22c55e' : '#ef4444' }}>{entry.guessParts.book}</span>
+      <span>&nbsp;</span>
+      <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>{entry.guessParts.chapter}</span>
+      <span style={{ color: chapterCorrect ? '#22c55e' : '#ef4444' }}>:</span>
+      <span style={{ color: verseCorrect ? '#22c55e' : '#ef4444' }}>{entry.guessParts.verse}</span>
+    </>
+  );
+}
 
 type Props = {
   players: MultiplayerSummaryPlayer[];
@@ -60,7 +89,7 @@ export default function MultiplayerGameSummary({ players, rounds, showAvatars = 
               {round.entries.map(entry => (
                 <div key={`${round.id}-${entry.playerId}`} className="multiplayer-summary-entry">
                   <span className="multiplayer-summary-entry-name">{entry.name}</span>
-                  <span className="multiplayer-summary-entry-guess">{entry.guess}</span>
+                  <span className="multiplayer-summary-entry-guess">{renderSummaryGuess(entry)}</span>
                   <span className="multiplayer-summary-entry-score">{Math.max(0, Math.min(100, Math.round(entry.score)))}%</span>
                 </div>
               ))}

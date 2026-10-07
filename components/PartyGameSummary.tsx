@@ -44,6 +44,9 @@ export default function PartyGameSummary({ room, game, isHost, isReturningToLobb
           name: member.name,
           guess: guessText(submission),
           score: entry.roundScores?.[member.id] ?? submission?.score ?? 0,
+          wasBlankGuess: !submission?.guess || Boolean(submission.wasBlankGuess),
+          guessParts: submission?.guess,
+          feedback: submission?.feedback,
         };
       }),
     })),

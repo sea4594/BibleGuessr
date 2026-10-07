@@ -70,7 +70,7 @@ export default function ProfilePage() {
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl">
 
-          <section className="surface-card p-5 relative">
+          <section className="p-5 relative">
             <button
               onClick={openSettings}
               className="btn-outline profile-settings-icon"

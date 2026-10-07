@@ -3950,3 +3950,65 @@ input:not([type='range']) {
     padding: 0 !important;
   }
 }
+
+/* ===== 2026-10-07 profile/avatar/hot-seat/game footer polish ===== */
+/* Hot Seat owns the viewport; only the player-name list may scroll. */
+.multiplayer-hotseat-content {
+  overflow: hidden !important;
+  padding-bottom: calc(33px + env(safe-area-inset-bottom)) !important;
+}
+.multiplayer-hotseat-page {
+  height: 100%;
+  min-height: 0;
+  display: flex !important;
+  flex-direction: column;
+  gap: 8px !important;
+  overflow: hidden !important;
+  padding-bottom: 0 !important;
+}
+.multiplayer-hotseat-page > .multiplayer-tab-row {
+  flex: 0 0 auto;
+}
+.multiplayer-hotseat-page .hotseat-shell {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding-bottom: 8px !important;
+}
+.multiplayer-hotseat-page .hotseat-names-window {
+  flex: 1 1 0 !important;
+  min-height: 62px !important;
+  overflow: hidden !important;
+}
+.multiplayer-hotseat-page .hotseat-names-list {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+.multiplayer-hotseat-page .hotseat-start-btn {
+  flex: 0 0 auto;
+}
+
+/* Keep all full-screen game action controls inside the iPhone safe area with the
+   same normal visual gap. This covers Submit plus Hot Seat/Party round actions. */
+.game-shell > .game-content.app-content-fixed {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
+}
+.round-screen-footer {
+  flex: 0 0 auto;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
+}
+.party-round-summary-footer {
+  flex: 0 0 auto;
+  padding-top: 2px !important;
+}
+
+/* Host/Join labels sit closer to the top edge of their compact header cells. */
+.party-header-half > .content-muted {
+  position: relative;
+  top: -2px;
+}
