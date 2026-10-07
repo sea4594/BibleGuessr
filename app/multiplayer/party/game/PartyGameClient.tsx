@@ -695,60 +695,67 @@ export default function PartyGameClient() {
           )}
 
           {game.status === 'in-round' && verse && (
-            <div className="play-layout">
-              <div className="play-verse">
-                <VerseDisplay
-                  verse={verse}
-                  previousVerses={previousVerses}
-                  nextVerses={nextVerses}
-                  isLoading={false}
-                  error={null}
-                  isLoadingNeighbor={loadingNeighbor}
-                  onAddPrevious={() => void handleAddNeighborVerse('previous')}
-                  onAddNext={() => void handleAddNeighborVerse('next')}
-                  onRetry={() => undefined}
-                />
-              </div>
-
-              <div className="play-guess">
-                {!mySubmission ? (
-                  <>
-                    <GuessInterface
-                      modeConfig={modeConfig}
-                      onSubmit={guess => void handleSubmitGuess(guess)}
-                      onSelectionChange={setPendingSelection}
-                    />
-                  </>
-                ) : (
-                  <section className="surface-card p-5 party-wait-card">
-                    <h2 className="headline-serif text-2xl mb-2">Submitted</h2>
-                    <p className="content-muted mb-4">
-                      Your score for this round: <strong>{clampPercent(mySubmission.score)}%</strong>
-                    </p>
-                    <p className="text-sm font-semibold mb-2">Waiting for other players ({submittedCount}/{totalPlayers})</p>
-                    <div className="party-waiting-player-list grid gap-2">
-                      {room.members.map(member => {
-                        const submission = game.submissions[member.id];
-                        return (
-                          <div key={member.id} className="party-round-table-row">
-                            <div className="party-round-table-meta">
-                              <p className="text-sm font-semibold">{member.name}</p>
-                              <p className="text-sm whitespace-nowrap overflow-x-auto">
-                                <span className="content-muted">Guess:&nbsp;</span>
-                                {submission ? renderSubmissionGuess(submission, false) : <span className="content-muted">Waiting…</span>}
-                              </p>
-                            </div>
-                            <span className="party-round-table-score">
-                              {submission ? `${clampPercent(submission.score)}%` : '--'}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+            mySubmission ? (
+              <section className="party-round-summary-fixed">
+                <div className="party-round-summary-header">
+                  <section className="surface-card party-round-verse-card">
+                    <p className="text-base sm:text-lg leading-relaxed italic">&ldquo;{verse.text}&rdquo;</p>
                   </section>
-                )}
+                  <section className="surface-card party-round-answer-card">
+                    <p className="text-center text-[2rem] sm:text-[2.7rem] lg:text-[3rem] font-black leading-[0.98] tracking-[0.08em]">
+                      ________
+                    </p>
+                  </section>
+                </div>
+
+                <div className="party-round-scores-scroll">
+                  {roundRows.map(({ member, submission, roundScore, totalScore }) => (
+                    <div key={member.id} className="party-round-table-row">
+                      <div className="party-round-table-meta">
+                        <p className="text-sm font-semibold">{member.name}</p>
+                        <p className="text-sm whitespace-nowrap overflow-x-auto">
+                          <span className="content-muted">Guess:&nbsp;</span>
+                          {submission ? renderSubmissionGuess(submission, false) : <span className="content-muted">Waiting…</span>}
+                        </p>
+                      </div>
+                      {submission ? (
+                        <div className="party-round-score-stack">
+                          <p className="party-round-table-score">{clampPercent(roundScore)}%</p>
+                          <ScoreBar score={roundScore} className="score-bar-compact" label={`${member.name} round score`} />
+                          <p className="text-xs content-muted">total {toOverallPercent(totalScore, game.currentRound)}%</p>
+                        </div>
+                      ) : (
+                        <span className="party-round-table-score content-muted">--</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : (
+              <div className="play-layout">
+                <div className="play-verse">
+                  <VerseDisplay
+                    verse={verse}
+                    previousVerses={previousVerses}
+                    nextVerses={nextVerses}
+                    isLoading={false}
+                    error={null}
+                    isLoadingNeighbor={loadingNeighbor}
+                    onAddPrevious={() => void handleAddNeighborVerse('previous')}
+                    onAddNext={() => void handleAddNeighborVerse('next')}
+                    onRetry={() => undefined}
+                  />
+                </div>
+
+                <div className="play-guess">
+                  <GuessInterface
+                    modeConfig={modeConfig}
+                    onSubmit={guess => void handleSubmitGuess(guess)}
+                    onSelectionChange={setPendingSelection}
+                  />
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {game.status === 'round-complete' && (

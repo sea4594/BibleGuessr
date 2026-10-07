@@ -4287,3 +4287,64 @@ input:not([type='range']) {
     border-radius: max(16px, calc(env(safe-area-inset-bottom) * 0.72)) !important;
   }
 }
+
+/* ===== 2026-10-07 party status, desktop nav, and bottom-action cleanup ===== */
+/* Active party status uses the exact same card geometry and label treatment as Host/Join. */
+.party-lobby-status-card.party-header-half {
+  width: 100% !important;
+  height: 92px !important;
+  min-height: 92px !important;
+  max-height: 92px !important;
+  padding: 3px 6px !important;
+  margin-bottom: 6px !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 9px !important;
+  background: color-mix(in oklab, var(--panel-soft) 92%, transparent) !important;
+  box-shadow: none !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
+.party-lobby-status-card.party-header-half .party-code-value {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: clamp(1.95rem, 6vw, 2.45rem) !important;
+  line-height: 1 !important;
+}
+.party-lobby-status-card .party-lobby-corner-action {
+  right: 6px !important;
+  bottom: 6px !important;
+  min-height: 28px !important;
+  padding: 4px 8px !important;
+}
+
+/* Restore normal app button corners. The device-edge-derived rounding was visually wrong. */
+.round-screen-footer .btn-primary,
+.party-round-summary-footer .btn-primary,
+.game-shell > .game-content.app-content-fixed .guess-interface .btn-primary,
+.party-game-summary > .btn-primary {
+  border-radius: 10px !important;
+}
+
+/* Desktop primary navigation should feel like a real persistent navigation bar. */
+@media (min-width: 641px) {
+  .app-screen:has(> .main-bottom-nav) > .app-content-scroll {
+    padding-bottom: calc(66px + env(safe-area-inset-bottom)) !important;
+  }
+  .main-bottom-nav {
+    height: calc(66px + env(safe-area-inset-bottom)) !important;
+    min-height: calc(66px + env(safe-area-inset-bottom)) !important;
+  }
+  .main-nav-item svg,
+  .main-nav-icon {
+    width: 23px !important;
+    height: 23px !important;
+  }
+  .main-nav-label {
+    font-size: 0.88rem !important;
+  }
+}

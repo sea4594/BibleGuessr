@@ -834,14 +834,14 @@ export default function MultiplayerPage() {
           {tab === 'party' && (
             <section className="party-lobby-shell">
               {room && isCurrentMember && !isHost ? (
-                <div className="party-lobby-status-card mb-3">
-                  <p className="content-muted text-xs">Joined Lobby:</p>
+                <div className="party-lobby-status-card party-header-half mb-3">
+                  <p className="content-muted text-xs">Joined Lobby</p>
                   <p className="headline-serif party-code-value">{room.code}</p>
                   <button onClick={handleLeaveLobby} className="btn-outline party-lobby-corner-action">Leave Lobby</button>
                 </div>
               ) : room && isHost && room.members.length > 1 ? (
-                <div className="party-lobby-status-card mb-3">
-                  <p className="content-muted text-xs">Hosting:</p>
+                <div className="party-lobby-status-card party-header-half mb-3">
+                  <p className="content-muted text-xs">Hosting</p>
                   <p className="headline-serif party-code-value">{room.code}</p>
                   <button
                     onClick={() => void handleEndLobby()}
