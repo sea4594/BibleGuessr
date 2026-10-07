@@ -104,7 +104,7 @@ export default function VerticalDragSlider({
 
   const showPopup = (dragging || hoveringMouse) && !disabled && items.length > 0;
 
-  const activeIdx = dragging
+  const activeIdx = (dragging || hoveringMouse)
     ? (items.length > 0 ? Math.max(0, Math.min(items.length - 1, hoverIdx)) : null)
     : selectedIndex;
   const itemHeightPercent = items.length > 0 ? 100 / items.length : 100;
@@ -155,7 +155,7 @@ export default function VerticalDragSlider({
                     ...(itemColor ? {
                       backgroundColor: itemColor.background,
                       color: itemColor.text,
-                      boxShadow: isActive ? 'inset 0 0 0 1.5px rgba(255,255,255,0.95), inset 0 0 0 3px rgba(0,0,0,0.24)' : undefined,
+                      boxShadow: isActive ? 'inset 0 0 0 2px rgba(255,255,255,1), inset 0 0 0 4px rgba(0,0,0,0.58)' : undefined,
                     } : {}),
                   }}
                 >
