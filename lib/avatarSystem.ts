@@ -251,7 +251,7 @@ function hairFront(style: string, color: string): string {
     case 'waves': return `<path d="M70 71Q71 35 120 31Q168 34 170 69Q157 57 145 63Q133 69 121 61Q109 53 96 62Q84 70 70 71Z" fill="${color}"/><path d="M83 52Q96 44 108 51Q120 58 132 50Q144 43 157 51" stroke="${hi}" stroke-width="3" fill="none" opacity=".5"/>`;
     case 'curly':
     case 'curls': return `<g fill="${color}"><circle cx="82" cy="61" r="17"/><circle cx="101" cy="48" r="18"/><circle cx="120" cy="44" r="19"/><circle cx="139" cy="48" r="18"/><circle cx="158" cy="61" r="17"/></g><g fill="${hi}" opacity=".32"><circle cx="101" cy="48" r="5"/><circle cx="139" cy="48" r="5"/></g>`;
-    case 'afro': return `<g fill="${color}"><circle cx="78" cy="64" r="18"/><circle cx="93" cy="49" r="20"/><circle cx="111" cy="42" r="21"/><circle cx="129" cy="42" r="21"/><circle cx="147" cy="49" r="20"/><circle cx="162" cy="64" r="18"/><path d="M82 61Q120 48 158 61L155 66Q120 57 85 66Z"/></g>`;
+    case 'afro': return `<g fill="${color}"><circle cx="80" cy="54" r="17"/><circle cx="95" cy="39" r="20"/><circle cx="112" cy="32" r="21"/><circle cx="128" cy="32" r="21"/><circle cx="145" cy="39" r="20"/><circle cx="160" cy="54" r="17"/><path d="M83 53Q120 42 157 53L154 59Q120 51 86 59Z"/></g>`;
     case 'bob': return `<path d="M70 68Q75 28 120 29Q165 29 170 68Q151 52 128 52Q103 50 70 68Z" fill="${color}"/>`;
     case 'long':
     case 'long-straight': return `<path d="M69 68Q75 27 120 27Q164 27 171 67Q148 50 121 51Q94 50 69 68Z" fill="${color}"/>`;
@@ -457,7 +457,7 @@ export function avatarToSvg(spec: AvatarSpec, focus: AvatarFocus = 'full'): stri
   ${hairClipDefs(accessory)}
   ${lowerBodySvg(bottomStyle, pantsColor, skinColor, gender)}
   ${shoesSvg(shoeStyle, shoeColor, gender)}
-  ${clippedHair(hairBack(hairStyle, hairColor), accessory)}
+  ${(accessory === 'cap' || accessory === 'beanie') && hairStyle === 'afro' ? '' : clippedHair(hairBack(hairStyle, hairColor), accessory)}
   ${armsSvg(shirtStyle, shirtColor, skinColor, gender)}
   ${shirtSvg(shirtStyle, shirtColor, skinColor, gender)}
   ${neckSvg(gender, skinColor)}
@@ -470,7 +470,7 @@ export function avatarToSvg(spec: AvatarSpec, focus: AvatarFocus = 'full'): stri
   ${frecklesSvg(freckles, skinColor)}
   ${gender === 'male' ? facialHairSvg(facialHair, hairColor) : ''}
   ${mouthSvg(mouthType, gender, lipstickColor)}
-  ${clippedHair(hairFront(hairStyle, hairColor), accessory)}
+  ${(accessory === 'cap' || accessory === 'beanie') && hairStyle === 'afro' ? '' : clippedHair(hairFront(hairStyle, hairColor), accessory)}
   ${accessorySvg(accessory, shirtColor)}
 </svg>`.trim();
 }
