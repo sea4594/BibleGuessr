@@ -24,6 +24,7 @@ export interface UiSettings {
   preferredBook: string;
   preferredCustomBooks: string[];
   quickPlayTimerSeconds: number;
+  colorCodedCategories: boolean;
 }
 
 interface UiSettingsContextType {
@@ -34,6 +35,7 @@ interface UiSettingsContextType {
   setPreferredBook: (book: string) => void;
   setPreferredCustomBooks: (books: string[]) => void;
   setQuickPlayTimerSeconds: (seconds: number) => void;
+  setColorCodedCategories: (enabled: boolean) => void;
 }
 
 const STORAGE_KEY = 'bg-ui-settings-v1';
@@ -55,6 +57,7 @@ const DEFAULT_SETTINGS: UiSettings = {
   preferredBook: bibleData[0]?.book ?? 'Genesis',
   preferredCustomBooks: bibleData.map(book => book.book),
   quickPlayTimerSeconds: 30,
+  colorCodedCategories: true,
 };
 
 function normalizePreferredCustomBooks(raw: unknown) {
@@ -109,6 +112,9 @@ function readInitialSettings(): UiSettings {
       quickPlayTimerSeconds: clampQuickPlayTimerSeconds(
         parsed.quickPlayTimerSeconds ?? DEFAULT_SETTINGS.quickPlayTimerSeconds
       ),
+      colorCodedCategories: typeof parsed.colorCodedCategories === 'boolean'
+        ? parsed.colorCodedCategories
+        : DEFAULT_SETTINGS.colorCodedCategories,
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -160,6 +166,9 @@ export function UiSettingsProvider({ children }: { children: React.ReactNode }) 
           ...prev,
           quickPlayTimerSeconds: clampQuickPlayTimerSeconds(quickPlayTimerSeconds),
         }));
+      },
+      setColorCodedCategories: (colorCodedCategories: boolean) => {
+        setSettings(prev => ({ ...prev, colorCodedCategories }));
       },
     }),
     [settings]

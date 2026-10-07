@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { GameModeConfig, getBookCategory, type BookCategory } from '@/lib/gameModes';
+import { useUiSettings } from '@/lib/uiSettingsContext';
 import VerticalDragSlider from './VerticalDragSlider';
 
 
@@ -49,16 +50,18 @@ function parsePositiveInt(value: string | undefined) {
 }
 
 export default function GuessInterface({ modeConfig, onSubmit, onSelectionChange }: Props) {
+  const { settings } = useUiSettings();
   const [selection, setSelection] = useState(() => getInitialSelection(modeConfig));
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const bookNames = useMemo(() => modeConfig.books.map(b => b.book), [modeConfig]);
   const bookCategoryColors = useMemo(() => {
+    if (!settings.colorCodedCategories) return undefined;
     const categories = modeConfig.books.map(book => getBookCategory(book.book));
     const knownCategories = categories.filter((category): category is Exclude<BookCategory, 'Unknown'> => category !== 'Unknown');
     if (new Set(knownCategories).size <= 1) return undefined;
     return categories.map(category => category === 'Unknown' ? null : BOOK_CATEGORY_COLORS[category]);
-  }, [modeConfig.books]);
+  }, [modeConfig.books, settings.colorCodedCategories]);
   const selectedBook = selection.bookIdx === null ? null : modeConfig.books[selection.bookIdx] ?? null;
 
   const chaptersCount = selectedBook ? selectedBook.chapters.length : 0;

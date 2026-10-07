@@ -15,7 +15,7 @@ interface SettingsModalContextType {
 const SettingsModalContext = createContext<SettingsModalContextType | null>(null);
 
 export function SettingsModalProvider({ children }: { children: React.ReactNode }) {
-  const { settings, setThemePreset } = useUiSettings();
+  const { settings, setThemePreset, setColorCodedCategories } = useUiSettings();
   const { firebaseEnabled, login, loginPending, logout, syncError, syncStatus, user } = useAccountSync();
   const googleUser = user && !user.isAnonymous ? user : null;
   const [isOpen, setIsOpen] = useState(false);
@@ -117,6 +117,24 @@ export function SettingsModalProvider({ children }: { children: React.ReactNode 
                     <option key={preset.id} value={preset.id}>{preset.name}</option>
                   ))}
                 </select>
+              </section>
+
+              <section className="settings-section">
+                <p className="eyebrow mb-2">Gameplay</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold">Color-coded book categories</div>
+                    <p className="text-xs content-muted mt-0.5">Use category colors on the book guessing slider.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setColorCodedCategories(!settings.colorCodedCategories)}
+                    className={settings.colorCodedCategories ? 'btn-primary px-4 py-2 shrink-0' : 'btn-outline px-4 py-2 shrink-0'}
+                    aria-pressed={settings.colorCodedCategories}
+                  >
+                    {settings.colorCodedCategories ? 'On' : 'Off'}
+                  </button>
+                </div>
               </section>
 
               <section className="settings-section">
