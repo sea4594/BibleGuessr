@@ -96,8 +96,6 @@ export default function HotSeatGamemodePage() {
 
       <div className="app-content app-content-scroll">
         <div className="page max-w-3xl">
-          <h1 className="headline-serif text-3xl mb-1">Select Gamemode</h1>
-
           <section className="menu-grid">
             {modeCards.map(mode => (
               <button
