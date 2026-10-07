@@ -53,31 +53,46 @@ type Props = {
   players: MultiplayerSummaryPlayer[];
   rounds: MultiplayerSummaryRound[];
   showAvatars?: boolean;
+  singlePlayer?: boolean;
 };
 
-export default function MultiplayerGameSummary({ players, rounds, showAvatars = true }: Props) {
+export default function MultiplayerGameSummary({ players, rounds, showAvatars = true, singlePlayer = false }: Props) {
   const ranked = players.slice().sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
   return (
     <div className="multiplayer-summary">
-      <section className="surface-card multiplayer-summary-leaderboard">
-        {ranked.map(player => (
-          <div key={player.id} className={showAvatars ? 'multiplayer-summary-player' : 'multiplayer-summary-player no-avatar'}>
-            {showAvatars && player.avatarSrc && (
-              <Image
-                src={player.avatarSrc}
-                alt={`${player.name} avatar`}
-                width={44}
-                height={44}
-                unoptimized
-                className="multiplayer-summary-avatar"
-              />
-            )}
-            <span className="multiplayer-summary-player-name">{player.name}</span>
-            <span className="multiplayer-summary-final-score">{Math.max(0, Math.min(100, Math.round(player.score)))}%</span>
+      {singlePlayer ? (
+        <section className="surface-card multiplayer-summary-solo-score">
+          <div className="multiplayer-summary-solo-score-value">{Math.max(0, Math.min(100, Math.round(ranked[0]?.score ?? 0)))}%</div>
+          <div className="result-progress-track" aria-label="Final score">
+            <div
+              className="result-progress-fill"
+              style={{
+                background: `linear-gradient(90deg, #22c55e 0%, #22c55e ${Math.max(0, Math.min(100, Math.round(ranked[0]?.score ?? 0)))}%, #ef4444 ${Math.max(0, Math.min(100, Math.round(ranked[0]?.score ?? 0)))}%, #ef4444 100%)`,
+              }}
+            />
           </div>
-        ))}
-      </section>
+        </section>
+      ) : (
+        <section className="surface-card multiplayer-summary-leaderboard">
+          {ranked.map(player => (
+            <div key={player.id} className={showAvatars ? 'multiplayer-summary-player' : 'multiplayer-summary-player no-avatar'}>
+              {showAvatars && player.avatarSrc && (
+                <Image
+                  src={player.avatarSrc}
+                  alt={`${player.name} avatar`}
+                  width={44}
+                  height={44}
+                  unoptimized
+                  className="multiplayer-summary-avatar"
+                />
+              )}
+              <span className="multiplayer-summary-player-name">{player.name}</span>
+              <span className="multiplayer-summary-final-score">{Math.max(0, Math.min(100, Math.round(player.score)))}%</span>
+            </div>
+          ))}
+        </section>
+      )}
 
       <h2 className="headline-serif multiplayer-summary-title">Round Summaries</h2>
 
@@ -87,8 +102,8 @@ export default function MultiplayerGameSummary({ players, rounds, showAvatars = 
             <p className="multiplayer-summary-answer">{round.correctAnswer}</p>
             <div className="multiplayer-summary-round-entries">
               {round.entries.map(entry => (
-                <div key={`${round.id}-${entry.playerId}`} className="multiplayer-summary-entry">
-                  <span className="multiplayer-summary-entry-name">{entry.name}</span>
+                <div key={`${round.id}-${entry.playerId}`} className={singlePlayer ? 'multiplayer-summary-entry single-player' : 'multiplayer-summary-entry'}>
+                  {!singlePlayer && <span className="multiplayer-summary-entry-name">{entry.name}</span>}
                   <span className="multiplayer-summary-entry-guess">{renderSummaryGuess(entry)}</span>
                   <span className="multiplayer-summary-entry-score">{Math.max(0, Math.min(100, Math.round(entry.score)))}%</span>
                 </div>

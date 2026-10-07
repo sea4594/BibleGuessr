@@ -430,15 +430,13 @@ export async function upsertPartyMember(code: string, member: PartyMember): Prom
       const now = Date.now();
       const sanitizedMember = sanitizeMemberForStorage({ ...member, id: actorId });
 
-      if (!existing) {
-        members.push({ ...sanitizedMember, isHost: false, joinedAt: now });
-      } else {
-        Object.assign(existing, {
-          name: sanitizedMember.name,
-          avatar: sanitizedMember.avatar,
-          joinedAt: existing.joinedAt,
-        });
-      }
+      if (!existing) throw new Error('Party member no longer exists');
+
+      Object.assign(existing, {
+        name: sanitizedMember.name,
+        avatar: sanitizedMember.avatar,
+        joinedAt: existing.joinedAt,
+      });
 
       tx.update(ref, {
         members,
@@ -919,15 +917,16 @@ export function subscribeToParty(
   };
 }
 
-export async function leaveParty(code: string, memberId: string) {
+export async function leaveParty(code: string, memberId: string): Promise<boolean> {
   const db = getFirebaseDb();
-  if (!db) return;
+  if (!db) return false;
   await ensureFirebaseSession();
 
   const ref = doc(db, 'parties', code);
   const actorId = resolveActorId(memberId);
 
-  await runTransaction(db, async tx => {
+  try {
+    await runTransaction(db, async tx => {
     const snapshot = await tx.get(ref);
     if (!snapshot.exists()) return;
     if (isRoomExpired(snapshot.data())) {
@@ -994,4 +993,9 @@ export async function leaveParty(code: string, memberId: string) {
       expiresAt: expiresAtFromNow(Date.now()),
     });
   });
+    return true;
+  } catch (error) {
+    console.error('Unable to leave party cleanly:', error);
+    return false;
+  }
 }
