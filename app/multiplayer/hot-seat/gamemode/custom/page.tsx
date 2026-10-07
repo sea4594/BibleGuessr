@@ -45,10 +45,10 @@ export default function HotSeatCustomModePage() {
     <main className="app-screen">
       <AppTopBar title="Custom Setup" backHref="/multiplayer/hot-seat/gamemode" />
       <div className="app-content app-content-scroll">
-        <div className="page max-w-xl">
+        <div className="page max-w-xl setup-page">
+          <h1 className="headline-serif setup-title">Custom</h1>
           <section className="setup-panel">
             <div className="setup-panel-section">
-              <h1 className="headline-serif text-3xl mb-4">Custom</h1>
               <CustomBookSelectorPopup selectedBooks={selectedBooks} onChange={setSelectedBooks} />
               {selectedBooks.length === 0 && (
                 <p className="text-xs text-[var(--danger)] mt-2">Select at least one book to start.</p>
@@ -59,7 +59,7 @@ export default function HotSeatCustomModePage() {
           <button
             onClick={handleStart}
             disabled={selectedBooks.length === 0}
-            className="btn-primary w-full py-3 text-lg disabled:opacity-50"
+            className="btn-primary setup-start-btn disabled:opacity-50"
           >
             Start
           </button>

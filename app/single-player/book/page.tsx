@@ -57,7 +57,7 @@ export default function BookModeSetupPage() {
             </div>
 
             <div className="setup-panel-section">
-              <label className="block text-sm font-semibold mb-2">Book Selection</label>
+              <label className="setup-control-label block mb-2">Book Selection</label>
               <select
                 value={book}
                 onChange={e => setBook(e.target.value)}

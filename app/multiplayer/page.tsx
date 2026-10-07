@@ -8,7 +8,7 @@ import AvatarEditor from '@/components/AvatarEditor';
 import HorizontalWheel from '@/components/HorizontalWheel';
 import TimerSetupControls from '@/components/TimerSetupControls';
 import CustomBookSelectorPopup from '@/components/CustomBookSelectorPopup';
-import { readHotSeatSettings, writeHotSeatSettings } from '@/lib/hotSeatSettings';
+import { readHotSeatSettings, writeHotSeatSettings, type HotSeatSettings } from '@/lib/hotSeatSettings';
 import { BookData } from '@/lib/bibleData';
 import { gameModes, GameModeId } from '@/lib/gameModes';
 import {
@@ -263,6 +263,17 @@ export default function MultiplayerPage() {
     });
   }, [hotSeatSettingsReady, players, rounds, turnStyle, names, timerSeconds]);
 
+  const persistHotSeatSettingsNow = useCallback((patch: Partial<HotSeatSettings> = {}) => {
+    writeHotSeatSettings({
+      players,
+      rounds,
+      turnStyle,
+      names,
+      timerSeconds: clampTimerSeconds(timerSeconds),
+      ...patch,
+    });
+  }, [players, rounds, turnStyle, names, timerSeconds]);
+
   useEffect(() => {
     if (tab !== 'party' || !firebaseConfigured) return;
     let unsubscribe: () => void = () => {};
@@ -400,16 +411,15 @@ export default function MultiplayerPage() {
 
   const applyPlayers = (value: number) => {
     const n = Math.min(8, Math.max(2, value));
+    const adjustedNames = names.slice(0, n);
+    while (adjustedNames.length < n) adjustedNames.push(`Player ${adjustedNames.length + 1}`);
     setPlayers(n);
-    setNames(prev => {
-      const adj = prev.slice(0, n);
-      while (adj.length < n) adj.push(`Player ${adj.length + 1}`);
-      return adj;
-    });
+    setNames(adjustedNames);
+    persistHotSeatSettingsNow({ players: n, names: adjustedNames });
   };
 
   const selectGamemode = () => {
-    writeHotSeatSettings({ players, rounds, turnStyle, names, timerSeconds: clampTimerSeconds(timerSeconds) });
+    persistHotSeatSettingsNow();
     router.push('/multiplayer/hot-seat/gamemode');
   };
 
@@ -635,17 +645,17 @@ export default function MultiplayerPage() {
             <div className="hotseat-shell min-w-0">
               <div className="hotseat-rounds-turn-row">
                 <div className="hotseat-wheel-slot">
-                  <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={setRounds} />
+                  <HorizontalWheel label="Rounds per player" values={ROUND_VALUES} selected={rounds} onChange={value => { setRounds(value); persistHotSeatSettingsNow({ rounds: value }); }} />
                 </div>
                 <div className="hotseat-turn-buttons">
                   <button
-                    onClick={() => setTurnStyle('alternate')}
+                    onClick={() => { setTurnStyle('alternate'); persistHotSeatSettingsNow({ turnStyle: 'alternate' }); }}
                     className={turnStyle === 'alternate' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
                   >
                     Alternate
                   </button>
                   <button
-                    onClick={() => setTurnStyle('all-at-once')}
+                    onClick={() => { setTurnStyle('all-at-once'); persistHotSeatSettingsNow({ turnStyle: 'all-at-once' }); }}
                     className={turnStyle === 'all-at-once' ? 'btn-primary hotseat-turn-style-btn' : 'btn-outline hotseat-turn-style-btn'}
                   >
                     All at once
@@ -660,14 +670,14 @@ export default function MultiplayerPage() {
               <TimerSetupControls
                 embedded
                 seconds={timerSeconds}
-                onSecondsChange={setTimerSeconds}
+                onSecondsChange={value => { setTimerSeconds(value); persistHotSeatSettingsNow({ timerSeconds: clampTimerSeconds(value) }); }}
               />
 
               <section className="hotseat-names-window">
-                <p className="text-sm font-semibold mb-2">Player Names</p>
+                <p className="setup-control-label mb-2">Player Names</p>
                 <div className="grid gap-2 sm:grid-cols-2 hotseat-names-list">
                   {names.slice(0, players).map((name, idx) => (
-                    <input key={idx} value={name} onChange={e => { const n = names.slice(); n[idx] = e.target.value; setNames(n); }} className="settings-input !w-full" />
+                    <input key={idx} value={name} onChange={e => { const n = names.slice(); n[idx] = e.target.value; setNames(n); persistHotSeatSettingsNow({ names: n }); }} className="settings-input !w-full" />
                   ))}
                 </div>
               </section>
@@ -830,8 +840,8 @@ export default function MultiplayerPage() {
                   </div>
 
                     <div className="party-host-controls">
-                    <label className="text-sm font-semibold block mb-1">Game Mode</label>
-                    <div className={`party-gamemode-row mb-3 ${lobbySettings?.modeId === 'book-selection' ? 'has-book' : ''}`}>
+                    <label className="setup-control-label block mb-1">Game Mode</label>
+                    <div className={`party-gamemode-row mb-3 ${lobbySettings?.modeId === 'book-selection' || lobbySettings?.modeId === 'custom' ? 'has-book' : ''}`}>
                       <select
                         value={lobbySettings?.modeId ?? ''}
                         onChange={e => {
@@ -863,16 +873,15 @@ export default function MultiplayerPage() {
                           }}
                           className="settings-input party-book-select"
                           disabled={!isHost}
+                          aria-label="Book"
                         >
                           {bibleData.map(book => (
                             <option key={book.book} value={book.book}>{book.book}</option>
                           ))}
                         </select>
                       )}
-                    </div>
 
-                    {lobbySettings?.modeId === 'custom' && (
-                      <div className="mb-3">
+                      {lobbySettings?.modeId === 'custom' && (
                         <CustomBookSelectorPopup
                           selectedBooks={lobbySettings.selectedBooks ?? []}
                           onChange={books => {
@@ -880,13 +889,14 @@ export default function MultiplayerPage() {
                           }}
                           disabled={!isHost}
                         />
-                        {(lobbySettings.selectedBooks?.length ?? 0) === 0 && (
-                          <p className="text-xs text-[var(--danger)] mt-2">Select at least one book.</p>
-                        )}
-                      </div>
+                      )}
+                    </div>
+
+                    {lobbySettings?.modeId === 'custom' && (lobbySettings.selectedBooks?.length ?? 0) === 0 && (
+                      <p className="text-xs text-[var(--danger)] -mt-1 mb-3">Select at least one book.</p>
                     )}
 
-                    <label className="text-sm font-semibold block mb-1">Rounds</label>
+                    <label className="setup-control-label block mb-1">Rounds</label>
                     <select
                       value={lobbySettings?.roundsPerPlayer ?? ''}
                       onChange={e => {
@@ -902,7 +912,7 @@ export default function MultiplayerPage() {
                       ))}
                     </select>
 
-                    <label className="text-sm font-semibold block mb-1">Timer (seconds)</label>
+                    <label className="setup-control-label block mb-1">Timer</label>
                     <select
                       value={lobbySettings?.timerDurationSeconds ?? ''}
                       onChange={e => {

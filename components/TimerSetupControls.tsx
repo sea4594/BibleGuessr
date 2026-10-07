@@ -13,7 +13,7 @@ export default function TimerSetupControls({
 }: Props) {
   const controls = (
     <div className="timer-inline-row">
-      <p className="text-sm font-semibold">Timer</p>
+      <p className="setup-control-label">Timer</p>
       <div className="timer-inline-controls">
         <label className="timer-inline-label">
           <select

@@ -59,7 +59,7 @@ export default function ModePage() {
       <section className="setup-panel fade-up w-full">
         {modeConfig.isSingleBook && (
           <div className="setup-panel-section">
-            <label className="block text-sm font-semibold mb-2">Book</label>
+            <label className="setup-control-label block mb-2">Book</label>
             <select
               value={selectedBook}
               onChange={e => setSelectedBook(e.target.value)}

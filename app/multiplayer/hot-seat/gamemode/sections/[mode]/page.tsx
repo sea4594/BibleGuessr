@@ -18,7 +18,7 @@ export default function HotSeatSectionSetupPage() {
       <main className="app-screen">
         <AppTopBar title="Category Setup" backHref="/multiplayer/hot-seat/gamemode/sections" />
         <div className="app-content app-content-scroll">
-          <div className="page max-w-xl">
+          <div className="page max-w-xl setup-page">
             <section className="surface-card p-5">Invalid category.</section>
           </div>
         </div>
@@ -54,14 +54,14 @@ export default function HotSeatSectionSetupPage() {
     <main className="app-screen">
       <AppTopBar title={mode.name} backHref="/multiplayer/hot-seat/gamemode/sections" />
       <div className="app-content app-content-scroll">
-        <div className="page max-w-xl">
+        <div className="page max-w-xl setup-page">
+          <h1 className="headline-serif setup-title">{mode.name}</h1>
           <section className="setup-panel">
             <div className="setup-panel-section">
-              <h1 className="headline-serif text-3xl">{mode.name}</h1>
-              <p className="content-muted mt-2">Starts with your Hot Seat setup values.</p>
+              <p className="content-muted">Starts with your Hot Seat setup values.</p>
             </div>
           </section>
-          <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
+          <button onClick={handleStart} className="btn-primary setup-start-btn">Start</button>
         </div>
       </div>
     </main>

@@ -42,11 +42,10 @@ export default function HotSeatBookModePage() {
     <main className="app-screen">
       <AppTopBar title="Book Setup" backHref="/multiplayer/hot-seat/gamemode" />
       <div className="app-content app-content-scroll">
-        <div className="page max-w-xl">
+        <div className="page max-w-xl setup-page">
+          <h1 className="headline-serif setup-title">Book</h1>
           <section className="setup-panel">
             <div className="setup-panel-section">
-              <h1 className="headline-serif text-3xl mb-4">Book</h1>
-
               <select
                 value={book}
                 onChange={e => setBook(e.target.value)}
@@ -59,7 +58,7 @@ export default function HotSeatBookModePage() {
             </div>
           </section>
 
-          <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start</button>
+          <button onClick={handleStart} className="btn-primary setup-start-btn">Start</button>
         </div>
       </div>
     </main>

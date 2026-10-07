@@ -113,10 +113,8 @@ export default function ProfilePage() {
                     : 'Not logged in'}
             </p>
 
-            {firebaseEnabled && (syncStatus === 'syncing' || Boolean(syncError)) && (
-              <p className="content-muted text-xs mb-4">
-                {syncStatus === 'syncing' ? 'Syncing your profile and app data...' : syncError}
-              </p>
+            {firebaseEnabled && Boolean(syncError) && (
+              <p className="content-muted text-xs mb-4">{syncError}</p>
             )}
 
             <div className="profile-account-actions">

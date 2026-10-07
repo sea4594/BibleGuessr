@@ -59,7 +59,7 @@ export default function CustomModeSetupPage() {
             </div>
 
             <div className="setup-panel-section">
-              <label className="block text-sm font-semibold mb-2">Book Selection</label>
+              <label className="setup-control-label block mb-2">Book Selection</label>
               <CustomBookSelectorPopup selectedBooks={selectedBooks} onChange={setSelectedBooks} />
               {selectedBooks.length === 0 && (
                 <p className="text-xs text-[var(--danger)] mt-2">Select at least one book to start.</p>

@@ -2,7 +2,6 @@ import { notifyCloudSyncNeeded } from './syncSignal';
 
 export const SYNCED_LOCAL_STORAGE_KEYS = [
   'bg-ui-settings-v1',
-  'bg-hotseat-settings-v1',
   'bg-game-history-v1',
   'bg-game-mode-stats-v1',
   'bg-user-profile-v2',

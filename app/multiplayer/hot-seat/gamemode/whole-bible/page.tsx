@@ -39,7 +39,7 @@ export default function HotSeatWholeBiblePage() {
       <AppTopBar title="Whole Bible" backHref="/multiplayer/hot-seat/gamemode" />
       <div className="app-content app-content-scroll">
         <div className="page max-w-xl setup-page">
-          <h1 className="headline-serif text-4xl mb-4">Whole Bible</h1>
+          <h1 className="headline-serif setup-title">Whole Bible</h1>
 
           <section className="setup-panel">
             <div className="setup-panel-section">

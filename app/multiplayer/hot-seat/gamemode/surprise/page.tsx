@@ -73,17 +73,17 @@ export default function HotSeatSurprisePage() {
     <main className="app-screen">
       <AppTopBar title="Surprise Mode" backHref="/multiplayer/hot-seat/gamemode" />
       <div className="app-content app-content-scroll">
-        <div className="page max-w-xl">
+        <div className="page max-w-xl setup-page">
+          <h1 className="headline-serif setup-title">Surprise Me</h1>
           <section className="setup-panel">
             <div className="setup-panel-section">
-              <h1 className="headline-serif text-3xl mb-2">Surprise Me</h1>
               <p className="content-muted">Randomly picks Whole Bible, Category, or Book.</p>
             </div>
             <div className="setup-panel-section">
               <TimerSetupControls
                 embedded
                 seconds={timerSeconds}
-                onSecondsChange={setTimerSeconds}
+                onSecondsChange={value => { setTimerSeconds(value); writeHotSeatSettings({ ...readHotSeatSettings(), timerSeconds: value }); }}
               />
             </div>
             {resolved && (
@@ -92,7 +92,7 @@ export default function HotSeatSurprisePage() {
               </div>
             )}
           </section>
-          <button onClick={handleStart} className="btn-primary w-full py-3 text-lg">Start Surprise Game</button>
+          <button onClick={handleStart} className="btn-primary setup-start-btn">Start Surprise Game</button>
         </div>
       </div>
     </main>

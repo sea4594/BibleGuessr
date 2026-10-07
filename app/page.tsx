@@ -120,13 +120,14 @@ export default function HomePage() {
 
           <div className="home-quickplay-stack grid gap-3">
             <section className="surface-card p-5 min-w-0">
-              <p className="eyebrow mb-2">QUICK PLAY</p>
+              <h2 className="quickplay-title">Quick Play</h2>
 
-              <div className={`party-gamemode-row mb-4 ${settings.preferredGameMode === "book-selection" ? "has-book" : ""}`}>
+              <div className={`party-gamemode-row mb-4 ${settings.preferredGameMode === "book-selection" || settings.preferredGameMode === "custom" ? "has-book" : ""}`}>
                 <select
                   value={settings.preferredGameMode}
                   onChange={e => setPreferredGameMode(e.target.value)}
                   className="settings-input party-gamemode-select"
+                  aria-label="Game mode"
                 >
                   {modeOptions.map(option => (
                     <option key={option.id} value={option.id}>
@@ -141,23 +142,21 @@ export default function HomePage() {
                     value={settings.preferredBook}
                     onChange={e => setPreferredBook(e.target.value)}
                     className="settings-input party-book-select"
+                    aria-label="Book"
                   >
                     {bibleData.map(book => (
                       <option key={book.book} value={book.book}>{book.book}</option>
                     ))}
                   </select>
                 )}
-              </div>
 
-              {settings.preferredGameMode === "custom" && (
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold mb-2">Books</label>
+                {settings.preferredGameMode === "custom" && (
                   <CustomBookSelectorPopup
                     selectedBooks={settings.preferredCustomBooks}
                     onChange={setPreferredCustomBooks}
                   />
-                </div>
-              )}
+                )}
+              </div>
 
               <div className="mb-4 min-w-0">
                 <HorizontalWheel
@@ -169,7 +168,7 @@ export default function HomePage() {
               </div>
 
               <div className="timer-inline-row">
-                <p className="text-sm font-semibold">Timer</p>
+                <p className="setup-control-label">Timer</p>
                 <div className="timer-inline-controls">
                   <label className="timer-inline-label">
                     <select

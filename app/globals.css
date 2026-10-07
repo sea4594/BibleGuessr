@@ -3768,3 +3768,94 @@ body {
   justify-content: center !important;
   align-items: center !important;
 }
+
+/* ===== 2026-10-07 setup typography + quick-play spacing consistency ===== */
+/* Keep one visual hierarchy for equivalent setup controls throughout the app. */
+.setup-control-label,
+.h-wheel-label,
+.party-host-controls .setup-control-label,
+.hotseat-names-window .setup-control-label {
+  color: var(--text-muted) !important;
+  font-size: 0.72rem !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+.h-wheel-label {
+  text-align: left !important;
+  padding-inline: 2px;
+}
+.timer-inline-row {
+  align-items: center !important;
+  gap: 10px !important;
+}
+.timer-inline-label {
+  font-size: 0.88rem !important;
+  line-height: 1.2 !important;
+  font-weight: 700 !important;
+}
+.setup-title {
+  margin: 2px 0 8px !important;
+  font-size: clamp(1.75rem, 6vw, 2.15rem) !important;
+  line-height: 1.12 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+.mode-card h2 {
+  margin: 0 0 4px !important;
+  font-size: clamp(1.28rem, 4.8vw, 1.48rem) !important;
+  line-height: 1.16 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+.mode-card p {
+  margin-top: 0 !important;
+  font-size: 0.9rem !important;
+  line-height: 1.35 !important;
+}
+.eyebrow {
+  font-size: 0.72rem !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+}
+.settings-input,
+select,
+input:not([type='range']) {
+  font-family: inherit;
+}
+.quickplay-title {
+  margin: 0 0 12px;
+  color: var(--text-main);
+  font-size: clamp(1.35rem, 5vw, 1.6rem);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+/* The Start button should have the same inter-section gap above the primary nav as
+   the rest of the Quick Play stack. */
+.home-quickplay-stack {
+  margin-bottom: 10px !important;
+}
+/* Book and Custom selectors share the same two-column row beside Game Mode. */
+.home-page .party-gamemode-row.has-book,
+.party-host-controls .party-gamemode-row.has-book {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  align-items: stretch;
+}
+.home-page .party-gamemode-row.has-book > *,
+.party-host-controls .party-gamemode-row.has-book > * {
+  min-width: 0;
+  width: 100% !important;
+}
+.home-page .party-gamemode-row.has-book .btn-outline,
+.party-host-controls .party-gamemode-row.has-book .btn-outline {
+  min-height: 100%;
+}
+/* Top-bar typography follows the same compact navigation hierarchy everywhere. */
+.app-topbar .topbar-title-slot {
+  font-size: 0.95rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
