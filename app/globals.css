@@ -3319,18 +3319,22 @@ input[type='tel'],
 
 
 /* ===== iOS standalone viewport + compact primary navigation ===== */
-/* WebKit standalone PWAs can re-measure the fixed/dynamic viewport after an SPA
-   navigation and omit the home-indicator inset. Keep the root in normal layout
-   flow and explicitly restore that missing physical-screen strip only in standalone. */
+/* WebKit standalone PWAs can under-report dynamic viewport units after SPA navigation.
+   In standalone mode, use the stable full-screen 100vh shell exactly once; the bottom
+   navigation handles the home-indicator inset internally, so the root must not add it. */
 @media (display-mode: standalone) {
   :root {
-    --app-viewport-height: max(100vh, 100lvh, calc(100dvh + env(safe-area-inset-bottom)));
+    /* In iOS Home Screen apps, 100vh is the stable full physical viewport.
+       Do not add safe-area-inset-bottom here; the nav already owns that inset. */
+    --app-viewport-height: 100vh;
   }
 
   html,
   body {
-    height: var(--app-viewport-height) !important;
-    min-height: var(--app-viewport-height) !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
   }
 }
 
