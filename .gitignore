@@ -53,3 +53,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Generated offline Bible payload
+/public/offline-bible/web.json

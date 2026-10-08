@@ -6,6 +6,7 @@ import { GameProvider } from '@/lib/gameContext';
 import { UiSettingsProvider } from '@/lib/uiSettingsContext';
 import { AccountSyncProvider } from '@/lib/accountSync';
 import EnsureHomeOnLaunch from '@/components/EnsureHomeOnLaunch';
+import OfflineSupport from '@/components/OfflineSupport';
 import { SettingsModalProvider } from '@/components/SettingsModalProvider';
 
 const bodyFont = Barlow({
@@ -107,6 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <GameProvider>
               <SettingsModalProvider>
                 <EnsureHomeOnLaunch />
+                <OfflineSupport />
                 {children}
               </SettingsModalProvider>
             </GameProvider>

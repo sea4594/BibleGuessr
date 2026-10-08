@@ -147,12 +147,14 @@ export default function MultiplayerPage() {
   const isCurrentMember = Boolean(room?.members.some(member => isSelfMemberId(member.id)));
   const currentPartyMember = room?.members.find(member => isSelfMemberId(member.id)) ?? null;
 
-  partyLifecycleRef.current = {
-    tab,
-    activeRoomCode,
-    partyMemberId: accountUid ?? partyMemberId,
-    gameStatus: room?.game?.status,
-  };
+  useEffect(() => {
+    partyLifecycleRef.current = {
+      tab,
+      activeRoomCode,
+      partyMemberId: accountUid ?? partyMemberId,
+      gameStatus: room?.game?.status,
+    };
+  }, [tab, activeRoomCode, accountUid, partyMemberId, room?.game?.status]);
 
   const persistPartyProfile = useCallback(async (nextProfile: UserProfile) => {
     const normalizedProfile = { ...nextProfile, name: normalizeDisplayName(nextProfile.name) || 'Player' };
@@ -167,7 +169,7 @@ export default function MultiplayerPage() {
         joinedAt: currentPartyMember?.joinedAt ?? Date.now(),
       });
     }
-  }, [activeRoomCode, currentPartyMember?.joinedAt, firebaseConfigured, isCurrentMember, accountUid, isSelfMemberId, partyMemberId, room?.hostId]);
+  }, [activeRoomCode, currentPartyMember?.joinedAt, firebaseConfigured, isCurrentMember, accountUid, isSelfMemberId, partyMemberId, room]);
 
   const commitPartyName = useCallback(async () => {
     const trimmed = normalizeDisplayName(partyNameDraft);
@@ -217,16 +219,19 @@ export default function MultiplayerPage() {
   );
 
   useEffect(() => {
-    const stored = readHotSeatSettings();
-    setPlayers(stored.players);
-    setRounds(stored.rounds);
-    setTurnStyle(stored.turnStyle);
-    setNames(stored.names);
-    setTimerSeconds(stored.timerSeconds);
-    setHotSeatModeId(stored.modeId);
-    setHotSeatBook(stored.selectedBook);
-    setHotSeatBooks(stored.selectedBooks);
-    setHotSeatSettingsReady(true);
+    const timer = window.setTimeout(() => {
+      const stored = readHotSeatSettings();
+      setPlayers(stored.players);
+      setRounds(stored.rounds);
+      setTurnStyle(stored.turnStyle);
+      setNames(stored.names);
+      setTimerSeconds(stored.timerSeconds);
+      setHotSeatModeId(stored.modeId);
+      setHotSeatBook(stored.selectedBook);
+      setHotSeatBooks(stored.selectedBooks);
+      setHotSeatSettingsReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -251,12 +256,8 @@ export default function MultiplayerPage() {
   }, [appStateNonce]);
 
   useEffect(() => {
-    if (!firebaseConfigured) {
-      setPartyIdentityReady(true);
-      return;
-    }
+    if (!firebaseConfigured) return;
     let cancelled = false;
-    setPartyIdentityReady(false);
 
     const resolveId = async () => {
       while (!cancelled) {

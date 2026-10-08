@@ -402,7 +402,7 @@ export default function PartyGameClient() {
     } finally {
       if (submissionInFlightRoundRef.current === round) submissionInFlightRoundRef.current = null;
     }
-  }, [code, game, myMember?.name, partyMemberId, profile.name])
+  }, [code, game, myMember, partyMemberId, profile.name])
 
   useEffect(() => {
     if (!game || !verse || !modeConfig) return;

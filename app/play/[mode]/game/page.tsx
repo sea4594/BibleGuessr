@@ -290,12 +290,15 @@ export default function GamePage() {
 
   useEffect(() => {
     if (!isHotSeatGame || session?.gameState !== 'playing') return;
-    setCurrentVerse(null);
-    setRemainingSeconds(timerDurationSeconds);
-    timeoutSubmittedRef.current = false;
-    setPreviousVerses([]);
-    setNextVerses([]);
-    setPendingSelection({ guess: null, hasInteracted: false });
+    const timer = window.setTimeout(() => {
+      setCurrentVerse(null);
+      setRemainingSeconds(timerDurationSeconds);
+      timeoutSubmittedRef.current = false;
+      setPreviousVerses([]);
+      setNextVerses([]);
+      setPendingSelection({ guess: null, hasInteracted: false });
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [isHotSeatGame, session?.currentRound, session?.gameState, timerDurationSeconds]);
 
   useEffect(() => {
