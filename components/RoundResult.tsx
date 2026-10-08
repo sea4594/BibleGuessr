@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Settings } from 'lucide-react';
 import { RoundData } from '@/lib/gameContext';
 import { useSettingsModal } from './SettingsModalProvider';
-import ScoreBar from './ScoreBar';
 
 interface Props {
   round: RoundData;
@@ -27,7 +26,6 @@ export default function RoundResult({
   onNext,
   onHome,
   isLastRound,
-  rounds = [round],
   multiplayer,
 }: Props) {
   const { verse, guess, score, scoreBreakdown } = round;
@@ -39,32 +37,8 @@ export default function RoundResult({
   const chapterCorrect = bookCorrect && feedback.chapter === 'correct';
   const verseCorrect = chapterCorrect && feedback.verse === 'correct';
   const scorePercent = Math.max(0, Math.min(100, Math.round(score)));
-
-  const runningTotal = rounds.reduce((sum, r) => sum + r.score, 0);
-  const runningPercent = Math.max(0, Math.min(100, Math.round((runningTotal / Math.max(rounds.length * 100, 1)) * 100)));
   const isHotSeat = Boolean(multiplayer?.enabled);
 
-  const groupedRoundRows = useMemo(() => {
-    if (!multiplayer?.enabled || multiplayer.players.length === 0) return null;
-
-    const grouped = new Map<number, Map<string, number>>();
-    rounds.forEach((item, idx) => {
-      const playerIndex = multiplayer.turnStyle === 'alternate'
-        ? idx % multiplayer.players.length
-        : Math.floor(idx / multiplayer.roundsPerPlayer);
-      const logicalRound = multiplayer.turnStyle === 'alternate'
-        ? Math.floor(idx / multiplayer.players.length) + 1
-        : (idx % multiplayer.roundsPerPlayer) + 1;
-      const playerName = item.playerName ?? multiplayer.players[Math.min(playerIndex, multiplayer.players.length - 1)];
-
-      if (!grouped.has(logicalRound)) grouped.set(logicalRound, new Map<string, number>());
-      grouped.get(logicalRound)!.set(playerName, item.score);
-    });
-
-    return Array.from(grouped.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([logicalRound, byPlayer]) => ({ logicalRound, byPlayer }));
-  }, [multiplayer, rounds]);
 
   return (
     <main className="app-screen">
@@ -113,37 +87,6 @@ export default function RoundResult({
             </div>
           </div>
 
-          <div className="surface-card p-4 sm:p-5 mb-6">
-            <h3 className="content-muted text-xs uppercase tracking-[0.18em] mb-3">Round Scores</h3>
-            {groupedRoundRows ? groupedRoundRows.map(({ logicalRound, byPlayer }) => (
-              <div key={logicalRound} className="border-t border-[var(--line)] first:border-0 py-2">
-                <div className="text-xs uppercase tracking-[0.14em] content-muted mb-1">Round {logicalRound}</div>
-                {multiplayer?.players
-                  .filter(player => byPlayer.has(player))
-                  .map(player => (
-                  <div key={`${logicalRound}-${player}`} className="round-score-list-row pl-4">
-                    <span>{player}</span>
-                    <span className="round-score-list-value">
-                      <span className="font-semibold">{Math.max(0, Math.min(100, Math.round(byPlayer.get(player) ?? 0)))}%</span>
-                      <ScoreBar score={byPlayer.get(player) ?? 0} className="score-bar-compact" label={`${player} round score`} />
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )) : rounds.map((item, idx) => (
-              <div key={idx} className="round-score-list-row py-1.5 border-t border-[var(--line)] first:border-0">
-                <span>Round {idx + 1}</span>
-                <span className="round-score-list-value">
-                  <span className="font-semibold">{Math.max(0, Math.min(100, Math.round(item.score)))}%</span>
-                  <ScoreBar score={item.score} className="score-bar-compact" label={`Round ${idx + 1} score`} />
-                </span>
-              </div>
-            ))}
-            <div className="flex justify-between items-center text-[1.55rem] sm:text-[1.75rem] py-3 mt-1 border-t border-[var(--line)] font-extrabold">
-              <span>Current total</span>
-              <span>{runningPercent}%</span>
-            </div>
-          </div>
         </div>
       </div>
 
