@@ -2169,10 +2169,12 @@ input[type='range']::-moz-range-thumb {
 /* ====== Round result correctness bar ====== */
 .result-progress-track {
   width: 100%;
-  height: 16px;
+  height: 18px;
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   overflow: hidden;
+  margin-top: 4px;
+  margin-bottom: 20px !important;
 }
 
 .result-progress-fill {
@@ -3208,22 +3210,26 @@ input[type='tel'],
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  min-height: 80px;
+  padding: 10px 2px 8px;
 }
 .result-guess-line {
   min-width: 0;
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
+  line-height: 1.5;
   white-space: nowrap;
   overflow-x: auto;
 }
 .result-round-score {
   font-size: clamp(2rem, 8vw, 3rem);
-  line-height: 1;
+  line-height: 1.1;
   font-weight: 900;
   text-align: right;
   white-space: nowrap;
+  padding-block: 6px;
 }
 
 @media (max-width: 640px) {
