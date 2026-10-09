@@ -15,6 +15,12 @@ const bodyFont = Barlow({
   variable: '--font-body',
 });
 
+const verseFont = Barlow({
+  subsets: ['latin'],
+  weight: ['300', '400'],
+  variable: '--font-verse',
+});
+
 const isGitHubPages =
   process.env.GITHUB_PAGES === 'true' || process.env.GITHUB_ACTIONS === 'true';
 const base = isGitHubPages ? '/BibleGuessr' : '';
@@ -102,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {THEME_COLOR_SYNC_SCRIPT}
         </Script>
       </head>
-      <body className={`${bodyFont.variable} font-[var(--font-body)] antialiased`}>
+      <body className={`${bodyFont.variable} ${verseFont.variable} font-[var(--font-body)] antialiased`}>
         <AccountSyncProvider>
           <UiSettingsProvider>
             <GameProvider>

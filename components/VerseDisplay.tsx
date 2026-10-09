@@ -76,7 +76,7 @@ export default function VerseDisplay({
             {versesToDisplay.map(item => (
               <p
                 key={`${item.book}-${item.chapter}-${item.verse}`}
-                className="headline-serif text-[var(--text-main)] text-base sm:text-lg leading-relaxed text-center italic"
+                className={`headline-serif text-[var(--text-main)] text-base sm:text-lg leading-relaxed text-center italic ${item === verse ? 'verse-target' : 'verse-context'}`}
               >
                 &ldquo;{item.text}&rdquo;
               </p>

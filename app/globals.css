@@ -4784,3 +4784,53 @@ input:not([type='range']) {
   }
 }
 /* ===== END RESPONSIVE LAYOUT HOTFIX ===== */
+
+/* ===== BIBLEGUESSR LAYOUT FOLLOW-UP: single-column names, centered verses and results ===== */
+/* Player names remain stacked even when a wider responsive layout is active. */
+.hotseat-names-list { grid-template-columns: minmax(0, 1fr) !important; }
+
+/* Center short verse passages between context buttons. Auto margins collapse when
+   a passage is too long, preserving scrolling and access to the first verse. */
+.game-content.app-content-fixed .verse-scroll-area > .surface-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.game-content.app-content-fixed .verse-scroll-area > .surface-card > .space-y-3 {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+/* Same Barlow family, with purpose-loaded 400 / 300 weights. */
+.verse-scroll-area .verse-target {
+  font-family: var(--font-verse), Trebuchet MS, Segoe UI, sans-serif;
+  font-weight: 400 !important;
+}
+.verse-scroll-area .verse-context {
+  font-family: var(--font-verse), Trebuchet MS, Segoe UI, sans-serif;
+  font-weight: 300 !important;
+}
+
+/* The present round result contains two vertically stacked cards; remove the old
+   desktop three-card grid that left both cards in an off-center left column. */
+@media (min-width: 641px) {
+  .app-content-scroll > .page:has(.result-guess-score-row) {
+    width: min(100%, 720px) !important;
+    max-width: 720px !important;
+    margin-inline: auto !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px !important;
+  }
+  .page:has(.result-guess-score-row) > * {
+    width: 100%;
+    margin-bottom: 0 !important;
+  }
+  .app-screen:has(.result-guess-score-row) .round-screen-footer .footer-inner {
+    width: min(100%, 720px) !important;
+  }
+  .party-round-summary-fixed { margin-inline: auto !important; }
+}
+/* ===== END BIBLEGUESSR LAYOUT FOLLOW-UP ===== */
